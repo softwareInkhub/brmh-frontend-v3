@@ -199,3 +199,9 @@ const LambdaPage: React.FC<LambdaPageProps> = ({ lambda, namespace }) => {
 };
 
 export default LambdaPage;
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> frontend-fixesv2
