@@ -1,31 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { NestedFieldsEditor, schemaToFields } from '../components/SchemaService';
 import RecursiveDataForm from '../../components/common/RecursiveDataForm';
 import MockDataPanel from '../components/MockDataPanel';
 import Ajv from 'ajv';
 import { v4 as uuidv4 } from 'uuid';
-import { Edit, PlusCircle, RefreshCw, Eye, Trash2 } from "lucide-react";
+import { Edit, PlusCircle, RefreshCw, Eye, Trash2, Upload, File, X } from "lucide-react";
+import { toast } from 'react-hot-toast';
 
 function fieldsToSchema(fields: any[]): Record<string, any> {
   const properties: Record<string, any> = {};
   const required: string[] = [];
   for (const field of fields) {
-    let type: any = field.type;
-    if (field.allowNull) {
-      type = [field.type, 'null'];
-    }
-    let property: any = { type };
+    let property: any = {};
     if (field.type === 'enum') {
       property = {
         type: field.allowNull ? ['string', 'null'] : 'string',
         enum: field.enumValues || []
       };
+    } else if (field.type === 'file') {
+      property = {
+        type: field.allowNull ? ['string', 'null'] : 'string',
+        format: 'file'
+      };
     } else if (field.type === 'object') {
       const nested = fieldsToSchema(field.fields || []);
-      property = { ...property, ...nested };
+      property = {
+        type: field.allowNull ? ['object', 'null'] : 'object',
+        properties: nested.properties || {}
+      };
+      if (nested.required && nested.required.length > 0) {
+        property.required = nested.required;
+      }
     } else if (field.type === 'array') {
       if (field.itemType === 'object') {
-        property.items = fieldsToSchema(field.itemFields || []);
+        const nested = fieldsToSchema(field.itemFields || []);
+        property.items = {
+          type: 'object',
+          properties: nested.properties || {}
+        };
+        if (nested.required && nested.required.length > 0) {
+          property.items.required = nested.required;
+        }
       } else if (field.itemType === 'schema') {
         property.items = { 
           $ref: `#/components/schemas/${field.schemaId}`,
@@ -38,6 +53,11 @@ function fieldsToSchema(fields: any[]): Record<string, any> {
       property = {
         $ref: `#/components/schemas/${field.schemaId}`,
         type: field.allowNull ? ['object', 'null'] : 'object'
+      };
+    } else {
+      // Default case for basic types (string, number, boolean, etc.)
+      property = {
+        type: field.allowNull ? [field.type, 'null'] : field.type
       };
     }
     properties[field.name] = property;
@@ -68,6 +88,15 @@ interface SchemaCreatePageProps {
 }
 
 export default function SchemaCreatePage({ onSchemaNameChange, namespace, initialSchema, initialSchemaName, onSuccess, mode, methodId }: SchemaCreatePageProps) {
+  console.log('=== SCHEMA CREATE PAGE DEBUG ===');
+  console.log('Initial schema:', initialSchema);
+  console.log('Initial schema type:', typeof initialSchema);
+  console.log('Initial schema stringified:', JSON.stringify(initialSchema, null, 2));
+  console.log('Initial schema name:', initialSchemaName);
+  console.log('Namespace:', namespace);
+  console.log('Mode:', mode);
+  console.log('Method ID:', methodId);
+  
   const [schemaName, setSchemaName] = useState(initialSchemaName || '');
   const [fields, setFields] = useState<any[]>(initialSchema ? schemaToFields(initialSchema) : []);
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
@@ -82,6 +111,7 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
   const [validationResult, setValidationResult] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [saveResponse, setSaveResponse] = useState<any>(null);
   // Resolved schema state
   const [resolvedView, setResolvedView] = useState(false);
   const [resolvedSchema, setResolvedSchema] = useState<any | null>(null);
@@ -90,6 +120,27 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
   const [activeTab, setActiveTab] = useState<'edit' | 'createData' | 'updateData' | 'readData' | 'deleteData'>('edit');
   const [createDataResult, setCreateDataResult] = useState<string | null>(null);
   const [formData, setFormData] = useState<any>({});
+  
+  // Use ref to maintain stable form data reference
+  const formDataRef = useRef<any>({});
+  
+  // Stable form data update function
+  const handleFormDataChange = useCallback((newFormData: any) => {
+    formDataRef.current = newFormData;
+    setFormData(newFormData);
+  }, []);
+  
+  // Stable field update function
+  const updateFormField = useCallback((fieldName: string, fieldValue: any) => {
+    const newFormData = { ...formDataRef.current, [fieldName]: fieldValue };
+    formDataRef.current = newFormData;
+    setFormData(newFormData);
+  }, []);
+  
+  // Keep formDataRef in sync with formData
+  useEffect(() => {
+    formDataRef.current = formData;
+  }, [formData]);
   const [tableName, setTableName] = useState<string | null>(null);
   const [showTableModal, setShowTableModal] = useState(false);
   const [newTableName, setNewTableName] = useState(schemaName || '');
@@ -124,6 +175,10 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
   const [isGeneratingMockData, setIsGeneratingMockData] = useState(false);
   const [mockDataContext, setMockDataContext] = useState('');
   const [autoFillEnabled, setAutoFillEnabled] = useState(false);
+
+  // File upload state
+  const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, { name: string; url: string; path: string }>>({});
 
   // If query param create=1 is present, ensure we're in create mode (no-op if editing)
   useEffect(() => {
@@ -168,9 +223,26 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
 
   // Update fields and JSON schema when initialSchema changes
   useEffect(() => {
+    console.log('=== INITIAL SCHEMA EFFECT ===');
+    console.log('Initial schema changed:', initialSchema);
+    console.log('Initial schema type:', typeof initialSchema);
+    console.log('Initial schema stringified:', JSON.stringify(initialSchema, null, 2));
+    
     if (initialSchema) {
-      setFields(schemaToFields(initialSchema));
+      console.log('Processing initial schema...');
+      console.log('- Schema type:', initialSchema.type);
+      console.log('- Schema properties:', initialSchema.properties);
+      console.log('- Schema required:', initialSchema.required);
+      
+      const convertedFields = schemaToFields(initialSchema);
+      console.log('Converted fields:', convertedFields);
+      console.log('Number of converted fields:', convertedFields.length);
+      console.log('Fields details:', convertedFields.map(f => ({ name: f.name, type: f.type })));
+      
+      setFields(convertedFields);
       setJsonSchema(JSON.stringify(initialSchema, null, 2));
+    } else {
+      console.log('No initial schema provided');
     }
   }, [initialSchema]);
 
@@ -330,6 +402,13 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
     }
     setIsSaving(true);
     setSaveMessage('');
+    setSaveResponse(null);
+    console.log('=== STARTING SCHEMA SAVE ===');
+    console.log('Schema name:', schemaName);
+    console.log('Parsed schema:', parsedSchema);
+    console.log('Is editing:', isEditing);
+    console.log('Schema object:', schemaObj);
+    
     try {
       let methodNameToSave = null;
       if (methodId) {
@@ -355,38 +434,57 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
         schema: parsedSchema
       };
 
+      console.log('Payload to send:', payload);
+
       let schemaId;
+      let response;
+      let responseData;
+      
       // If we're editing and have a schema object with an ID, update it
       if (isEditing && schemaObj && (schemaObj.id || schemaObj.schemaId)) {
         const existingSchemaId = schemaObj.id || schemaObj.schemaId;
         console.log('Updating schema with ID:', existingSchemaId);
-        const response = await fetch(`${API_BASE_URL}/unified/schema/${existingSchemaId}`, {
+        response = await fetch(`${API_BASE_URL}/unified/schema/${existingSchemaId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        console.log('Update response status:', response.status);
+        console.log('Update response headers:', response.headers);
+        
         if (!response.ok) {
           const errorText = await response.text();
+          console.error('Update failed:', errorText);
           throw new Error(errorText || 'Failed to update schema');
         }
-        const updatedSchema = await response.json();
-        schemaId = updatedSchema.id || updatedSchema.schemaId;
-        setSaveMessage('Schema updated successfully!');
+        responseData = await response.json();
+        console.log('Update response data:', responseData);
+        schemaId = responseData.id || responseData.schemaId;
+        setSaveResponse(responseData);
+        setSaveMessage(`Schema updated successfully! ID: ${schemaId}`);
+        toast.success(`Schema updated successfully! ID: ${schemaId}`);
       } else {
         // Create new schema
         console.log('Creating new schema');
-        const response = await fetch(`${API_BASE_URL}/unified/schema`, {
+        response = await fetch(`${API_BASE_URL}/unified/schema`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        console.log('Create response status:', response.status);
+        console.log('Create response headers:', response.headers);
+        
         if (!response.ok) {
           const errorText = await response.text();
+          console.error('Create failed:', errorText);
           throw new Error(errorText || 'Failed to save schema');
         }
-        const newSchema = await response.json();
-        schemaId = newSchema.id || newSchema.schemaId;
-        setSaveMessage('Schema created successfully!');
+        responseData = await response.json();
+        console.log('Create response data:', responseData);
+        schemaId = responseData.id || responseData.schemaId;
+        setSaveResponse(responseData);
+        setSaveMessage(`Schema created successfully! ID: ${schemaId}`);
+        toast.success(`Schema created successfully! ID: ${schemaId}`);
       }
 
       // Update method with schema ID if methodId exists
@@ -443,10 +541,25 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
         } catch {}
       }
       if (onSuccess) onSuccess();
+      
+      // Clear the save message after 5 seconds
+      setTimeout(() => {
+        setSaveMessage('');
+      }, 5000);
+      
     } catch (error: any) {
-      setSaveMessage(error.message || 'Failed to save schema.');
+      console.error('=== SCHEMA SAVE ERROR ===', error);
+      const errorMessage = `Error: ${error.message || 'Failed to save schema.'}`;
+      setSaveMessage(errorMessage);
+      toast.error(errorMessage);
+      
+      // Clear the error message after 10 seconds
+      setTimeout(() => {
+        setSaveMessage('');
+      }, 10000);
     } finally {
       setIsSaving(false);
+      console.log('=== SCHEMA SAVE COMPLETED ===');
     }
   };
 
@@ -596,6 +709,355 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
 
   const getStringId = (id: any) => (typeof id === 'object' && id !== null && 'S' in id ? id.S : id);
 
+  // File upload helper functions
+  const uploadFileToS3 = async (file: File, fieldName: string): Promise<{ name: string; url: string; path: string }> => {
+    try {
+      // Get namespace folder path
+      const namespaceId = namespace?.['namespace-id'] || schemaObj?.namespaceId;
+      if (!namespaceId) {
+        throw new Error('Namespace ID not found');
+      }
+
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('namespaceId', namespaceId);
+      formData.append('fieldName', fieldName);
+
+      // Upload file to BRMH Drive
+      const response = await fetch(`${API_BASE_URL}/drive/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload file');
+      }
+
+      const result = await response.json();
+      return {
+        name: file.name,
+        url: result.downloadUrl || result.url,
+        path: result.filePath || result.path
+      };
+    } catch (error) {
+      console.error('File upload error:', error);
+      throw error;
+    }
+  };
+
+  const handleFileUpload = async (file: File, fieldName: string) => {
+    setUploadingFiles(prev => ({ ...prev, [fieldName]: true }));
+    try {
+      const uploadResult = await uploadFileToS3(file, fieldName);
+      setUploadedFiles(prev => ({ ...prev, [fieldName]: uploadResult }));
+      // Update form data with file path
+      updateFormField(fieldName, uploadResult.path);
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setUploadingFiles(prev => ({ ...prev, [fieldName]: false }));
+    }
+  };
+
+  const removeUploadedFile = (fieldName: string) => {
+    setUploadedFiles(prev => {
+      const newFiles = { ...prev };
+      delete newFiles[fieldName];
+      return newFiles;
+    });
+    updateFormField(fieldName, '');
+  };
+
+  // File upload component
+  const FileUploadField = ({ fieldName, required = false }: { fieldName: string; required?: boolean }) => {
+    const isUploading = uploadingFiles[fieldName];
+    const uploadedFile = uploadedFiles[fieldName];
+
+    return (
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          {fieldName} {required && <span className="text-red-500">*</span>}
+        </label>
+        
+        {uploadedFile ? (
+          <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <File className="w-4 h-4 text-green-600" />
+              <span className="text-sm text-green-800">{uploadedFile.name}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => removeUploadedFile(fieldName)}
+              className="text-red-500 hover:text-red-700"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+            <input
+              type="file"
+              id={`file-${fieldName}`}
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleFileUpload(file, fieldName);
+                }
+              }}
+              disabled={isUploading}
+            />
+            <label
+              htmlFor={`file-${fieldName}`}
+              className={`flex flex-col items-center justify-center cursor-pointer ${
+                isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+              }`}
+            >
+              <Upload className="w-8 h-8 text-gray-400 mb-2" />
+              <span className="text-sm text-gray-600">
+                {isUploading ? 'Uploading...' : 'Click to upload file'}
+              </span>
+              <span className="text-xs text-gray-500 mt-1">
+                File will be saved to namespace folder
+              </span>
+            </label>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Stable form field component
+  const FormField = React.memo(({ 
+    fieldName, 
+    fieldSchema, 
+    value, 
+    isRequired, 
+    onUpdate 
+  }: { 
+    fieldName: string; 
+    fieldSchema: any; 
+    value: any; 
+    isRequired: boolean; 
+    onUpdate: (value: any) => void; 
+  }) => {
+    // Handle file type fields
+    if (fieldSchema.type === 'file' || fieldSchema.format === 'file') {
+      return (
+        <FileUploadField 
+          key={fieldName}
+          fieldName={fieldName} 
+          required={isRequired}
+        />
+      );
+    }
+
+    // Handle string fields
+    if (fieldSchema.type === 'string') {
+      return (
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            {fieldName} {isRequired && <span className="text-red-500">*</span>}
+          </label>
+          <input
+            type="text"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={value || ''}
+            onChange={(e) => onUpdate(e.target.value)}
+            placeholder={`Enter ${fieldName}`}
+          />
+        </div>
+      );
+    }
+
+    // Handle number fields
+    if (fieldSchema.type === 'number' || fieldSchema.type === 'integer') {
+      return (
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            {fieldName} {isRequired && <span className="text-red-500">*</span>}
+          </label>
+          <input
+            type="number"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={value || ''}
+            onChange={(e) => onUpdate(parseFloat(e.target.value) || '')}
+            placeholder={`Enter ${fieldName}`}
+          />
+        </div>
+      );
+    }
+
+    // Handle boolean fields
+    if (fieldSchema.type === 'boolean') {
+      return (
+        <div className="space-y-2">
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              checked={value === true}
+              onChange={(e) => onUpdate(e.target.checked)}
+            />
+            <span className="text-sm font-medium text-gray-700">
+              {fieldName} {isRequired && <span className="text-red-500">*</span>}
+            </span>
+          </label>
+        </div>
+      );
+    }
+
+    // Handle array fields
+    if (fieldSchema.type === 'array') {
+      // Get the display value - if it's an array, stringify it, otherwise use the raw value
+      const displayValue = Array.isArray(value) ? JSON.stringify(value, null, 2) : (value || '');
+      
+      return (
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            {fieldName} {isRequired && <span className="text-red-500">*</span>}
+          </label>
+          <textarea
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={displayValue}
+            onChange={(e) => {
+              const inputValue = e.target.value;
+              // Always store the raw input value
+              onUpdate(inputValue);
+            }}
+            onBlur={(e) => {
+              // Only try to parse as JSON when the user finishes typing
+              const inputValue = e.target.value.trim();
+              if (inputValue) {
+                try {
+                  const parsed = JSON.parse(inputValue);
+                  if (Array.isArray(parsed)) {
+                    onUpdate(parsed);
+                  } else {
+                    // If it's not an array, keep as string
+                    onUpdate(inputValue);
+                  }
+                } catch {
+                  // Keep as string if not valid JSON
+                  onUpdate(inputValue);
+                }
+              } else {
+                onUpdate('');
+              }
+            }}
+            placeholder={`Enter ${fieldName} as JSON array (e.g., ["item1", "item2", "item3"])`}
+            rows={3}
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            💡 Tip: Type your JSON array and click outside the field to validate
+          </div>
+        </div>
+      );
+    }
+
+    // Handle object fields
+    if (fieldSchema.type === 'object') {
+      // Get the display value - if it's an object, stringify it, otherwise use the raw value
+      const displayValue = (typeof value === 'object' && value !== null && !Array.isArray(value)) 
+        ? JSON.stringify(value, null, 2) 
+        : (value || '');
+      
+      return (
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            {fieldName} {isRequired && <span className="text-red-500">*</span>}
+          </label>
+          <textarea
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={displayValue}
+            onChange={(e) => {
+              const inputValue = e.target.value;
+              // Always store the raw input value
+              onUpdate(inputValue);
+            }}
+            onBlur={(e) => {
+              // Only try to parse as JSON when the user finishes typing
+              const inputValue = e.target.value.trim();
+              if (inputValue) {
+                try {
+                  const parsed = JSON.parse(inputValue);
+                  if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+                    onUpdate(parsed);
+                  } else {
+                    // If it's not an object, keep as string
+                    onUpdate(inputValue);
+                  }
+                } catch {
+                  // Keep as string if not valid JSON
+                  onUpdate(inputValue);
+                }
+              } else {
+                onUpdate('');
+              }
+            }}
+            placeholder={`Enter ${fieldName} as JSON object (e.g., {"platform": "instagram", "followers": 1000})`}
+            rows={4}
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            💡 Tip: Type your JSON object and click outside the field to validate
+          </div>
+        </div>
+      );
+    }
+
+    // Default to text input
+    return (
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          {fieldName} {isRequired && <span className="text-red-500">*</span>}
+        </label>
+        <input
+          type="text"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          value={value || ''}
+          onChange={(e) => onUpdate(e.target.value)}
+          placeholder={`Enter ${fieldName}`}
+        />
+      </div>
+    );
+  });
+
+  // Custom form component that handles file fields
+  const CustomDataForm = React.memo(({ schema, value, onChange, required = [], updateField }: { 
+    schema: any; 
+    value: any; 
+    onChange: (value: any) => void; 
+    required?: string[];
+    updateField: (fieldName: string, fieldValue: any) => void;
+  }) => {
+    if (!schema || !schema.properties) {
+      return <div className="text-gray-500 text-sm">No schema properties found</div>;
+    }
+
+    return (
+      <div className="space-y-4">
+        {Object.entries(schema.properties).map(([fieldName, fieldSchema]: [string, any]) => {
+          const isRequired = required.includes(fieldName);
+          const fieldValue = value?.[fieldName] || '';
+          
+          return (
+            <FormField
+              key={fieldName}
+              fieldName={fieldName}
+              fieldSchema={fieldSchema}
+              value={fieldValue}
+              isRequired={isRequired}
+              onUpdate={(newValue) => updateField(fieldName, newValue)}
+            />
+          );
+        })}
+      </div>
+    );
+  });
+
   // Handle mock data insertion
   const handleInsertMockData = async (data: any[]) => {
     try {
@@ -621,7 +1083,7 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
       }
       
       setCreateDataResult(`Successfully inserted ${data.length} record(s)`);
-      setFormData({});
+      handleFormDataChange({});
     } catch (err) {
       setCreateDataResult('Error: ' + (err instanceof Error ? err.message : String(err)));
       throw err;
@@ -783,6 +1245,8 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
             <div className="p-2 border-b border-gray-100 bg-gray-50">
               <div className="text-xs text-gray-500">
                 OpenAPI 3.0+ spec: Use type: <code>["string", "null"]</code> for nullable fields, and <code>required: ["field1", ...]</code> for required fields.
+                <br />
+                For file uploads, use <code>type: "file"</code> or <code>format: "file"</code> - files will be saved to the namespace folder in S3.
               </div>
             </div>
             {resolvedView ? (
@@ -833,9 +1297,11 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
                 });
                 if (!res.ok) throw new Error('Failed to delete schema');
                 setSaveMessage('Schema deleted successfully!');
+                toast.success('Schema deleted successfully!');
                 if (onSuccess) onSuccess();
               } catch (err: any) {
                 setSaveMessage('Failed to delete schema.');
+                toast.error('Failed to delete schema.');
               }
             }}
             type="button"
@@ -853,8 +1319,33 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
         </div>
       )}
       {saveMessage && (
-        <div className="mt-2 text-blue-700 font-semibold text-xs px-4">{saveMessage}</div>
-          )}
+        <div className={`mt-2 px-4 py-2 rounded-lg text-sm font-medium ${
+          saveMessage.startsWith('Error:') 
+            ? 'bg-red-100 text-red-800 border border-red-200' 
+            : 'bg-green-100 text-green-800 border border-green-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span>{saveMessage}</span>
+            <button
+              onClick={() => {
+                setSaveMessage('');
+                setSaveResponse(null);
+              }}
+              className="ml-2 text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+      {saveResponse && (
+        <div className="mt-2 px-4">
+          <div className="font-semibold text-xs text-gray-700 mb-2">Save Response:</div>
+          <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+            {JSON.stringify(saveResponse, null, 2)}
+          </pre>
+        </div>
+      )}
         </>
       )}
 
@@ -909,6 +1400,16 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
                 setFormErrors(null);
                 // Type validation using ajv
                 const ajv = new Ajv();
+                
+                // Add custom format validator for 'file' type
+                ajv.addFormat('file', {
+                  type: 'string',
+                  validate: (data: string) => {
+                    // Accept any string as valid file path/URL
+                    return typeof data === 'string';
+                  }
+                });
+                
                 let schema;
                 try {
                   schema = JSON.parse(jsonSchema);
@@ -940,18 +1441,19 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
                   });
                   if (!res.ok) throw new Error('Failed to create data');
                   setCreateDataResult('Data created successfully!');
-                  setFormData({});
+                  handleFormDataChange({});
                 } catch (err: any) {
                   setCreateDataResult('Error: ' + err.message);
                 }
               }}
               className="max-w-xl"
             >
-              <RecursiveDataForm
+              <CustomDataForm
                 schema={JSON.parse(jsonSchema)}
                 value={formData}
-                onChange={setFormData}
-                required={JSON.parse(jsonSchema).required}
+                onChange={handleFormDataChange}
+                required={JSON.parse(jsonSchema).required || []}
+                updateField={updateFormField}
               />
 
               <div className="flex gap-2 mt-4">
@@ -1302,7 +1804,7 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
         schema={JSON.parse(jsonSchema)}
         onInsertData={handleInsertMockData}
         onFillForm={(data) => {
-          setFormData(data);
+          handleFormDataChange(data);
           setShowMockDataPanel(false);
         }}
       />

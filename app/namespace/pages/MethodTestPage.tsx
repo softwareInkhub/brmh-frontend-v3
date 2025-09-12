@@ -477,28 +477,160 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab }: {
       toast.error('No response data available to save as schema');
       return;
     }
-    // Generic: find the first array field in the response body (regardless of name)
-    const body = (response.body as any)?.body || response.body;
+    
+    console.log('=== SAVE SCHEMA DEBUG ===');
+    console.log('Response body:', response.body);
+    console.log('Method name:', methodName);
+    console.log('onOpenSchemaTab function:', onOpenSchemaTab);
+    
+    // Check if onOpenSchemaTab function is available
+    if (!onOpenSchemaTab) {
+      console.error('onOpenSchemaTab function is not available');
+      toast.error('Schema tab function not available. Please refresh the page and try again.');
+      return;
+    }
+    
+    // Check if the response body itself is an array
     let arrayField: any[] | null = null;
     let arrayFieldName: string | null = null;
-    if (body && typeof body === 'object') {
-      for (const key in body) {
-        if (Array.isArray(body[key])) {
-          arrayField = body[key];
-          arrayFieldName = key;
-          break;
+    let body = response.body;
+    
+    console.log('Original response body:', body);
+    console.log('Response body type:', typeof body);
+    console.log('Is response body array:', Array.isArray(body));
+    
+    // If response body is directly an array, use it
+    if (Array.isArray(body)) {
+      arrayField = body;
+      arrayFieldName = 'data';
+      console.log('Response body is directly an array:', arrayField);
+    } else {
+      // Check if response body has a nested body property
+      const nestedBody = (body as any)?.body;
+      console.log('Nested body:', nestedBody);
+      console.log('Is nested body array:', Array.isArray(nestedBody));
+      
+      if (Array.isArray(nestedBody)) {
+        arrayField = nestedBody;
+        arrayFieldName = 'body';
+        body = nestedBody;
+        console.log('Found array in nested body:', arrayField);
+      } else if (body && typeof body === 'object') {
+        // Look for array fields in the response object
+        for (const key in body) {
+          const value = (body as any)[key];
+          console.log(`Checking key: ${key}, value:`, value, 'isArray:', Array.isArray(value));
+          if (Array.isArray(value)) {
+            arrayField = value;
+            arrayFieldName = key;
+            body = value;
+            console.log('Found array field:', key, arrayField);
+            break;
+          }
         }
       }
     }
+    
+    let generatedSchema: Record<string, unknown>;
+    let schemaName: string;
+    
+    // If no array field found, try to use the entire response body as a single object
     if (!arrayField || arrayField.length === 0) {
-      toast.error('No array field found in response to generate schema');
-      return;
+      console.log('No array field found, using entire response body');
+      if (body && typeof body === 'object' && !Array.isArray(body)) {
+        generatedSchema = generateResponseSchema(body);
+        schemaName = methodName ? `${methodName}_response` : 'response_schema';
+        console.log('Generated schema for entire body:', generatedSchema);
+        console.log('Schema name:', schemaName);
+      } else {
+        // Fallback: create a basic schema structure
+        console.log('Creating fallback schema structure');
+        generatedSchema = {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            data: { type: 'object' }
+          },
+          required: ['id']
+        };
+        schemaName = methodName ? `${methodName}_schema` : 'response_schema';
+        console.log('Fallback schema:', generatedSchema);
+        console.log('Fallback schema name:', schemaName);
+      }
+    } else {
+      console.log('Processing array field with', arrayField.length, 'items');
+      console.log('First array item:', arrayField[0]);
+      
+      // For array responses, generate schema from the first item
+      const itemSchema = generateResponseSchema(arrayField[0]);
+      console.log('Generated item schema:', itemSchema);
+      
+      // If the item is an object, use its properties directly
+      if (itemSchema.type === 'object' && itemSchema.properties) {
+        generatedSchema = {
+          type: 'object',
+          properties: itemSchema.properties,
+          required: itemSchema.required || []
+        };
+        console.log('Using object properties from array item');
+      } else {
+        generatedSchema = itemSchema;
+        console.log('Using item schema directly');
+      }
+      
+      schemaName = methodName ? `${methodName}_${arrayFieldName}` : `${arrayFieldName}_schema`;
+      console.log('Generated schema for array field:', generatedSchema);
+      console.log('Schema name:', schemaName);
     }
-    const generatedSchema = generateResponseSchema(arrayField[0]);
-    if (onOpenSchemaTab) {
-      onOpenSchemaTab(generatedSchema, methodName);
+    
+    // Ensure schema has required structure
+    if (!generatedSchema.type) {
+      generatedSchema.type = 'object';
     }
-    toast.success(`Schema generated for array field: ${arrayFieldName}`);
+    if (!generatedSchema.properties) {
+      generatedSchema.properties = {};
+    }
+    
+    // Final safety check: if we still don't have properties, create a basic schema
+    if (Object.keys(generatedSchema.properties as Record<string, unknown>).length === 0) {
+      console.log('WARNING: Generated schema has no properties, creating fallback schema');
+      // Try to create a schema from the first array item if available
+      if (arrayField && arrayField.length > 0 && arrayField[0]) {
+        const firstItem = arrayField[0];
+        console.log('Creating schema from first array item:', firstItem);
+        if (typeof firstItem === 'object' && firstItem !== null) {
+          const properties: Record<string, unknown> = {};
+          const required: string[] = [];
+          Object.entries(firstItem).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+              properties[key] = { type: typeof value };
+              required.push(key);
+            }
+          });
+          generatedSchema = {
+            type: 'object',
+            properties,
+            required
+          };
+          console.log('Created fallback schema with properties:', properties);
+        }
+      }
+    }
+    
+    try {
+      console.log('Calling onOpenSchemaTab with:');
+      console.log('- Generated schema:', JSON.stringify(generatedSchema, null, 2));
+      console.log('- Schema name:', schemaName);
+      console.log('- Schema type:', generatedSchema.type);
+      console.log('- Schema properties:', generatedSchema.properties);
+      console.log('- Schema required:', generatedSchema.required);
+      
+      onOpenSchemaTab(generatedSchema, schemaName);
+      toast.success(`Schema creation page opened for: ${schemaName}`);
+    } catch (error) {
+      console.error('Error calling onOpenSchemaTab:', error);
+      toast.error('Failed to open schema creation page. Please try again.');
+    }
   };
 
   const handleSync = async () => {

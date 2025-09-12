@@ -854,15 +854,37 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
 
   // Add this handler function:
   const handleOpenSchemaTabFromTest = (schema: any, schemaName: any, namespace: any, methodId?: string) => {
+    console.log('=== HANDLE OPEN SCHEMA TAB FROM TEST ===');
+    console.log('Schema:', schema);
+    console.log('Schema type:', typeof schema);
+    console.log('Schema stringified:', JSON.stringify(schema, null, 2));
+    console.log('Schema name:', schemaName);
+    console.log('Namespace:', namespace);
+    console.log('Method ID:', methodId);
+    
     const key = `schema-create-from-test-${schemaName}`;
+    console.log('Tab key:', key);
+    
     if (!tabs.find(tab => tab.key === key)) {
+      console.log('Creating new tab with key:', key);
       setTabs([...tabs, { key, label: `Create Schema: ${schemaName}`, pinned: false }]);
+    } else {
+      console.log('Tab already exists with key:', key);
     }
+    
+    console.log('Setting active tab to:', key);
     setActiveTab(key);
+    
     setSchemaPageTabs(prev => {
-      if (prev.find(t => t.key === key)) return prev;
+      if (prev.find(t => t.key === key)) {
+        console.log('Schema page tab already exists');
+        return prev;
+      }
+      console.log('Adding new schema page tab');
       return [...prev, { key, schema, mode: 'create', initialSchemaName: schemaName, namespace, methodId }];
     });
+    
+    console.log('=== END HANDLE OPEN SCHEMA TAB FROM TEST ===');
   };
 
 

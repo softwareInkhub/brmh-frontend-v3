@@ -3,7 +3,7 @@ import { Plus, ChevronDown, ChevronRight, LayoutGrid, List as ListIcon } from 'l
 import SchemaModal from '../Modals/SchemaModal';
 import SchemaPreviewModal from '../Modals/SchemaPreviewModal';
 
-const FIELD_TYPES = ['string', 'number', 'boolean', 'object', 'array', 'enum', 'schema'];
+const FIELD_TYPES = ['string', 'number', 'boolean', 'object', 'array', 'enum', 'schema', 'file'];
 
 type Field = {
   name: string;
@@ -521,6 +521,11 @@ function fieldsToSchema(fields: Field[]): Record<string, any> {
         type: field.allowNull ? ['string', 'null'] : 'string',
         enum: field.enumValues || []
       };
+    } else if (field.type === 'file') {
+      property = {
+        type: field.allowNull ? ['string', 'null'] : 'string',
+        format: 'file'
+      };
     } else if (field.type === 'object') {
       const nested = fieldsToSchema(field.fields || []);
       property = { ...property, ...nested };
@@ -584,6 +589,16 @@ function schemaToFields(schema: any): Field[] {
         required: (schema.required || []).includes(name),
         allowNull,
         enumValues: prop.enum
+      };
+    }
+    
+    // Handle file type
+    if (prop.format === 'file' || prop.type === 'file') {
+      return {
+        name: name ?? '',
+        type: 'file',
+        required: (schema.required || []).includes(name),
+        allowNull
       };
     }
     
@@ -658,10 +673,18 @@ function parseTypeScriptToJsonSchema(ts: string) {
     else if (type === 'boolean') jsonType = 'boolean';
     else if (type === 'object') jsonType = 'object';
     else if (type === 'array' || type === 'any[]') jsonType = 'array';
+    else if (type === 'file') jsonType = 'file';
     else if (type === 'null') continue; // skip null fields
     else if (type === 'Date') jsonType = 'string'; // Handle Date type as string
 
-    properties[name] = { type: allowNull ? [jsonType, 'null'] : jsonType };
+    if (jsonType === 'file') {
+      properties[name] = { 
+        type: allowNull ? ['string', 'null'] : 'string',
+        format: 'file'
+      };
+    } else {
+      properties[name] = { type: allowNull ? [jsonType, 'null'] : jsonType };
+    }
     if (!allowNull) required.push(name);
   }
   return {
