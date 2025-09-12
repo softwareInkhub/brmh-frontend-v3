@@ -95,9 +95,3 @@ export default function TestScrapingPage() {
     </div>
   );
 }
-<<<<<<< HEAD
-=======
-
-
-
->>>>>>> frontend-fixesv2

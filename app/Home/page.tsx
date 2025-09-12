@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import NamespaceLibrarySidebar from '../components/NamespaceLibrarySidebar';
 import Navbar from '../components/Navbar';
 import { LayoutGrid, List, Upload, Plus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function HomePage() {
+function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') === 'apiHub' ? 'apiHub' : 'projects';
@@ -80,5 +80,13 @@ export default function HomePage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomePageContent />
+    </Suspense>
   );
 }

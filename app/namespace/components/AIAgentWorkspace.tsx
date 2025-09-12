@@ -1,10 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, Send, File, Folder, Play, Database, Code, X, Maximize2, Minimize2, Upload, FileText, Image, Archive } from 'lucide-react';
 import { useDrop } from 'react-dnd';
-<<<<<<< HEAD
-=======
-import { useNamespaceContext } from '../../components/NamespaceContext';
->>>>>>> frontend-fixesv2
 
 interface Message {
   id: string;
@@ -49,15 +45,6 @@ interface WorkspaceState {
 const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose }) => {
   console.log('AIAgentWorkspace rendered with props:', { namespace, onClose });
   
-<<<<<<< HEAD
-=======
-  // Get namespace from context as fallback
-  const { currentNamespace } = useNamespaceContext();
-  const effectiveNamespace = namespace || currentNamespace;
-  
-  console.log('Effective namespace:', effectiveNamespace);
-  
->>>>>>> frontend-fixesv2
   // Add useEffect to log namespace changes
   useEffect(() => {
     console.log('Namespace changed:', namespace);
@@ -446,17 +433,10 @@ What would you like to work on today?`,
 
   // Load available schemas for drag-drop functionality
   const loadAvailableSchemas = async () => {
-<<<<<<< HEAD
     if (!namespace?.['namespace-id']) return;
     
     try {
       const response = await fetch(`/unified/schema?namespaceId=${namespace['namespace-id']}`);
-=======
-    if (!effectiveNamespace?.['namespace-id']) return;
-    
-    try {
-      const response = await fetch(`/unified/schema?namespaceId=${effectiveNamespace['namespace-id']}`);
->>>>>>> frontend-fixesv2
       if (response.ok) {
         const schemas = await response.json();
         setDragDropSchemas(schemas);
@@ -531,19 +511,7 @@ What would you like to work on today?`,
   };
 
   const handleScrapeAndSave = async () => {
-<<<<<<< HEAD
     if (!selectedService || !namespace?.['namespace-id']) return;
-=======
-    console.log('handleScrapeAndSave called with:', { selectedService, namespace, effectiveNamespace });
-    if (!selectedService) {
-      addScrapingLog('Please select a service to scrape', 'error');
-      return;
-    }
-    if (!effectiveNamespace?.['namespace-id']) {
-      addScrapingLog('No namespace available. Please select a namespace from the sidebar or drag one to the AI Agent button.', 'error');
-      return;
-    }
->>>>>>> frontend-fixesv2
     
     const serviceToScrape = selectedService === 'custom-url' ? customUrl : selectedService;
     if (selectedService === 'custom-url' && !customUrl) {
@@ -560,11 +528,7 @@ What would you like to work on today?`,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           serviceName: serviceToScrape,
-<<<<<<< HEAD
           namespaceId: namespace['namespace-id'],
-=======
-          namespaceId: effectiveNamespace['namespace-id'],
->>>>>>> frontend-fixesv2
           options: scrapeOptions
         })
       });
@@ -643,11 +607,7 @@ What would you like to work on today?`,
 
   // Load file tree and workspace state when namespace changes
   useEffect(() => {
-<<<<<<< HEAD
     if (namespace?.['namespace-id']) {
-=======
-    if (effectiveNamespace?.['namespace-id']) {
->>>>>>> frontend-fixesv2
       refreshFileTree();
       loadWorkspaceState();
       loadAvailableSchemas(); // Load schemas for drag-drop functionality
@@ -662,19 +622,11 @@ What would you like to work on today?`,
         }
       }, 1000);
     }
-<<<<<<< HEAD
   }, [namespace?.['namespace-id'], workspaceState]);
 
   // Initialize session and load history when component mounts
   useEffect(() => {
     if (namespace?.['namespace-id']) {
-=======
-  }, [effectiveNamespace?.['namespace-id'], workspaceState]);
-
-  // Initialize session and load history when component mounts
-  useEffect(() => {
-    if (effectiveNamespace?.['namespace-id']) {
->>>>>>> frontend-fixesv2
       const newSessionId = `${userId}-ai-agent-workspace-${Date.now()}`;
       setSessionId(newSessionId);
       
@@ -683,7 +635,6 @@ What would you like to work on today?`,
         loadChatHistory();
       }, 100);
     }
-<<<<<<< HEAD
   }, [namespace?.['namespace-id'], userId]);
 
   useEffect(() => {
@@ -696,12 +647,6 @@ What would you like to work on today?`,
       });
     }
   }, [namespace?.['namespace-id'], sessionId]);
-=======
-  }, [effectiveNamespace?.['namespace-id'], userId]);
-
-  // Removed useEffect that was calling non-existent clear-generated-schemas endpoint
-  // This was causing schemas to be cleared unexpectedly
->>>>>>> frontend-fixesv2
 
 
 
@@ -709,21 +654,13 @@ What would you like to work on today?`,
 
   // Memory service functions
   const loadWorkspaceState = async () => {
-<<<<<<< HEAD
     if (!sessionId || !namespace?.['namespace-id']) return;
-=======
-    if (!sessionId || !effectiveNamespace?.['namespace-id']) return;
->>>>>>> frontend-fixesv2
     
     try {
       const response = await fetch(`${API_BASE_URL}/ai-agent/get-workspace-state`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-<<<<<<< HEAD
         body: JSON.stringify({ sessionId, namespaceId: namespace['namespace-id'] })
-=======
-        body: JSON.stringify({ sessionId, namespaceId: effectiveNamespace['namespace-id'] })
->>>>>>> frontend-fixesv2
       });
       
       if (response.ok) {
@@ -740,11 +677,7 @@ What would you like to work on today?`,
   };
 
   const saveWorkspaceState = async () => {
-<<<<<<< HEAD
     if (!sessionId || !namespace?.['namespace-id']) return;
-=======
-    if (!sessionId || !effectiveNamespace?.['namespace-id']) return;
->>>>>>> frontend-fixesv2
     
     const currentState: WorkspaceState = {
       files: [], // No longer tracking generated files
@@ -760,11 +693,7 @@ What would you like to work on today?`,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-<<<<<<< HEAD
           namespaceId: namespace['namespace-id'],
-=======
-          namespaceId: effectiveNamespace['namespace-id'],
->>>>>>> frontend-fixesv2
           workspaceState: currentState
         })
       });
@@ -1317,11 +1246,7 @@ What would you like to work on today?`,
       // Automatically switch to Schema tab
       setActiveTab('schema');
       
-<<<<<<< HEAD
       // Use the existing schema generation logic
-=======
-      // Use the new streaming logic that properly handles schema generation
->>>>>>> frontend-fixesv2
       try {
         setIsStreamingSchema(true);
         setLiveSchema('');
@@ -1342,7 +1267,6 @@ What would you like to work on today?`,
         if (response.ok) {
           const reader = response.body?.getReader();
           if (reader) {
-<<<<<<< HEAD
             let schemaContent = '';
             
             while (true) {
@@ -1367,172 +1291,6 @@ What would you like to work on today?`,
                       }
                     } catch (e) {
                       console.error('[Schema Generation] Error parsing data:', e);
-=======
-            let assistantMessage = '';
-            let actions: any[] = [];
-            let lastAssistantMessageId: string | null = null;
-            let chunkCount = 0;
-            let schemaChunkCount = 0;
-            
-            try {
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                chunkCount++;
-                const chunk = new TextDecoder().decode(value);
-                const lines = chunk.split('\n');
-                
-                for (const line of lines) {
-                  if (line.startsWith('data: ')) {
-                    try {
-                      const data = JSON.parse(line.slice(6));
-                      console.log('[Frontend] Received streaming data:', data);
-                      console.log('[Frontend Debug] Route:', data.route, 'Type:', data.type, 'Content preview:', data.content?.substring(0, 100));
-                      
-                      // Handle actions regardless of route
-                      if (data.type === 'actions' && data.actions) {
-                        console.log('[Frontend] Received actions:', data.actions);
-                        actions = data.actions;
-                        setConsoleOutput(prev => [...prev, `📋 Received ${data.actions.length} action(s) from AI agent`]);
-                      }
-                      
-                      if (data.route === 'schema') {
-                        // Handle schema-specific messages
-                        console.log('[Frontend Debug] Received schema route message:', data);
-                        if (data.type === 'live_schema') {
-                          // Handle live schema updates from backend - show JSON in live box
-                          // Only show content if it looks like JSON (starts with { or [)
-                          if (data.content && (data.content.trim().startsWith('{') || data.content.trim().startsWith('['))) {
-                            setLiveSchema(data.content);
-                            setIsStreamingSchema(true);
-                            setConsoleOutput(prev => [...prev, `🔄 Live schema update received`]);
-                          } else {
-                            console.log('[Frontend Debug] Ignoring non-JSON content in live schema:', data.content);
-                          }
-                        } else if (data.type === 'live_schema_complete') {
-                          // Handle final live schema update and close the live generation window
-                          setIsStreamingSchema(false);
-                          setConsoleOutput(prev => [...prev, `✅ Live schema generation completed`]);
-                        } else {
-                          console.log('[Frontend Debug] Ignoring non-live_schema message in schema route:', data);
-                        }
-                      } else if (data.route === 'chat') {
-                        // Live update the assistant's message in the chat UI
-                        if (data.type === 'chat') {
-                          assistantMessage += data.content;
-                          // If this is the first chunk, add a new assistant message
-                          if (!lastAssistantMessageId) {
-                            lastAssistantMessageId = getNowId();
-                            setMessages(prev => [
-                              ...prev,
-                              {
-                                id: lastAssistantMessageId || getNowId(),
-                                role: 'assistant',
-                                content: assistantMessage,
-                                timestamp: new Date()
-                              }
-                            ]);
-                          } else {
-                            // Update the last assistant message
-                            setMessages(prev => prev.map(m =>
-                              m.id === lastAssistantMessageId
-                                ? { ...m, content: assistantMessage }
-                                : m
-                            ));
-                          }
-                        }
-                      }
-                    } catch (e) {
-                      console.log('[Frontend Debug] Error parsing message:', e, 'Raw data:', line);
-                    }
-                  }
-                }
-              }
-            } finally {
-              reader.releaseLock();
-              // Reset editing state if no actions were processed
-              if (actions.length === 0) {
-                setIsEditingSchema(false);
-              }
-            }
-            // Process actions after streaming is complete
-            console.log('[Frontend] Processing actions:', actions);
-            setConsoleOutput(prev => [...prev, `🔍 Processing AI agent actions...`]);
-            
-            if (actions && Array.isArray(actions)) {
-              for (const action of actions) {
-                console.log('[Frontend] Processing action:', action);
-                setConsoleOutput(prev => [...prev, `⚙️ Processing action: ${action.type}`]);
-                
-                if (action.status === 'complete' && action.data) {
-                  switch (action.type) {
-                    case 'generate_schema': {
-                      console.log('[Frontend] Processing generate_schema action:', action.data);
-                      setConsoleOutput(prev => [...prev, `🎯 Processing schema generation action`]);
-                      
-                      // Replace existing schema or create new one (maintain only one schema)
-                      const newSchema = {
-                        id: Date.now().toString(),
-                        name: action.data.name || action.data.title || 'Generated Schema',
-                        schema: action.data,
-                        namespaceId: effectiveNamespace?.['namespace-id'] || '',
-                        timestamp: action.data.timestamp || new Date(),
-                        saved: false, // Ensure schema is marked as unsaved so save button appears
-                        schemaName: action.data.name || action.data.title || 'Generated Schema'
-                      };
-                      
-                      console.log('[Frontend] Setting schema (replacing existing):', newSchema);
-                      setSchemas([newSchema]); // Replace all schemas with just this one
-                      setRawSchemas([{ id: newSchema.id, content: JSON.stringify(action.data, null, 2) }]); // Replace all raw schemas
-                      setSchemaNames(prev => ({ ...prev, [newSchema.id]: newSchema.schemaName })); // Initialize schema name
-                      setActiveTab('schema');
-                      
-                      setConsoleOutput(prev => [...prev, `✅ Schema generated successfully!`]);
-                      setConsoleOutput(prev => [...prev, `📋 Schema name: ${newSchema.name}`]);
-                      setConsoleOutput(prev => [...prev, `🆔 Schema ID: ${newSchema.id}`]);
-                      setConsoleOutput(prev => [...prev, `📏 Schema size: ${JSON.stringify(action.data).length} characters`]);
-                      
-                      setLiveSchema('');
-                      setIsStreamingSchema(false);
-                      setConsoleOutput(prev => [...prev, `🔄 Live generation window closed`]);
-                      break;
-                    }
-                    case 'edit_schema': {
-                      console.log('[Frontend] Processing edit_schema action:', action.data);
-                      setConsoleOutput(prev => [...prev, `🎯 Processing schema editing action`]);
-                      
-                      // Update the existing schema with the edited version
-                      if (schemas.length > 0) {
-                        const updatedSchema = {
-                          ...schemas[0], // Use the first (and only) schema
-                          schema: action.data,
-                          edited: true,
-                          lastEdited: new Date(),
-                          saved: false, // Mark as unsaved after editing
-                          schemaName: schemas[0].schemaName || schemas[0].name || 'Generated Schema'
-                        };
-                        setSchemas([updatedSchema]); // Keep only one schema
-                        // Update the raw schema content
-                        const updatedRawSchema = {
-                          ...rawSchemas[0], // Use the first (and only) raw schema
-                          content: JSON.stringify(action.data, null, 2)
-                        };
-                        setRawSchemas([updatedRawSchema]); // Keep only one raw schema
-                        setSchemaNames(prev => ({ ...prev, [updatedSchema.id]: updatedSchema.schemaName })); // Update schema name
-                        setActiveTab('schema');
-                        
-                        setConsoleOutput(prev => [...prev, `✅ Schema edited successfully!`]);
-                        setConsoleOutput(prev => [...prev, `📋 Updated schema: ${updatedSchema.name}`]);
-                        setConsoleOutput(prev => [...prev, `📏 New schema size: ${JSON.stringify(action.data).length} characters`]);
-                        
-                        setLiveSchema('');
-                        setIsStreamingSchema(false);
-                        setIsEditingSchema(false);
-                        setConsoleOutput(prev => [...prev, `🔄 Live generation window closed`]);
-                      }
-                      break;
->>>>>>> frontend-fixesv2
                     }
                   }
                 }
@@ -1641,10 +1399,6 @@ What would you like to work on today?`,
             try {
               const data = JSON.parse(line.slice(6));
               console.log('[Frontend] Received streaming data:', data);
-<<<<<<< HEAD
-=======
-              console.log('[Frontend Debug] Route:', data.route, 'Type:', data.type, 'Content preview:', data.content?.substring(0, 100));
->>>>>>> frontend-fixesv2
               
               // Handle actions regardless of route
               if (data.type === 'actions' && data.actions) {
@@ -1654,7 +1408,6 @@ What would you like to work on today?`,
               }
               
               if (data.route === 'schema') {
-<<<<<<< HEAD
                 // Live update the schema preview in the Schema tab
                 if (data.type === 'chat') {
                   setLiveSchema(prev => prev + data.content);
@@ -1670,26 +1423,6 @@ What would you like to work on today?`,
                   if (schemaChunkCount % 5 === 0) {
                     setConsoleOutput(prev => [...prev, `📝 Schema generation in progress... (chunk ${schemaChunkCount})`]);
                   }
-=======
-                // Handle schema-specific messages
-                console.log('[Frontend Debug] Received schema route message:', data);
-                if (data.type === 'live_schema') {
-                  // Handle live schema updates from backend - show JSON in live box
-                  // Only show content if it looks like JSON (starts with { or [)
-                  if (data.content && (data.content.trim().startsWith('{') || data.content.trim().startsWith('['))) {
-                    setLiveSchema(data.content);
-                    setIsStreamingSchema(true);
-                    setConsoleOutput(prev => [...prev, `🔄 Live schema update received`]);
-                  } else {
-                    console.log('[Frontend Debug] Ignoring non-JSON content in live schema:', data.content);
-                  }
-                } else if (data.type === 'live_schema_complete') {
-                  // Handle final live schema update and close the live generation window
-                  setIsStreamingSchema(false);
-                  setConsoleOutput(prev => [...prev, `✅ Live schema generation completed`]);
-                } else {
-                  console.log('[Frontend Debug] Ignoring non-live_schema message in schema route:', data);
->>>>>>> frontend-fixesv2
                 }
               } else if (data.route === 'chat') {
                 // Live update the assistant's message in the chat UI
@@ -1717,13 +1450,7 @@ What would you like to work on today?`,
                   }
                 }
               }
-<<<<<<< HEAD
             } catch (e) {}
-=======
-            } catch (e) {
-              console.log('[Frontend Debug] Error parsing message:', e, 'Raw data:', line);
-            }
->>>>>>> frontend-fixesv2
           }
         }
       }
@@ -1754,28 +1481,15 @@ What would you like to work on today?`,
               // Replace existing schema or create new one (maintain only one schema)
               const newSchema = {
                 id: Date.now().toString(),
-<<<<<<< HEAD
                 name: action.data.name || 'Generated Schema',
                 schema: action.data,
                 namespaceId: namespace?.['namespace-id'] || '',
                 timestamp: action.data.timestamp || new Date()
-=======
-                name: action.data.name || action.data.title || 'Generated Schema',
-                schema: action.data,
-                namespaceId: effectiveNamespace?.['namespace-id'] || '',
-                timestamp: action.data.timestamp || new Date(),
-                saved: false, // Ensure schema is marked as unsaved so save button appears
-                schemaName: action.data.name || action.data.title || 'Generated Schema'
->>>>>>> frontend-fixesv2
               };
               
               console.log('[Frontend] Setting schema (replacing existing):', newSchema);
               setSchemas([newSchema]); // Replace all schemas with just this one
               setRawSchemas([{ id: newSchema.id, content: JSON.stringify(action.data, null, 2) }]); // Replace all raw schemas
-<<<<<<< HEAD
-=======
-              setSchemaNames(prev => ({ ...prev, [newSchema.id]: newSchema.schemaName })); // Initialize schema name
->>>>>>> frontend-fixesv2
               setActiveTab('schema');
               
               setConsoleOutput(prev => [...prev, `✅ Schema generated successfully!`]);
@@ -1785,10 +1499,6 @@ What would you like to work on today?`,
               
               setLiveSchema('');
               setIsStreamingSchema(false);
-<<<<<<< HEAD
-=======
-              setConsoleOutput(prev => [...prev, `🔄 Live generation window closed`]);
->>>>>>> frontend-fixesv2
               break;
             }
             case 'edit_schema': {
@@ -1801,13 +1511,7 @@ What would you like to work on today?`,
                   ...schemas[0], // Use the first (and only) schema
                   schema: action.data,
                   edited: true,
-<<<<<<< HEAD
                   lastEdited: new Date()
-=======
-                  lastEdited: new Date(),
-                  saved: false, // Mark as unsaved after editing
-                  schemaName: schemas[0].schemaName || schemas[0].name || 'Generated Schema'
->>>>>>> frontend-fixesv2
                 };
                 setSchemas([updatedSchema]); // Keep only one schema
                 // Update the raw schema content
@@ -1816,10 +1520,6 @@ What would you like to work on today?`,
                   content: JSON.stringify(action.data, null, 2)
                 };
                 setRawSchemas([updatedRawSchema]); // Keep only one raw schema
-<<<<<<< HEAD
-=======
-                setSchemaNames(prev => ({ ...prev, [updatedSchema.id]: updatedSchema.schemaName })); // Update schema name
->>>>>>> frontend-fixesv2
                 setActiveTab('schema');
                 
                 setConsoleOutput(prev => [...prev, `✅ Schema edited successfully!`]);
@@ -1829,10 +1529,6 @@ What would you like to work on today?`,
                 setLiveSchema('');
                 setIsStreamingSchema(false);
                 setIsEditingSchema(false);
-<<<<<<< HEAD
-=======
-                setConsoleOutput(prev => [...prev, `🔄 Live generation window closed`]);
->>>>>>> frontend-fixesv2
               }
               break;
             }
@@ -1940,11 +1636,7 @@ What would you like to work on today?`,
               id: Date.now().toString(),
               name: 'Generated Schema',
               schema: schemaData,
-<<<<<<< HEAD
               namespaceId: namespace?.['namespace-id'] || '',
-=======
-              namespaceId: effectiveNamespace?.['namespace-id'] || '',
->>>>>>> frontend-fixesv2
               timestamp: new Date()
             };
             setSchemas((prev) => [...prev, newSchema]);
@@ -2089,17 +1781,10 @@ What would you like to work on today?`,
   };
 
   const refreshFileTree = async () => {
-<<<<<<< HEAD
     if (!namespace?.['namespace-id']) return;
     
     try {
       const response = await fetch(`${API_BASE_URL}/code-generation/files/${namespace['namespace-id']}`);
-=======
-    if (!effectiveNamespace?.['namespace-id']) return;
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/code-generation/files/${effectiveNamespace['namespace-id']}`);
->>>>>>> frontend-fixesv2
       if (response.ok) {
         const data = await response.json();
         if (data.files) {
@@ -2152,17 +1837,10 @@ What would you like to work on today?`,
   };
 
   const readFileContent = async (filePath: string) => {
-<<<<<<< HEAD
     if (!namespace?.['namespace-id']) return;
     
     try {
       const response = await fetch(`${API_BASE_URL}/code-generation/files/${namespace['namespace-id']}/${encodeURIComponent(filePath)}`);
-=======
-    if (!effectiveNamespace?.['namespace-id']) return;
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/code-generation/files/${effectiveNamespace['namespace-id']}/${encodeURIComponent(filePath)}`);
->>>>>>> frontend-fixesv2
       
       if (response.ok) {
         const data = await response.json();
@@ -2430,19 +2108,11 @@ What would you like to work on today?`,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-<<<<<<< HEAD
           namespaceId: namespace?.['namespace-id'],
           schemaData: {
             name: schemaData.name || 'Generated Schema',
             schema: schemaData.schema,
             namespaceId: namespace?.['namespace-id'] || '',
-=======
-          namespaceId: effectiveNamespace?.['namespace-id'],
-          schemaData: {
-            name: schemaData.name || 'Generated Schema',
-            schema: schemaData.schema,
-            namespaceId: effectiveNamespace?.['namespace-id'] || '',
->>>>>>> frontend-fixesv2
             url: schemaData.url || '',
           }
         })
@@ -2451,13 +2121,8 @@ What would you like to work on today?`,
       if (response.ok) {
         const result = await response.json();
         setConsoleOutput(prev => [...prev, `✅ Schema saved successfully!`]);
-<<<<<<< HEAD
         setConsoleOutput(prev => [...prev, `📁 Saved to namespace: ${namespace?.['namespace-name'] || 'Unknown'}`]);
         setConsoleOutput(prev => [...prev, `🆔 Namespace ID: ${namespace?.['namespace-id'] || 'Unknown'}`]);
-=======
-        setConsoleOutput(prev => [...prev, `📁 Saved to namespace: ${effectiveNamespace?.['namespace-name'] || 'Unknown'}`]);
-        setConsoleOutput(prev => [...prev, `🆔 Namespace ID: ${effectiveNamespace?.['namespace-id'] || 'Unknown'}`]);
->>>>>>> frontend-fixesv2
         
         // Show success message
         addMessage({
@@ -2484,11 +2149,7 @@ What would you like to work on today?`,
     console.log('Schemas:', schemas);
     console.log('APIs:', apiEndpoints);
     
-<<<<<<< HEAD
     if (!namespace?.['namespace-id']) {
-=======
-    if (!effectiveNamespace?.['namespace-id']) {
->>>>>>> frontend-fixesv2
       console.log('❌ No namespace ID');
       setConsoleOutput(prev => [...prev, '❌ No namespace ID found']);
       return;
@@ -2519,11 +2180,7 @@ What would you like to work on today?`,
       setConsoleOutput(prev => [...prev, `📊 Using ${currentSchemas.length} schemas and ${currentApis.length} APIs from workspace`]);
       
       const requestBody = {
-<<<<<<< HEAD
         namespaceId: namespace['namespace-id'],
-=======
-        namespaceId: effectiveNamespace['namespace-id'],
->>>>>>> frontend-fixesv2
         schemas: currentSchemas,
         apis: currentApis,
         projectType,
@@ -3218,13 +2875,8 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-<<<<<<< HEAD
           namespaceId: namespace?.['namespace-id'],
           projectName: namespace?.['namespace-name'] || 'unnamed-project',
-=======
-          namespaceId: effectiveNamespace?.['namespace-id'],
-          projectName: effectiveNamespace?.['namespace-name'] || 'unnamed-project',
->>>>>>> frontend-fixesv2
           zipData: base64Data,
           fileCount: fileCount,
           files: projectFiles.map(file => ({
@@ -3367,11 +3019,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         timeout: lambdaForm.timeout,
         environment: lambdaForm.environment,
         savedAt: new Date(),
-<<<<<<< HEAD
         namespaceId: namespace?.['namespace-id'] || 'unknown'
-=======
-        namespaceId: effectiveNamespace?.['namespace-id'] || 'unknown'
->>>>>>> frontend-fixesv2
       };
       
       // Save to backend
@@ -3379,11 +3027,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-<<<<<<< HEAD
           namespaceId: namespace?.['namespace-id'],
-=======
-          namespaceId: effectiveNamespace?.['namespace-id'],
->>>>>>> frontend-fixesv2
           lambdaData: lambdaData
         })
       });
@@ -3398,11 +3042,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         setConsoleOutput(prev => [...prev, `✅ Lambda function saved to namespace library!`]);
         setConsoleOutput(prev => [...prev, `📝 Function Name: ${lambdaForm.functionName}`]);
         setConsoleOutput(prev => [...prev, `🆔 Lambda ID: ${lambdaId}`]);
-<<<<<<< HEAD
         setConsoleOutput(prev => [...prev, `💾 Saved to namespace: ${namespace?.['namespace-name'] || 'Unknown'}`]);
-=======
-        setConsoleOutput(prev => [...prev, `💾 Saved to namespace: ${effectiveNamespace?.['namespace-name'] || 'Unknown'}`]);
->>>>>>> frontend-fixesv2
         
         addMessage({
           role: 'assistant',
@@ -3410,11 +3050,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
 
 📝 **Function Name:** ${lambdaForm.functionName}
 🆔 **Lambda ID:** ${lambdaId}
-<<<<<<< HEAD
 💾 **Namespace:** ${namespace?.['namespace-name'] || 'Unknown'}
-=======
-💾 **Namespace:** ${effectiveNamespace?.['namespace-name'] || 'Unknown'}
->>>>>>> frontend-fixesv2
 
 🚀 **Next Steps:** 
 • Deploy the function to get the API Gateway URL
@@ -3448,15 +3084,9 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           <div>
             <h2 className="font-semibold text-gray-900">AI Assistant</h2>
             <p className="text-sm text-gray-500">
-<<<<<<< HEAD
               {namespace ? (
                 <span className="flex items-center gap-2">
                   <span className="text-blue-600 font-medium">Working with: {namespace['namespace-name']}</span>
-=======
-              {effectiveNamespace ? (
-                <span className="flex items-center gap-2">
-                  <span className="text-blue-600 font-medium">Working with: {effectiveNamespace['namespace-name']}</span>
->>>>>>> frontend-fixesv2
                   <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
                     Context Active
                   </span>
@@ -3745,34 +3375,17 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
               </div>
               
               <div className="flex gap-2 mt-4">
-<<<<<<< HEAD
-=======
-                {/* Debug info */}
-                <div className="text-xs text-gray-500 mb-2">
-                  Debug: selectedService={selectedService}, effectiveNamespace={effectiveNamespace?.['namespace-id'] || 'none'}, isScraping={isScraping.toString()}
-                </div>
->>>>>>> frontend-fixesv2
                 <button
                   onClick={handlePreviewScrape}
                   disabled={!selectedService || isScraping}
                   className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-<<<<<<< HEAD
-=======
-                  title={!selectedService ? 'Please select a service first' : ''}
->>>>>>> frontend-fixesv2
                 >
                   {isScraping ? 'Scraping...' : 'Preview'}
                 </button>
                 <button
                   onClick={handleScrapeAndSave}
-<<<<<<< HEAD
                   disabled={!selectedService || isScraping}
                   className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-=======
-                  disabled={!selectedService || !effectiveNamespace?.['namespace-id'] || isScraping}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={!selectedService ? 'Please select a service first' : !effectiveNamespace?.['namespace-id'] ? 'Please select a namespace first' : ''}
->>>>>>> frontend-fixesv2
                 >
                   {isScraping ? 'Scraping...' : 'Scrape & Save'}
                 </button>
@@ -4003,22 +3616,14 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             </div>
             
             {/* Live Streaming Preview */}
-<<<<<<< HEAD
             {isStreamingSchema && (
-=======
-            {isStreamingSchema && liveSchema && (
->>>>>>> frontend-fixesv2
               <div className="mb-4 p-4 border border-blue-200 rounded-lg bg-blue-50">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                   <span className="text-sm font-medium text-blue-700">Live Schema Generation</span>
                 </div>
                 <pre className="text-sm overflow-x-auto bg-white p-3 rounded border">
-<<<<<<< HEAD
                   {liveSchema || 'Starting schema generation...'}
-=======
-                  {liveSchema}
->>>>>>> frontend-fixesv2
                 </pre>
               </div>
             )}

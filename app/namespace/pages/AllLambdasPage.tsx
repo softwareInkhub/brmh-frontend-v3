@@ -324,9 +324,3 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
 };
 
 export default AllLambdasPage;
-<<<<<<< HEAD
-=======
-
-
-
->>>>>>> frontend-fixesv2
