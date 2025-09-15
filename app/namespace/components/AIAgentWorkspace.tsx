@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, File, Folder, Play, Database, Code, X, Maximize2, Minimize2, Upload, FileText, Image, Archive } from 'lucide-react';
+import { Bot, Send, File, Folder, Play, Database, Code, X, Upload, FileText, Image, Archive } from 'lucide-react';
 import { useDrop } from 'react-dnd';
 
 interface Message {
@@ -834,949 +834,158 @@ What would you like to work on today?`,
     let actions: any[] = [];
     let lastAssistantMessageId: string | null = null;
 
-      // Robust intent detection for Lambda generation
-  const lowerMessage = userMessage.toLowerCase();
-  
-  // Explicit action keywords that indicate user wants to generate/create something
-  const explicitActionKeywords = [
-    'generate', 'create', 'build', 'write', 'make', 'develop', 'code', 'program',
-    'implement', 'set up', 'configure', 'deploy', 'launch', 'start'
-  ];
-  
-  // Lambda-related keywords
-  const lambdaKeywords = [
-    'lambda', 'function', 'handler', 'aws lambda', 'serverless', 
-    'lambda function', 'aws function', 'serverless function'
-  ];
-  
-  // Schema-related keywords
-  const schemaKeywords = [
-    'schema', 'json schema', 'data model', 'structure', 'format', 'validation',
-    'type definition', 'interface', 'model'
-  ];
-  
-  // API-related keywords
-  const apiKeywords = [
-    'api', 'endpoint', 'route', 'rest', 'http', 'get', 'post', 'put', 'delete',
-    'api endpoint', 'rest api', 'http endpoint', 'webhook', 'microservice'
-  ];
-  
-  // Check for explicit generation intent
-  const hasExplicitAction = explicitActionKeywords.some(action => lowerMessage.includes(action));
-  const hasLambdaKeyword = lambdaKeywords.some(keyword => lowerMessage.includes(keyword));
-  const hasSchemaKeyword = schemaKeywords.some(keyword => lowerMessage.includes(keyword));
-  const hasApiKeyword = apiKeywords.some(keyword => lowerMessage.includes(keyword));
-  
-  // More sophisticated intent detection
-  // Prioritize lambda requests over schema requests when both keywords are present
-  // Also detect lambda generation requests that mention schema context
-  const isLambdaRequest = hasExplicitAction && hasLambdaKeyword;
-  
-  // Check for lambda generation requests that mention schema (common pattern)
-  const hasLambdaContext = hasLambdaKeyword || (hasExplicitAction && (lowerMessage.includes('handler') || lowerMessage.includes('function')));
-  const mentionsSchemaContext = lowerMessage.includes('from this schema') || lowerMessage.includes('using this schema') || lowerMessage.includes('with this schema') || lowerMessage.includes('based on this schema');
-  const isLambdaWithSchemaContext = hasLambdaContext && mentionsSchemaContext;
-  
-  // API generation requests
-  const isApiRequest = hasExplicitAction && hasApiKeyword && !hasLambdaKeyword && !isLambdaWithSchemaContext;
-  
-  // Schema requests should not include lambda or api generation patterns
-  const isSchemaRequest = hasExplicitAction && hasSchemaKeyword && !hasLambdaKeyword && !hasApiKeyword && !isLambdaWithSchemaContext;
-  
-  // Debug the intermediate values
-  console.log('[Intent Debug] Intermediate values:');
-  console.log('[Intent Debug] isLambdaRequest:', isLambdaRequest, '(hasExplicitAction:', hasExplicitAction, '&& hasLambdaKeyword:', hasLambdaKeyword, ')');
-  console.log('[Intent Debug] hasLambdaContext:', hasLambdaContext, '(hasLambdaKeyword:', hasLambdaKeyword, '|| (hasExplicitAction && handler/function))');
-  console.log('[Intent Debug] mentionsSchemaContext:', mentionsSchemaContext, '(from/using/with/based on this schema)');
-  console.log('[Intent Debug] isLambdaWithSchemaContext:', isLambdaWithSchemaContext, '(hasLambdaContext && mentionsSchemaContext)');
-  console.log('[Intent Debug] isSchemaRequest:', isSchemaRequest, '(hasExplicitAction && hasSchemaKeyword && !hasLambdaKeyword && !isLambdaWithSchemaContext)');
-  
-  // Additional context checks to avoid false positives
-  const isQuestion = lowerMessage.includes('?') || lowerMessage.includes('what') || lowerMessage.includes('how') || lowerMessage.includes('why');
-  const isCasualMention = lowerMessage.includes('about') || lowerMessage.includes('regarding') || lowerMessage.includes('concerning');
-  const isExplanatory = lowerMessage.includes('explain') || lowerMessage.includes('describe') || lowerMessage.includes('tell me');
-  
-  // Final intent determination
-  const shouldGenerateLambda = (isLambdaRequest || isLambdaWithSchemaContext) && !isQuestion && !isCasualMention && !isExplanatory;
-  const shouldGenerateApi = isApiRequest && !isQuestion && !isCasualMention && !isExplanatory;
-  const shouldGenerateSchema = isSchemaRequest && !isQuestion && !isCasualMention && !isExplanatory;
-    
-    console.log('[Intent Debug] Message:', userMessage);
-    console.log('[Intent Debug] Has explicit action:', hasExplicitAction);
-    console.log('[Intent Debug] Has lambda keyword:', hasLambdaKeyword);
-    console.log('[Intent Debug] Has schema keyword:', hasSchemaKeyword);
-    console.log('[Intent Debug] Is lambda request:', isLambdaRequest);
-    console.log('[Intent Debug] Is schema request:', isSchemaRequest);
-    console.log('[Intent Debug] Is question:', isQuestion);
-    console.log('[Intent Debug] Is casual mention:', isCasualMention);
-    console.log('[Intent Debug] Is explanatory:', isExplanatory);
-    console.log('[Intent Debug] Should generate lambda:', shouldGenerateLambda);
-    console.log('[Intent Debug] Should generate schema:', shouldGenerateSchema);
-    console.log('[Intent Debug] Processing as regular chat:', !shouldGenerateLambda && !shouldGenerateSchema);
-    
-    // Add more detailed logging
-    console.log('[Intent Debug] === DETAILED ANALYSIS ===');
-    console.log('[Intent Debug] Original message:', userMessage);
-    console.log('[Intent Debug] Lower message:', lowerMessage);
-    console.log('[Intent Debug] Explicit action keywords found:', explicitActionKeywords.filter(action => lowerMessage.includes(action)));
-    console.log('[Intent Debug] Lambda keywords found:', lambdaKeywords.filter(keyword => lowerMessage.includes(keyword)));
-    console.log('[Intent Debug] Schema keywords found:', schemaKeywords.filter(keyword => lowerMessage.includes(keyword)));
-    console.log('[Intent Debug] === END ANALYSIS ===');
-    
-    // Handle Lambda generation only when explicitly requested
-    if (shouldGenerateLambda) {
-      console.log('[Frontend] !!! ENTERING LAMBDA GENERATION BLOCK !!!');
-      console.log('[Frontend] Detected Lambda generation request - sending to lambda generation endpoint');
-      console.log('[Frontend] shouldGenerateLambda:', shouldGenerateLambda);
-      console.log('[Frontend] shouldGenerateSchema:', shouldGenerateSchema);
-      console.log('[Frontend] isLambdaRequest:', isLambdaRequest);
-      console.log('[Frontend] isLambdaWithSchemaContext:', isLambdaWithSchemaContext);
-      setConsoleOutput(prev => [...prev, `🚀 Starting Lambda generation from chat request`]);
-      
-      // Automatically switch to Lambda tab
-      setActiveTab('lambda');
-      
-      try {
-        setGeneratedLambdaCode('');
-        setConsoleOutput(prev => [...prev, `📝 Processing Lambda request: ${userMessage}`]);
-        setConsoleOutput(prev => [...prev, `📋 Using automatic schema detection from workspace`]);
-        
-        // Prepare context from uploaded files and dropped schemas
-        const fileContext = uploadedFiles.length > 0 ? 
-          `\n\nUploaded Files Context:\n${uploadedFiles.map(file => 
-            `File: ${file.name} (${file.type})\nContent:\n${file.content?.substring(0, 1000)}${file.content && file.content.length > 1000 ? '...' : ''}`
-          ).join('\n\n')}` : '';
-        
-        const schemaContext = droppedSchemas.length > 0 ? 
-          `\n\nDropped Schema Context:\n${droppedSchemas.map(schema => 
-            `Schema: ${schema.schemaName || schema.name || 'Unknown'}\nContent:\n${JSON.stringify(schema, null, 2)}`
-          ).join('\n\n')}` : '';
-        
-        const enhancedMessage = userMessage + fileContext + schemaContext;
-        
-        const requestBody = {
-          message: enhancedMessage,
-          originalMessage: userMessage, // Send original message for intent detection
-          functionName: lambdaForm.functionName || 'handler',
-          runtime: lambdaForm.runtime || 'nodejs18.x',
-          handler: lambdaForm.handler || 'index.handler',
-          memory: lambdaForm.memory || 128,
-          timeout: lambdaForm.timeout || 3,
-          environment: lambdaForm.environment || ''
-        };
-        
-        console.log('[Lambda Debug] Making backend request to:', `${API_BASE_URL}/ai-agent/lambda-codegen`);
-        console.log('[Lambda Debug] Request body:', requestBody);
-        
-        const response = await fetch(`${API_BASE_URL}/ai-agent/lambda-codegen`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        });
+    console.log('[Frontend] Processing message:', userMessage);
 
-        console.log('[Lambda Debug] Response status:', response.status);
-        console.log('[Lambda Debug] Response ok:', response.ok);
-        
-        if (response.ok) {
-          setConsoleOutput(prev => [...prev, `✅ Connected to backend, starting Lambda generation...`]);
-          const reader = response.body?.getReader();
-          if (reader) {
-            let generatedCode = '';
-            let chatMessage = '';
-            let chunkCount = 0;
-            let isCodeSection = false;
-            
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              
-              const chunk = new TextDecoder().decode(value);
-              const lines = chunk.split('\n');
-              
-              for (const line of lines) {
-                console.log('[Lambda Debug] Processing line:', line);
-                if (line.startsWith('data: ')) {
-                  const data = line.slice(6);
-                  console.log('[Lambda Debug] Data:', data);
-                  if (data === '[DONE]') {
-                    // Generation complete
-                    setConsoleOutput(prev => [...prev, `🎉 Lambda generation completed!`]);
-                    setConsoleOutput(prev => [...prev, `📊 Total chunks received: ${chunkCount}`]);
-                    setConsoleOutput(prev => [...prev, `📏 Code length: ${generatedCode.length} characters`]);
-                    
-                    if (generatedCode.trim()) {
-                      setConsoleOutput(prev => [...prev, `📁 Creating file structure...`]);
-                      generateLambdaFileStructure(generatedCode, lambdaForm.functionName || 'handler', lambdaForm.runtime || 'nodejs18.x');
-                      setConsoleOutput(prev => [...prev, `✅ Files created successfully!`]);
-                    }
-                    
-                    // Add success message about code generation
-                    addMessage({
-                      role: 'assistant',
-                      content: `✅ Lambda function code generated successfully! 
-
-📝 **Code Location:** The generated code is now available in the "Generated Lambda Code" box in the Lambda tab.
-
-📁 **Files:** The code has also been saved to the Files tab.
-
-🚀 **Next Steps:** You can now configure deployment settings in the Deployment tab to deploy your function.`
-                    });
-                    break;
-                  } else if (data !== '') {
-                    try {
-                      const parsed = JSON.parse(data);
-                      console.log('[Lambda Debug] Parsed JSON:', parsed);
-                      if (parsed.content) {
-                        chunkCount++;
-                        
-                        // For Lambda generation, ALL content from the backend is code
-                        // The backend is instructed to output ONLY code, no explanations
-                        const content = parsed.content;
-                        
-                        // Debug: Log the content to see what we're receiving
-                        console.log('[Lambda Debug] Received content:', content);
-                        console.log('[Lambda Debug] Content length:', content.length);
-                        
-                        // Since this is Lambda generation, all content is code
-                        console.log('[Lambda Debug] Adding to generatedCode (Lambda generation)');
-                        generatedCode += content;
-                        setGeneratedLambdaCode(generatedCode);
-                        
-                        // Update console every 10 chunks
-                        if (chunkCount % 10 === 0) {
-                          setConsoleOutput(prev => [...prev, `📦 Received chunk ${chunkCount}, code length: ${generatedCode.length} chars`]);
-                        }
-                      } else if (parsed.error) {
-                        console.error('Lambda generation error:', parsed.error);
-                        setGeneratedLambdaCode('Error: ' + parsed.error);
-                        setConsoleOutput(prev => [...prev, `❌ Error: ${parsed.error}`]);
-                        
-                        addMessage({
-                          role: 'assistant',
-                          content: `❌ Error generating Lambda function: ${parsed.error}`
-                        });
-                      }
-                    } catch (e) {
-                      // Ignore parsing errors
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } else {
-          console.error('Failed to generate Lambda code:', response.status);
-          setConsoleOutput(prev => [...prev, `❌ Failed to connect to backend: ${response.status}`]);
-          
-          addMessage({
-            role: 'assistant',
-            content: `❌ Failed to generate Lambda function. Please try again.`
-          });
-        }
-      } catch (error) {
-        console.error('Error generating Lambda code:', error);
-        setConsoleOutput(prev => [...prev, `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`]);
-        
-        addMessage({
-          role: 'assistant',
-          content: `❌ Error generating Lambda function: ${error instanceof Error ? error.message : 'Unknown error'}`
-        });
-      }
-      return;
-    } else if (shouldGenerateApi) {
-      // Handle API generation when explicitly requested
-      console.log('[Frontend] !!! ENTERING API GENERATION BLOCK !!!');
-      console.log('[Frontend] Detected API generation request - sending to API generation endpoint');
-      setConsoleOutput(prev => [...prev, `🚀 Starting API generation from chat request`]);
-      
-      // Automatically switch to API tab
-      setActiveTab('api');
-      
-      try {
-        setGeneratedApiCode('');
-        setApiDocumentation('');
-        setConsoleOutput(prev => [...prev, `📝 Processing API request: ${userMessage}`]);
-        setConsoleOutput(prev => [...prev, `📋 Using automatic schema detection from workspace`]);
-        
-        // Prepare context from uploaded files and dropped schemas
-        const fileContext = uploadedFiles.length > 0 ? 
-          `\n\nUploaded Files Context:\n${uploadedFiles.map(file => 
-            `File: ${file.name} (${file.type})\nContent:\n${file.content?.substring(0, 1000)}${file.content && file.content.length > 1000 ? '...' : ''}`
-          ).join('\n\n')}` : '';
-        
-        const schemaContext = droppedSchemas.length > 0 ? 
-          `\n\nDropped Schema Context:\n${droppedSchemas.map(schema => 
-            `Schema: ${schema.schemaName || schema.name || 'Unknown'}\nContent:\n${JSON.stringify(schema, null, 2)}`
-          ).join('\n\n')}` : '';
-        
-        const enhancedMessage = userMessage + fileContext + schemaContext;
-        
-        const requestBody = {
-          message: enhancedMessage,
-          originalMessage: userMessage,
-          namespace: namespace ? { id: namespace['namespace-id'] } : null,
-          action: 'api-generation',
-          history: messages.map(m => ({ role: m.role, content: m.content })),
-          userId,
-          schema: null,
-        };
-        
-        console.log('[API Debug] Making backend request to:', `${API_BASE_URL}/ai-agent/stream`);
-        console.log('[API Debug] Request body:', requestBody);
-        
-        const response = await fetch(`${API_BASE_URL}/ai-agent/stream`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        });
-
-        if (response.ok) {
-          setConsoleOutput(prev => [...prev, `✅ Connected to backend, starting API generation...`]);
-          const reader = response.body?.getReader();
-          if (reader) {
-            let apiCode = '';
-            let documentation = '';
-            let chunkCount = 0;
-            let isCodeSection = false;
-            
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              
-              const chunk = new TextDecoder().decode(value);
-              const lines = chunk.split('\n');
-              
-              for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                  const data = line.slice(6);
-                  if (data === '[DONE]') {
-                    // Generation complete
-                    setConsoleOutput(prev => [...prev, `🎉 API generation completed!`]);
-                    setConsoleOutput(prev => [...prev, `📊 Total chunks received: ${chunkCount}`]);
-                    
-                    addMessage({
-                      role: 'assistant',
-                      content: `✅ API code and documentation generated successfully! 
-
-📝 **Code Location:** The generated API code is now available in the "Generated API Code" box in the API tab.
-
-📚 **Documentation:** API documentation is available in the "API Documentation" box.
-
-🚀 **Next Steps:** You can now review the generated code and documentation, and deploy your API.`
-                    });
-                    break;
-                  } else if (data !== '') {
-                    try {
-                      const parsed = JSON.parse(data);
-                      if (parsed.content) {
-                        chunkCount++;
-                        const content = parsed.content;
-                        
-                        // Check if this is code or documentation based on content
-                        if (content.includes('```') || content.includes('function') || content.includes('const') || content.includes('export')) {
-                          apiCode += content;
-                          setGeneratedApiCode(apiCode);
-                        } else {
-                          documentation += content;
-                          setApiDocumentation(documentation);
-                        }
-                        
-                        // Update console every 10 chunks
-                        if (chunkCount % 10 === 0) {
-                          setConsoleOutput(prev => [...prev, `📦 Received chunk ${chunkCount}, code length: ${apiCode.length} chars, docs length: ${documentation.length} chars`]);
-                        }
-                      } else if (parsed.error) {
-                        console.error('API generation error:', parsed.error);
-                        setGeneratedApiCode('Error: ' + parsed.error);
-                        setConsoleOutput(prev => [...prev, `❌ Error: ${parsed.error}`]);
-                        
-                        addMessage({
-                          role: 'assistant',
-                          content: `❌ Error generating API: ${parsed.error}`
-                        });
-                      }
-                    } catch (e) {
-                      // Ignore parsing errors
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } else {
-          console.error('Failed to generate API code:', response.status);
-          setConsoleOutput(prev => [...prev, `❌ Failed to connect to backend: ${response.status}`]);
-          
-          addMessage({
-            role: 'assistant',
-            content: `❌ Failed to generate API. Please try again.`
-          });
-        }
-      } catch (error) {
-        console.error('Error generating API code:', error);
-        setConsoleOutput(prev => [...prev, `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`]);
-        
-        addMessage({
-          role: 'assistant',
-          content: `❌ Error generating API: ${error instanceof Error ? error.message : 'Unknown error'}`
-        });
-      }
-      return;
-    } else if (shouldGenerateSchema) {
-      // Handle Schema generation when explicitly requested
-      console.log('[Frontend] !!! ENTERING SCHEMA GENERATION BLOCK !!!');
-      console.log('[Frontend] Detected Schema generation request - sending to schema generation endpoint');
-      console.log('[Frontend] shouldGenerateLambda:', shouldGenerateLambda);
-      console.log('[Frontend] shouldGenerateSchema:', shouldGenerateSchema);
-      console.log('[Frontend] isLambdaRequest:', isLambdaRequest);
-      console.log('[Frontend] isLambdaWithSchemaContext:', isLambdaWithSchemaContext);
-      
-      // Double-check: if lambda context is detected, don't generate schema
-      if (isLambdaWithSchemaContext || isLambdaRequest) {
-        console.log('[Frontend] SAFEGUARD: Lambda context detected, skipping schema generation');
-        addMessage({
-          role: 'assistant',
-          content: `I detected that you want to generate a Lambda function! Since you have a schema dropped as context, I'll help you create a Lambda handler that uses that schema. Please use the Lambda tab or ask me to 'generate a lambda handler' to create Lambda functions.`
-        });
-        return;
-      }
-      
-      setConsoleOutput(prev => [...prev, `🚀 Starting Schema generation from chat request`]);
-      
-      // Automatically switch to Schema tab
-      setActiveTab('schema');
-      
-      // Use the existing schema generation logic
-      try {
-        setIsStreamingSchema(true);
-        setLiveSchema('');
-        
-        const response = await fetch(`${API_BASE_URL}/ai-agent/stream`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: userMessage,
-            namespace: namespace ? { id: namespace['namespace-id'] } : null,
-            action: null,
-            history: messages.map(m => ({ role: m.role, content: m.content })),
-            userId,
-            schema: null,
-          })
-        });
-
-        if (response.ok) {
-          const reader = response.body?.getReader();
-          if (reader) {
-            let schemaContent = '';
-            
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              
-              const chunk = new TextDecoder().decode(value);
-              const lines = chunk.split('\n');
-              
-              for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                  const data = line.slice(6);
-                  if (data === '[DONE]') {
-                    setIsStreamingSchema(false);
-                    break;
-                  } else if (data !== '') {
-                    try {
-                      const parsed = JSON.parse(data);
-                      if (parsed.content) {
-                        schemaContent += parsed.content;
-                        setLiveSchema(schemaContent);
-                      }
-                    } catch (e) {
-                      console.error('[Schema Generation] Error parsing data:', e);
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('[Schema Generation] Error:', error);
-        setIsStreamingSchema(false);
-        addMessage({
-          role: 'assistant',
-          content: `Sorry, I encountered an error while generating the schema: ${error.message}`
-        });
-      }
-      return;
-    }
-
-    // Always pass the existing schema if we have one, regardless of the request type
-    let schemaToEdit = currentSchema;
-    if (!schemaToEdit && schemas.length > 0) {
-      // Always use the existing schema for any schema-related request
-      schemaToEdit = schemas[0].schema;
-      console.log('[Frontend] Using existing schema for request:', schemaToEdit);
-      // Check if this is an edit command for visual feedback
-      const editKeywords = ['edit', 'modify', 'update', 'change', 'add', 'remove', 'delete', 'rename'];
-      const isEditCommand = editKeywords.some(keyword => lowerMessage.includes(keyword));
-      if (isEditCommand) {
-        setIsEditingSchema(true);
-        setConsoleOutput(prev => [...prev, `🔄 Editing schema: ${userMessage}`]);
-      }
-    }
-    
-    // Add console output for schema generation start
-    if (schemaToEdit) {
-      setConsoleOutput(prev => [...prev, `📝 Schema editing request: ${userMessage}`]);
-      setConsoleOutput(prev => [...prev, `📋 Using existing schema as base`]);
-    } else {
-      setConsoleOutput(prev => [...prev, `🆕 Schema generation request: ${userMessage}`]);
-      setConsoleOutput(prev => [...prev, `✨ Creating new schema from scratch`]);
-    }
-    
-    console.log('[Frontend] Sending request to backend:', {
-      message: userMessage,
-      hasExistingSchema: !!schemaToEdit,
-      schemaToEdit: schemaToEdit ? 'Schema exists' : 'No schema'
-    });
-    
-    console.log('[Frontend] Sending regular chat request to backend (no generation intent detected)');
-    console.log('[Frontend] This should NOT happen for lambda requests!');
-    setConsoleOutput(prev => [...prev, `🌐 Connecting to AI agent backend...`]);
-    
-        // Prepare context from uploaded files and dropped schemas for regular chat
-        const fileContext = uploadedFiles.length > 0 ? 
-          `\n\nUploaded Files Context:\n${uploadedFiles.map(file => 
-            `File: ${file.name} (${file.type})\nContent:\n${file.content?.substring(0, 1000)}${file.content && file.content.length > 1000 ? '...' : ''}`
-          ).join('\n\n')}` : '';
-        
-        const schemaContext = droppedSchemas.length > 0 ? 
-          `\n\nDropped Schema Context:\n${droppedSchemas.map(schema => 
-            `Schema: ${schema.schemaName || schema.name || 'Unknown'}\nContent:\n${JSON.stringify(schema, null, 2)}`
-          ).join('\n\n')}` : '';
-        
-        const enhancedMessage = userMessage + fileContext + schemaContext;
-        
-        const response = await fetch(`${API_BASE_URL}/ai-agent/stream`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: enhancedMessage,
-            namespace: namespace ? { id: namespace['namespace-id'] } : null,
-            action: null,
-            history: messages.map(m => ({ role: m.role, content: m.content })),
-            userId,
-            schema: schemaToEdit,
-          })
-        });
-    
-    if (!response.ok) {
-      setConsoleOutput(prev => [...prev, `❌ Failed to connect to backend: ${response.status}`]);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    setConsoleOutput(prev => [...prev, `✅ Connected to backend, starting AI processing...`]);
-    
-    const reader = response.body?.getReader();
-    if (!reader) {
-      setConsoleOutput(prev => [...prev, `❌ No response body received`]);
-      throw new Error('No response body');
-    }
-    
-    let chunkCount = 0;
-    let schemaChunkCount = 0;
-    
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      setConsoleOutput(prev => [...prev, `💬 Processing message: ${userMessage}`]);
         
-        chunkCount++;
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split('\n');
+        const requestBody = {
+        message: userMessage,
+        namespace: namespace?.['namespace-id'] || 'default',
+        history: messages.slice(-10), // Send last 10 messages for context
+        schema: currentSchema || (schemas.length > 0 ? schemas[0].schema : null)
+      };
+      
+      console.log('[Frontend Debug] Making backend request to:', `${API_BASE_URL}/ai-agent/stream`);
+      console.log('[Frontend Debug] Request body:', requestBody);
         
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              console.log('[Frontend] Received streaming data:', data);
-              
-              // Handle actions regardless of route
-              if (data.type === 'actions' && data.actions) {
-                console.log('[Frontend] Received actions:', data.actions);
-                actions = data.actions;
-                setConsoleOutput(prev => [...prev, `📋 Received ${data.actions.length} action(s) from AI agent`]);
-              }
-              
-              if (data.route === 'schema') {
-                // Live update the schema preview in the Schema tab
-                if (data.type === 'chat') {
-                  setLiveSchema(prev => prev + data.content);
-                  setIsStreamingSchema(true);
-                  schemaChunkCount++;
-                  
-                  // Add console output to show schema generation progress
-                  if (schemaChunkCount === 1) {
-                    setConsoleOutput(prev => [...prev, `🔄 AI agent started generating schema...`]);
-                  }
-                  
-                  // Update progress every 5 chunks
-                  if (schemaChunkCount % 5 === 0) {
-                    setConsoleOutput(prev => [...prev, `📝 Schema generation in progress... (chunk ${schemaChunkCount})`]);
-                  }
-                }
-              } else if (data.route === 'chat') {
-                // Live update the assistant's message in the chat UI
-                if (data.type === 'chat') {
-                  assistantMessage += data.content;
-                  // If this is the first chunk, add a new assistant message
-                  if (!lastAssistantMessageId) {
-                    lastAssistantMessageId = getNowId();
-                    setMessages(prev => [
-                      ...prev,
-                      {
-                        id: lastAssistantMessageId || getNowId(),
-                        role: 'assistant',
-                        content: assistantMessage,
-                        timestamp: new Date()
+        const response = await fetch(`${API_BASE_URL}/ai-agent/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+
+      console.log('[Frontend Debug] Response status:', response.status);
+      console.log('[Frontend Debug] Response ok:', response.ok);
+
+        if (response.ok) {
+        setConsoleOutput(prev => [...prev, `✅ Connected to backend, starting streaming...`]);
+          const reader = response.body?.getReader();
+          if (reader) {
+            let chunkCount = 0;
+            
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                chunkCount++;
+                const chunk = new TextDecoder().decode(value);
+                const lines = chunk.split('\n');
+                
+                for (const line of lines) {
+                  if (line.startsWith('data: ')) {
+                    try {
+                      const data = JSON.parse(line.slice(6));
+                      console.log('[Frontend Debug] Route:', data.route, 'Type:', data.type, 'Content preview:', data.content?.substring(0, 100));
+                      
+                  // Handle actions
+                  if (data.actions) {
+                        console.log('[Frontend] Received actions:', data.actions);
+                        actions = data.actions;
+                        setConsoleOutput(prev => [...prev, `📋 Received ${data.actions.length} action(s) from AI agent`]);
                       }
-                    ]);
-                  } else {
-                    // Update the last assistant message
-                    setMessages(prev => prev.map(m =>
-                      m.id === lastAssistantMessageId
-                        ? { ...m, content: assistantMessage }
-                        : m
-                    ));
-                  }
+                      
+                      if (data.route === 'schema') {
+                    // Handle schema-specific messages - stream JSON schema content live
+                    console.log('[Frontend Debug] ⚠️ SCHEMA ROUTE MESSAGE:', data);
+                    console.log('[Frontend Debug] ⚠️ Type:', data.type, 'Content:', data.content?.substring(0, 200));
+                        if (data.type === 'live_schema') {
+                      // Stream JSON schema content progressively in the live box
+                      console.log('[Frontend Debug] ✅ Adding to live schema box:', data.content?.substring(0, 100));
+                      if (data.content) {
+                        setLiveSchema(prev => prev + data.content);
+                            setIsStreamingSchema(true);
+                        setConsoleOutput(prev => [...prev, `🔄 Live schema streaming...`]);
+                          }
+                        } else if (data.type === 'live_schema_complete') {
+                          // Handle final live schema update and close the live generation window
+                      console.log('[Frontend Debug] ✅ Schema generation completed');
+                          setIsStreamingSchema(false);
+                          setConsoleOutput(prev => [...prev, `✅ Live schema generation completed`]);
+                        } else {
+                      console.log('[Frontend Debug] ⚠️ UNEXPECTED MESSAGE TYPE IN SCHEMA ROUTE:', data.type, data.content?.substring(0, 100));
+                        }
+                      } else if (data.route === 'chat') {
+                        // Live update the assistant's message in the chat UI
+                    console.log('[Frontend Debug] ✅ CHAT ROUTE MESSAGE:', data.type, data.content?.substring(0, 100));
+                        if (data.type === 'chat') {
+                          assistantMessage += data.content;
+                          // If this is the first chunk, add a new assistant message
+                          if (!lastAssistantMessageId) {
+                            lastAssistantMessageId = getNowId();
+                            setMessages(prev => [
+                              ...prev,
+                              {
+                                id: lastAssistantMessageId || getNowId(),
+                                role: 'assistant',
+                                content: assistantMessage,
+                                timestamp: new Date()
+                              }
+                            ]);
+                          } else {
+                        // Update the existing assistant message
+                        setMessages(prev => prev.map(msg => 
+                          msg.id === lastAssistantMessageId 
+                            ? { ...msg, content: assistantMessage }
+                            : msg
+                            ));
+                          }
+                        }
+                      }
+                    } catch (e) {
+                  console.log('[Frontend Debug] Failed to parse streaming data:', e);
                 }
               }
-            } catch (e) {}
+            }
           }
         }
-      }
-    } finally {
-      reader.releaseLock();
-      // Reset editing state if no actions were processed
-      if (actions.length === 0) {
-        setIsEditingSchema(false);
-      }
+      } else {
+        const errorText = await response.text();
+        console.error('[Frontend Debug] Backend error:', errorText);
+        setConsoleOutput(prev => [...prev, `❌ Backend error: ${response.status} - ${errorText}`]);
+        }
+      } catch (error) {
+      console.error('[Frontend Debug] Error:', error);
+      setConsoleOutput(prev => [...prev, `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`]);
     }
-    // Process actions after streaming is complete
-    console.log('[Frontend] Processing actions:', actions);
-    setConsoleOutput(prev => [...prev, `🔍 Processing AI agent actions...`]);
-    
-    if (actions && Array.isArray(actions)) {
+
+    // Process any actions received
+    if (actions && actions.length > 0) {
       for (const action of actions) {
         console.log('[Frontend] Processing action:', action);
-        setConsoleOutput(prev => [...prev, `⚙️ Processing action: ${action.type}`]);
         
-        if (action.status === 'complete' && action.data) {
-          switch (action.type) {
-            case 'generate_schema': {
-              console.log('[Frontend] Processing generate_schema action:', action.data);
-              console.log('[Frontend] WARNING: Received generate_schema action when schema should be edited!');
-              
-              setConsoleOutput(prev => [...prev, `🎯 Processing schema generation action`]);
-              
-              // Replace existing schema or create new one (maintain only one schema)
+        if (action.type === 'generate_schema' && action.status === 'complete') {
+          const schemaData = action.data;
+          if (schemaData) {
               const newSchema = {
-                id: Date.now().toString(),
-                name: action.data.name || 'Generated Schema',
-                schema: action.data,
-                namespaceId: namespace?.['namespace-id'] || '',
-                timestamp: action.data.timestamp || new Date()
-              };
-              
-              console.log('[Frontend] Setting schema (replacing existing):', newSchema);
-              setSchemas([newSchema]); // Replace all schemas with just this one
-              setRawSchemas([{ id: newSchema.id, content: JSON.stringify(action.data, null, 2) }]); // Replace all raw schemas
-              setActiveTab('schema');
-              
-              setConsoleOutput(prev => [...prev, `✅ Schema generated successfully!`]);
-              setConsoleOutput(prev => [...prev, `📋 Schema name: ${newSchema.name}`]);
-              setConsoleOutput(prev => [...prev, `🆔 Schema ID: ${newSchema.id}`]);
-              setConsoleOutput(prev => [...prev, `📏 Schema size: ${JSON.stringify(action.data).length} characters`]);
-              
-              setLiveSchema('');
-              setIsStreamingSchema(false);
-              break;
-            }
-            case 'edit_schema': {
-              console.log('[Frontend] Processing edit_schema action:', action.data);
-              setConsoleOutput(prev => [...prev, `🎯 Processing schema editing action`]);
-              
-              // Update the existing schema with the edited version
-              if (schemas.length > 0) {
-                const updatedSchema = {
-                  ...schemas[0], // Use the first (and only) schema
-                  schema: action.data,
-                  edited: true,
-                  lastEdited: new Date()
-                };
-                setSchemas([updatedSchema]); // Keep only one schema
-                // Update the raw schema content
-                const updatedRawSchema = {
-                  ...rawSchemas[0], // Use the first (and only) raw schema
-                  content: JSON.stringify(action.data, null, 2)
-                };
-                setRawSchemas([updatedRawSchema]); // Keep only one raw schema
-                setActiveTab('schema');
-                
-                setConsoleOutput(prev => [...prev, `✅ Schema edited successfully!`]);
-                setConsoleOutput(prev => [...prev, `📋 Updated schema: ${updatedSchema.name}`]);
-                setConsoleOutput(prev => [...prev, `📏 New schema size: ${JSON.stringify(action.data).length} characters`]);
-                
-                setLiveSchema('');
-                setIsStreamingSchema(false);
-                setIsEditingSchema(false);
-              }
-              break;
-            }
-            case 'generate_api': {
-              // Parse OpenAPI spec and extract endpoints
-              const openApi = action.data;
-              console.log('🔍 Received generate_api action with data:', openApi);
-              const endpoints = [];
-              if (openApi && openApi.paths) {
-                for (const path in openApi.paths) {
-                  for (const method in openApi.paths[path]) {
-                    const endpoint = {
-                      path,
-                      method: method.toUpperCase(),
-                      summary: openApi.paths[path][method].summary || '',
-                      description: openApi.paths[path][method].description || '',
-                      operation: openApi.paths[path][method]
-                    };
-                    endpoints.push(endpoint);
-                    console.log('📡 Extracted endpoint from generate_api:', endpoint);
-                  }
-                }
-              }
-              const newApi = {
-                id: Date.now().toString(),
-                name: openApi.info?.title || 'Generated API',
-                openApi, // store the full spec for Swagger UI etc.
-                endpoints,
-                timestamp: new Date()
-              };
-              setApiEndpoints((prev: any[]) => [...prev, newApi]);
-              setActiveTab('api');
-              setConsoleOutput((prev: string[]) => [...prev, '✅ API generated successfully']);
-              break;
-            }
-            case 'generate_code': {
-              // Trigger backend code generation and update Files tab
-              setConsoleOutput((prev: string[]) => [...prev, '🚀 Generating backend code...']);
-              // Call backend codegen endpoint
-              fetch(`${API_BASE_URL}/code-generation/generate-backend`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  namespaceId: namespace['namespace-id'],
-                  schemas: schemas.map(s => s.schema),
-                  apis: apiEndpoints,
-                  projectType: 'nodejs',
-                  namespaceName: namespace['namespace-name'] || 'Project'
-                })
-              })
-                .then(res => res.json())
-                .then(data => {
-                  if (data.success) {
-                    setConsoleOutput(prev => [...prev, `✅ Generated ${data.files.length} files successfully!`]);
-                    refreshFileTree();
-                    setActiveTab('files');
-                  } else {
-                    setConsoleOutput(prev => [...prev, `❌ Code generation failed: ${data.error}`]);
-                  }
-                })
-                .catch(err => {
-                  setConsoleOutput(prev => [...prev, `❌ Error generating code: ${err.message}`]);
-                });
-              break;
-            }
-            case 'test':
-              setConsoleOutput((prev: string[]) => [...prev, '✅ API testing completed']);
-              if (action.data) {
-                setConsoleOutput((prev: string[]) => [...prev, ...action.data.map((r: any) => `- ${r.endpoint}: ${r.status}`)]);
-              }
-              setActiveTab('console');
-              break;
-            case 'save':
-              setConsoleOutput((prev: string[]) => [...prev, '✅ Items saved to namespace']);
-              if (action.data) {
-                setConsoleOutput((prev: string[]) => [...prev, ...action.data.map((item: any) => `- ${item.type}: ${item.name} (${item.status})`)]);
-              }
-              setActiveTab('console');
-              break;
-            default:
-              setConsoleOutput((prev: string[]) => [...prev, `ℹ️ Action: ${action.type}`]);
-              break;
-          }
-        } else if (action.status === 'error') {
-          setConsoleOutput((prev: string[]) => [...prev, `❌ Error in ${action.type}: ${action.error}`]);
-          setActiveTab('console');
-        }
-      }
-    }
-    // Fallback: Try to extract schema from the assistant's message if no actions were processed
-    if ((!actions || actions.length === 0) && assistantMessage) {
-      console.log('[Frontend] No actions received, trying to extract schema from message');
-      try {
-        // Look for JSON code blocks in the assistant's message
-        const jsonMatch = assistantMessage.match(/```json\s*([\s\S]*?)\s*```/i) || 
-                         assistantMessage.match(/```\s*([\s\S]*?)\s*```/i) ||
-                         assistantMessage.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const jsonStr = jsonMatch[1] || jsonMatch[0];
-          const schemaData = JSON.parse(jsonStr);
-          // Check if this looks like a schema (has properties or type)
-          if (schemaData && (schemaData.properties || schemaData.type)) {
-            console.log('[Frontend] Extracted schema from message:', schemaData);
-            const newSchema = {
-              id: Date.now().toString(),
-              name: 'Generated Schema',
+              id: getNowId(),
+              schemaName: `Generated Schema ${schemas.length + 1}`,
               schema: schemaData,
-              namespaceId: namespace?.['namespace-id'] || '',
+              content: schemaData,
+              saved: false,
               timestamp: new Date()
             };
-            setSchemas((prev) => [...prev, newSchema]);
-            setRawSchemas((prev) => [...prev, { id: newSchema.id, content: JSON.stringify(schemaData, null, 2) }]);
-            setActiveTab('schema');
-            setConsoleOutput((prev) => [...prev, '✅ Schema extracted from message successfully']);
-            setLiveSchema('');
+            setSchemas(prev => [...prev, newSchema]);
+            setSchemaNames(prev => ({ ...prev, [newSchema.id]: newSchema.schemaName }));
+              setLiveSchema('');
+              setIsStreamingSchema(false);
+            setConsoleOutput(prev => [...prev, `✅ Schema generated and added to Schema tab`]);
+          }
+        } else if (action.type === 'edit_schema' && action.status === 'complete') {
+          const schemaData = action.data;
+          if (schemaData) {
+            // Update the existing schema
+            setSchemas(prev => prev.map(schema => 
+              schema.id === currentSchema?.id 
+                ? { ...schema, schema: schemaData, content: schemaData, saved: false }
+                : schema
+            ));
+                setLiveSchema('');
+                setIsStreamingSchema(false);
+            setConsoleOutput(prev => [...prev, `✅ Schema edited and updated in Schema tab`]);
           }
         }
-      } catch (e) {
-        console.log('[Frontend] Failed to extract schema from message:', e);
       }
-    }
-  };
-
-  const processStreamedContent = async (content: string, originalMessage: string) => {
-    // Check if this is a schema generation request
-    if (originalMessage.toLowerCase().includes('schema') || content.includes('"$schema"') || content.includes('"type": "object"')) {
-      try {
-        // Try to parse as JSON schema
-        const schemaData = JSON.parse(content);
-        const newSchema = {
-          id: Date.now().toString(),
-          name: 'Generated Schema',
-          schema: schemaData,
-          timestamp: new Date()
-        };
-        setSchemas(prev => [...prev, newSchema]);
-        setRawSchemas(prev => [...prev, { id: newSchema.id, content: JSON.stringify(schemaData, null, 2) }]);
-        setActiveTab('schema');
-        setConsoleOutput(prev => [...prev, '✅ Schema generated successfully']);
-        return;
-      } catch (e) {
-        // Not valid JSON, continue with other processing
-      }
-    }
-
-    // Check if this is an API generation request
-    if (originalMessage.toLowerCase().includes('api') || content.includes('endpoints') || content.includes('method') || content.includes('openapi')) {
-      try {
-        const apiData = JSON.parse(content);
-        
-        // Check if this is an OpenAPI spec (has paths object)
-        if (apiData.paths && typeof apiData.paths === 'object') {
-          console.log('🔍 Parsing OpenAPI spec:', apiData);
-          // Parse OpenAPI spec and extract endpoints
-          const endpoints = [];
-          for (const path in apiData.paths) {
-            for (const method in apiData.paths[path]) {
-              const endpoint = {
-                path,
-                method: method.toUpperCase(),
-                summary: apiData.paths[path][method].summary || '',
-                description: apiData.paths[path][method].description || '',
-                operation: apiData.paths[path][method]
-              };
-              endpoints.push(endpoint);
-              console.log('📡 Extracted endpoint:', endpoint);
-            }
-          }
-          const newApi = {
-            id: Date.now().toString(),
-            name: apiData.info?.title || 'Generated API',
-            openApi: apiData, // store the full spec for Swagger UI etc.
-            endpoints,
-            timestamp: new Date()
-          };
-          setApiEndpoints(prev => [...prev, newApi]);
-          setActiveTab('api');
-          setConsoleOutput(prev => [...prev, '✅ API generated successfully']);
-          return;
-        } else if (apiData.endpoints || Array.isArray(apiData)) {
-          // Handle direct endpoints array format
-          const endpoints = Array.isArray(apiData) ? apiData : apiData.endpoints;
-          const newApi = {
-            id: Date.now().toString(),
-            name: 'Generated API',
-            endpoints,
-            timestamp: new Date()
-          };
-          setApiEndpoints(prev => [...prev, newApi]);
-          setActiveTab('api');
-          setConsoleOutput(prev => [...prev, '✅ API generated successfully']);
-          return;
-        }
-      } catch (e) {
-        // Not valid JSON, continue with other processing
-      }
-    }
-
-    // Extract file operations from streamed content
-    const fileMatch = content.match(/file:\s*(.+)/i);
-    const codeMatch = content.match(/```[\s\S]*?```/g);
-    
-    if (fileMatch || codeMatch) {
-      // Extract file path and content
-      let filePath = '';
-      let fileContent = '';
-      
-      if (fileMatch) {
-        filePath = fileMatch[1].trim();
-      }
-      
-      if (codeMatch) {
-        fileContent = codeMatch[0].replace(/```[\w]*\n?/g, '').trim();
-      }
-      
-      // Create file in workspace
-      if (filePath && fileContent && namespace?.['namespace-id']) {
-        try {
-          const fileResponse = await fetch('/unified/file-operations', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              operation: 'create',
-              namespaceId: namespace['namespace-id'],
-              filePath,
-              content: fileContent
-            })
-          });
-          
-          if (fileResponse.ok) {
-            // Update file tree
-            await refreshFileTree();
-            // Switch to files tab to show the new file
-            setActiveTab('files');
-            setConsoleOutput(prev => [...prev, `✅ File ${filePath} created successfully`]);
-          }
-        } catch (error) {
-          const err = error as Error;
-          setConsoleOutput((prev) => [...prev, `❌ Error: ${err.message}`]);
-        }
-      }
-    }
-
-    // If no specific processing was done, add to console
-    if (content.trim()) {
-      setConsoleOutput(prev => [...prev, `📝 Generated: ${content.substring(0, 100)}...`]);
     }
   };
 
@@ -1861,10 +1070,14 @@ What would you like to work on today?`,
         const newSchema = {
           id: Date.now().toString(),
           name: 'Generated Schema',
+          schemaName: 'Generated Schema',
           schema: output,
+          content: output,
+          saved: false,
           timestamp: new Date()
         };
         setSchemas(prev => [...prev, newSchema]);
+        setSchemaNames(prev => ({ ...prev, [newSchema.id]: newSchema.schemaName }));
         setRawSchemas(prev => [...prev, { id: newSchema.id, content: output }]);
         setActiveTab('schema');
         // Removed auto-save to backend for session-only schemas
@@ -3623,7 +2836,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                   <span className="text-sm font-medium text-blue-700">Live Schema Generation</span>
                 </div>
                 <pre className="text-sm overflow-x-auto bg-white p-3 rounded border">
-                  {liveSchema || 'Starting schema generation...'}
+                  {liveSchema || 'Waiting for schema...'}
                 </pre>
               </div>
             )}
