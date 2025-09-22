@@ -42,8 +42,41 @@ interface WorkspaceState {
   lastGenerated?: string;
 }
 
+// Helper function to get error suggestions based on error type
+const getErrorSuggestions = (errorType: string): string => {
+  switch (errorType) {
+    case 'invalid_request':
+      return `**Suggestions:**
+• Check if the AI service API key is properly configured
+• Verify the request format is correct
+• Try again in a few moments (rate limiting)
+• Contact support if the issue persists`;
+    case 'authentication_error':
+      return `**Suggestions:**
+• Verify the AI service API key is valid and active
+• Check if the API key has the necessary permissions
+• Ensure the API key hasn't expired`;
+    case 'rate_limit_error':
+      return `**Suggestions:**
+• Wait a few moments before trying again
+• Consider upgrading your API plan if you need higher limits
+• Try breaking down large requests into smaller ones`;
+    case 'server_error':
+      return `**Suggestions:**
+• The AI service may be temporarily unavailable
+• Try again in a few minutes
+• Check the service status page for updates`;
+    default:
+      return `**Suggestions:**
+• Try again in a few moments
+• Check your internet connection
+• Contact support if the issue persists`;
+  }
+};
+
 const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose }) => {
   console.log('AIAgentWorkspace rendered with props:', { namespace, onClose });
+  // Force rebuild to ensure latest changes are applied
   
   // Add useEffect to log namespace changes
   useEffect(() => {
@@ -239,6 +272,7 @@ What would you like to work on today?`,
     
     setIsUploading(true);
     const newFiles: UploadedFile[] = [];
+    const schemaFiles: any[] = [];
     
     try {
       for (const file of Array.from(files)) {
@@ -249,6 +283,21 @@ What would you like to work on today?`,
           // Read file content based on type
           if (file.type.startsWith('text/') || file.type === 'application/json' || file.type === 'application/javascript') {
             content = await file.text();
+            
+            // Check if this is a schema file
+            if (file.name.endsWith('.json') || content.includes('"properties"') || content.includes('"type"')) {
+              try {
+                const schemaData = JSON.parse(content);
+                schemaFiles.push({
+                  name: file.name.replace('.json', ''),
+                  type: 'JSON',
+                  content: schemaData,
+                  originalFile: file.name
+                });
+              } catch (e) {
+                console.warn('Could not parse as schema:', file.name);
+              }
+            }
           } else if (file.type.startsWith('image/')) {
             // For images, create a data URL
             const reader = new FileReader();
@@ -279,9 +328,20 @@ What would you like to work on today?`,
       if (newFiles.length > 0) {
         addMessage({
           role: 'user',
-          content: `Uploaded ${newFiles.length} file(s): ${newFiles.map(f => f.name).join(', ')}`,
+          content: `Uploaded ${newFiles.length} file(s): ${newFiles.map(f => f.name).join(', ')}${schemaFiles.length > 0 ? `\n\n📋 Detected ${schemaFiles.length} schema file(s): ${schemaFiles.map(s => s.name).join(', ')}` : ''}`,
           files: newFiles
         });
+        
+        // If schemas were detected, offer to generate Lambda function
+        if (schemaFiles.length > 0) {
+          setTimeout(() => {
+            addMessage({
+              role: 'assistant',
+              content: `🎯 I detected ${schemaFiles.length} schema file(s) in your upload!\n\n**Available Actions:**\n• Type "generate lambda function" to create a Lambda using these schemas\n• Type "analyze schemas" to see detailed schema information\n• Type "combine schemas" to merge multiple schemas\n\n**Detected Schemas:**\n${schemaFiles.map((s, i) => `${i + 1}. **${s.name}** (${s.type})`).join('\n')}`,
+              timestamp: new Date()
+            });
+          }, 1000);
+        }
       }
     } catch (error) {
       console.error('Error in file upload:', error);
@@ -767,7 +827,117 @@ What would you like to work on today?`,
       id: getNowId(),
       timestamp: new Date()
     };
-    setMessages(prev => [...prev, newMessage]);
+    console.log('[Frontend] 📝 Adding message:', newMessage);
+    setMessages(prev => {
+      const updated = [...prev, newMessage];
+      console.log('[Frontend] 📋 Messages updated:', { oldCount: prev.length, newCount: updated.length });
+      return updated;
+    });
+  };
+
+  // Test function to debug chat UI
+  const testChatUI = () => {
+    console.log('[Frontend] 🧪 Testing chat UI...');
+    addMessage({
+      role: 'assistant',
+      content: 'This is a test message to verify the chat UI is working!'
+    });
+  };
+
+  // Function to handle Lambda generation using the dedicated endpoint
+  const handleLambdaGeneration = async (message: string, selectedSchema: any = null) => {
+    try {
+      setConsoleOutput(prev => [...prev, `🔄 Generating Lambda function...`]);
+      
+      const response = await fetch(`${API_BASE_URL}/ai-agent/lambda-codegen`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: message,
+          originalMessage: message,
+          namespace: namespace?.['namespace-id'],
+          selectedSchema: selectedSchema,
+          functionName: selectedSchema ? `${selectedSchema.schemaName || selectedSchema.name}Handler` : 'GeneratedHandler',
+          runtime: 'nodejs18.x',
+          handler: 'index.handler',
+          memory: 256,
+          timeout: 30,
+          environment: null
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body reader available');
+      }
+
+      let generatedCode = '';
+      let functionName = selectedSchema ? `${selectedSchema.schemaName || selectedSchema.name}Handler` : 'GeneratedHandler';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataContent = line.slice(6);
+            
+            if (dataContent.trim() === '[DONE]' || dataContent.trim().includes('[DONE]')) {
+              break;
+            }
+
+            try {
+              const data = JSON.parse(dataContent);
+              
+              if (data.content) {
+                generatedCode += data.content;
+              }
+            } catch (e) {
+              console.log('Failed to parse streaming data:', e);
+            }
+          }
+        }
+      }
+
+      if (generatedCode) {
+        // Set the generated Lambda code in the Lambda tab's code box
+        setGeneratedLambdaCode(generatedCode);
+        
+        // Also generate Lambda function structure and add to project files
+        generateLambdaFileStructure(generatedCode, functionName, 'nodejs18.x');
+        
+        // Switch to Lambda tab to show the generated code
+        setActiveTab('lambda');
+        
+        // Add success message to chat
+        addMessage({
+          role: 'assistant',
+          content: `✅ Generated Lambda function: **${functionName}**\n\nCheck the Lambda tab to see the generated code!`,
+          timestamp: new Date()
+        });
+        
+        setConsoleOutput(prev => [...prev, `✅ Lambda function generated: ${functionName}`]);
+      } else {
+        throw new Error('No Lambda code was generated');
+      }
+    } catch (error) {
+      console.error('Error in schema Lambda generation:', error);
+      setConsoleOutput(prev => [...prev, `❌ Error generating Lambda: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+      
+      addMessage({
+        role: 'assistant',
+        content: `❌ Failed to generate Lambda function: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
   };
 
   const handleSendMessage = async () => {
@@ -777,7 +947,9 @@ What would you like to work on today?`,
     setInputMessage('');
     
     // Debug: Log the message being processed
-    console.log('[Frontend] Processing message:', userMessage);
+    console.log('[Frontend] 🎯 Processing message:', userMessage);
+    console.log('[Frontend] 🔍 Current messages count:', messages.length);
+    console.log('[Frontend] 🏠 Current namespace:', namespace?.['namespace-id']);
     
     // Add user message to chat
     addMessage({
@@ -787,6 +959,37 @@ What would you like to work on today?`,
 
     // Add console output for message processing
     setConsoleOutput(prev => [...prev, `👤 User message: ${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}`]);
+    
+    // Check if user wants to generate Lambda with uploaded schemas
+    const hasUploadedSchemas = uploadedFiles.some(file => 
+      file.name.endsWith('.json') && file.content && 
+      (file.content.includes('"properties"') || file.content.includes('"type"'))
+    );
+    
+    if (hasUploadedSchemas && (userMessage.toLowerCase().includes('generate lambda') || userMessage.toLowerCase().includes('lambda function'))) {
+      // Extract schema data from uploaded files
+      const schemas = uploadedFiles
+        .filter(file => file.name.endsWith('.json') && file.content)
+        .map(file => {
+          try {
+            const schemaData = JSON.parse(file.content);
+            return {
+              name: file.name.replace('.json', ''),
+              type: 'JSON',
+              content: schemaData,
+              originalFile: file.name
+            };
+          } catch (e) {
+            return null;
+          }
+        })
+        .filter(Boolean);
+      
+      if (schemas.length > 0) {
+        await handleLambdaGeneration(userMessage, schemas[0]); // Use first schema for now
+        return;
+      }
+    }
     
     // Check if this might be a schema-related request
     const lowerMessage = userMessage.toLowerCase();
@@ -846,8 +1049,9 @@ What would you like to work on today?`,
         schema: currentSchema || (schemas.length > 0 ? schemas[0].schema : null)
       };
       
-      console.log('[Frontend Debug] Making backend request to:', `${API_BASE_URL}/ai-agent/stream`);
-      console.log('[Frontend Debug] Request body:', requestBody);
+      console.log('[Frontend Debug] 🚀 Making backend request to:', `${API_BASE_URL}/ai-agent/stream`);
+      console.log('[Frontend Debug] 📤 Request body:', requestBody);
+      console.log('[Frontend Debug] 🌐 API_BASE_URL:', API_BASE_URL);
         
         const response = await fetch(`${API_BASE_URL}/ai-agent/stream`, {
           method: 'POST',
@@ -855,8 +1059,9 @@ What would you like to work on today?`,
           body: JSON.stringify(requestBody)
         });
 
-      console.log('[Frontend Debug] Response status:', response.status);
-      console.log('[Frontend Debug] Response ok:', response.ok);
+      console.log('[Frontend Debug] 📥 Response status:', response.status);
+      console.log('[Frontend Debug] ✅ Response ok:', response.ok);
+      console.log('[Frontend Debug] 📋 Response headers:', Object.fromEntries(response.headers.entries()));
 
         if (response.ok) {
         setConsoleOutput(prev => [...prev, `✅ Connected to backend, starting streaming...`]);
@@ -874,15 +1079,36 @@ What would you like to work on today?`,
                 
                 for (const line of lines) {
                   if (line.startsWith('data: ')) {
+                    const dataContent = line.slice(6);
+                    
+                    console.log('[Frontend Debug] Processing data line:', { line, dataContent });
+                    
+                    // Handle [DONE] signal - not JSON (trim whitespace and check for variations)
+                    const trimmedContent = dataContent.trim();
+                    if (trimmedContent === '[DONE]' || trimmedContent.includes('[DONE]')) {
+                      console.log('[Frontend Debug] ✅ Received [DONE] signal - streaming complete');
+                      break;
+                    }
+                    
                     try {
-                      const data = JSON.parse(line.slice(6));
-                      console.log('[Frontend Debug] Route:', data.route, 'Type:', data.type, 'Content preview:', data.content?.substring(0, 100));
+                      const data = JSON.parse(dataContent);
+                      console.log('[Frontend Debug] 🔍 PARSED DATA:', {
+                        route: data.route,
+                        type: data.type,
+                        content: data.content?.substring(0, 100),
+                        fullData: data
+                      });
                       
-                  // Handle actions
+                  // Handle actions (can come from any route)
                   if (data.actions) {
-                        console.log('[Frontend] Received actions:', data.actions);
+                        console.log('[Frontend] 📋 Received actions:', {
+                          route: data.route,
+                          type: data.type,
+                          actionCount: data.actions.length,
+                          actions: data.actions
+                        });
                         actions = data.actions;
-                        setConsoleOutput(prev => [...prev, `📋 Received ${data.actions.length} action(s) from AI agent`]);
+                        setConsoleOutput(prev => [...prev, `📋 Received ${data.actions.length} action(s) from AI agent (route: ${data.route})`]);
                       }
                       
                       if (data.route === 'schema') {
@@ -905,36 +1131,130 @@ What would you like to work on today?`,
                         } else {
                       console.log('[Frontend Debug] ⚠️ UNEXPECTED MESSAGE TYPE IN SCHEMA ROUTE:', data.type, data.content?.substring(0, 100));
                         }
+                      } else if (data.route === 'lambda') {
+                        // Handle Lambda code generation responses
+                        console.log('[Frontend Debug] ✅ LAMBDA ROUTE MESSAGE:', {
+                          type: data.type,
+                          schemaName: data.schemaName,
+                          hasCode: !!data.code,
+                          codeLength: data.code?.length || 0
+                        });
+                        
+                        if (data.type === 'lambda_code' && data.code) {
+                          console.log('[Frontend Debug] 📝 LAMBDA CODE GENERATED:', {
+                            schemaName: data.schemaName,
+                            codeLength: data.code.length
+                          });
+                          
+                          // Set the generated Lambda code in the Lambda tab's code box
+                          setGeneratedLambdaCode(data.code);
+                          
+                          // Also generate Lambda function structure and add to project files
+                          generateLambdaFileStructure(data.code, data.schemaName + 'Handler', 'nodejs18.x');
+                          
+                          // Switch to Lambda tab to show the generated code
+                          setActiveTab('lambda');
+                          
+                          // Add success message to chat
+                          const successMessage = {
+                            id: getNowId(),
+                            role: 'assistant',
+                            content: `✅ Generated Lambda function for schema: **${data.schemaName}**\n\nCheck the Lambda tab to see the generated code!`,
+                            timestamp: new Date()
+                          };
+                          
+                          setMessages(prev => [...prev, successMessage]);
+                          setConsoleOutput(prev => [...prev, `✅ Lambda function generated for schema: ${data.schemaName}`]);
+                        }
                       } else if (data.route === 'chat') {
-                        // Live update the assistant's message in the chat UI
-                    console.log('[Frontend Debug] ✅ CHAT ROUTE MESSAGE:', data.type, data.content?.substring(0, 100));
-                        if (data.type === 'chat') {
+                        // Handle chat route messages - could be chat content or actions
+                        console.log('[Frontend Debug] ✅ CHAT ROUTE MESSAGE:', {
+                          type: data.type,
+                          content: data.content?.substring(0, 100),
+                          hasContent: !!data.content,
+                          contentLength: data.content?.length || 0,
+                          hasActions: !!data.actions
+                        });
+                        
+                        if (data.type === 'chat' && data.content) {
+                          // This is actual chat content to display
+                          console.log('[Frontend Debug] 📝 ADDING TO ASSISTANT MESSAGE:', {
+                            currentLength: assistantMessage.length,
+                            newContent: data.content,
+                            newLength: data.content.length
+                          });
+                          
                           assistantMessage += data.content;
+                          
                           // If this is the first chunk, add a new assistant message
                           if (!lastAssistantMessageId) {
                             lastAssistantMessageId = getNowId();
-                            setMessages(prev => [
-                              ...prev,
-                              {
-                                id: lastAssistantMessageId || getNowId(),
-                                role: 'assistant',
-                                content: assistantMessage,
-                                timestamp: new Date()
-                              }
-                            ]);
+                            console.log('[Frontend Debug] 🆕 CREATING NEW ASSISTANT MESSAGE:', {
+                              id: lastAssistantMessageId,
+                              content: assistantMessage,
+                              messageCount: messages.length + 1
+                            });
+                            
+                            setMessages(prev => {
+                              const newMessages = [
+                                ...prev,
+                                {
+                                  id: lastAssistantMessageId || getNowId(),
+                                  role: 'assistant',
+                                  content: assistantMessage,
+                                  timestamp: new Date()
+                                }
+                              ];
+                              console.log('[Frontend Debug] 📋 UPDATED MESSAGES ARRAY:', {
+                                oldLength: prev.length,
+                                newLength: newMessages.length,
+                                lastMessage: newMessages[newMessages.length - 1]
+                              });
+                              return newMessages;
+                            });
                           } else {
-                        // Update the existing assistant message
-                        setMessages(prev => prev.map(msg => 
-                          msg.id === lastAssistantMessageId 
-                            ? { ...msg, content: assistantMessage }
-                            : msg
-                            ));
+                            // Update the existing assistant message
+                            console.log('[Frontend Debug] 🔄 UPDATING EXISTING MESSAGE:', {
+                              messageId: lastAssistantMessageId,
+                              newContent: assistantMessage
+                            });
+                            
+                            setMessages(prev => {
+                              const updatedMessages = prev.map(msg => 
+                                msg.id === lastAssistantMessageId 
+                                  ? { ...msg, content: assistantMessage }
+                                  : msg
+                              );
+                              console.log('[Frontend Debug] 📋 UPDATED MESSAGES ARRAY:', {
+                                messageCount: updatedMessages.length,
+                                updatedMessage: updatedMessages.find(m => m.id === lastAssistantMessageId)
+                              });
+                              return updatedMessages;
+                            });
                           }
+                        } else if (data.type === 'actions') {
+                          // This is an actions message with route 'chat' - not an error, just actions
+                          console.log('[Frontend Debug] ✅ CHAT ROUTE ACTIONS:', {
+                            actionCount: data.actions?.length || 0,
+                            actions: data.actions
+                          });
+                        } else {
+                          // This might be an unexpected message type
+                          console.log('[Frontend Debug] ⚠️ UNEXPECTED CHAT ROUTE MESSAGE TYPE:', {
+                            type: data.type,
+                            hasContent: !!data.content,
+                            hasActions: !!data.actions,
+                            data: data
+                          });
                         }
                       }
                     } catch (e) {
-                  console.log('[Frontend Debug] Failed to parse streaming data:', e);
-                }
+                      console.log('[Frontend Debug] Failed to parse streaming data:', {
+                        error: e.message,
+                        dataContent: dataContent,
+                        line: line
+                      });
+                    }
               }
             }
           }
@@ -984,6 +1304,23 @@ What would you like to work on today?`,
                 setIsStreamingSchema(false);
             setConsoleOutput(prev => [...prev, `✅ Schema edited and updated in Schema tab`]);
           }
+        } else if (action.type === 'error' && action.status === 'failed') {
+          // Handle error actions with better user messaging
+          console.log('[Frontend] Processing error action:', action);
+          
+          let errorMessage = action.message || 'An unknown error occurred';
+          let errorType = action.errorType || 'unknown_error';
+          
+          // Add user-friendly error message to chat
+          const errorChatMessage = {
+            id: getNowId(),
+            role: 'assistant',
+            content: `❌ **Error**: ${errorMessage}\n\n${getErrorSuggestions(errorType)}`,
+            timestamp: new Date()
+          };
+          
+          setMessages(prev => [...prev, errorChatMessage]);
+          setConsoleOutput(prev => [...prev, `❌ Error: ${errorMessage} (Type: ${errorType})`]);
         }
       }
     }
@@ -3414,13 +3751,22 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             rows={1}
             disabled={isLoading}
           />
-          <button
-            onClick={handleSendMessage}
-            disabled={isLoading || !inputMessage.trim()}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send className="w-4 h-4" />
-          </button>
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={handleSendMessage}
+              disabled={isLoading || !inputMessage.trim()}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+            <button
+              onClick={testChatUI}
+              className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
+              title="Test Chat UI"
+            >
+              Test
+            </button>
+          </div>
         </div>
       </div>
 
