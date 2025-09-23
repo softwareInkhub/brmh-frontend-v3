@@ -59,7 +59,7 @@ export function CreateFunctionModal({ isOpen, onClose, onSuccess }: CreateFuncti
 
     setIsCreating(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/aws/lambda`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/aws/lambda`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

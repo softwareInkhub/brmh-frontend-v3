@@ -859,7 +859,9 @@ What would you like to work on today?`,
           originalMessage: message,
           namespace: namespace?.['namespace-id'],
           selectedSchema: selectedSchema,
-          functionName: selectedSchema ? `${selectedSchema.schemaName || selectedSchema.name}Handler` : 'GeneratedHandler',
+          functionName: (lambdaForm.functionName && lambdaForm.functionName.trim()) 
+            ? lambdaForm.functionName.trim() 
+            : (selectedSchema ? `${selectedSchema.schemaName || selectedSchema.name}Handler` : 'GeneratedHandler'),
           runtime: 'nodejs18.x',
           handler: 'index.handler',
           memory: 256,
@@ -878,7 +880,9 @@ What would you like to work on today?`,
       }
 
       let generatedCode = '';
-      let functionName = selectedSchema ? `${selectedSchema.schemaName || selectedSchema.name}Handler` : 'GeneratedHandler';
+      let functionName = (lambdaForm.functionName && lambdaForm.functionName.trim()) 
+        ? lambdaForm.functionName.trim() 
+        : (selectedSchema ? `${selectedSchema.schemaName || selectedSchema.name}Handler` : 'GeneratedHandler');
 
       while (true) {
         const { done, value } = await reader.read();
@@ -2211,15 +2215,21 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
         console.log('Deploy response status:', deployResponse.status);
         
         if (!deployResponse.ok) {
-          const errorText = await deployResponse.text();
+          let errorText;
+          try {
+            const errorData = await deployResponse.json();
+            errorText = errorData.details || errorData.error || `HTTP ${deployResponse.status}`;
+          } catch (e) {
+            errorText = await deployResponse.text();
+          }
           console.error('Deploy error response:', errorText);
-          throw new Error(`Deployment failed: ${deployResponse.status} - ${errorText}`);
+          throw new Error(`Deployment failed: ${errorText}`);
         }
         
         const deployResult = await deployResponse.json();
         console.log('Deploy result:', deployResult);
         
-        if (deployResult.success) {
+          if (deployResult.success) {
           setConsoleOutput(prev => [...prev, `✅ Successfully deployed: ${func.name}`]);
           setConsoleOutput(prev => [...prev, `   Function ARN: ${deployResult.functionArn}`]);
           setConsoleOutput(prev => [...prev, `   Code Size: ${deployResult.codeSize} bytes`]);
@@ -2227,14 +2237,14 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
           // API Gateway is now created automatically during deployment
           if (deployResult.apiGatewayUrl) {
             setConsoleOutput(prev => [...prev, `✅ API Gateway created automatically!`]);
-            setConsoleOutput(prev => [...prev, `🌐 API Gateway URL: ${deployResult.apiGatewayUrl}`]);
-            setConsoleOutput(prev => [...prev, `   Endpoint: ${deployResult.apiGatewayUrl}/${func.name}`]);
+              setConsoleOutput(prev => [...prev, `🌐 API Gateway URL: ${deployResult.apiGatewayUrl}`]);
+              setConsoleOutput(prev => [...prev, `   Endpoint: ${deployResult.apiGatewayUrl}/${deployResult.functionName || func.name}`]);
             setConsoleOutput(prev => [...prev, `   API ID: ${deployResult.apiId}`]);
             
             // Store the deployed endpoint for display
             setDeployedEndpoints(prev => [...prev, {
-              functionName: func.name,
-              apiGatewayUrl: `${deployResult.apiGatewayUrl}/${func.name}`,
+              functionName: deployResult.functionName || func.name,
+              apiGatewayUrl: `${deployResult.apiGatewayUrl}/${deployResult.functionName || func.name}`,
               functionArn: deployResult.functionArn,
               deployedAt: new Date()
             }]);
@@ -2242,7 +2252,7 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
             // Add success message to chat
             addMessage({
               role: 'assistant',
-              content: `✅ Lambda function "${func.name}" deployed successfully!\n\n🌐 **API Gateway URL:** ${deployResult.apiGatewayUrl}/${func.name}\n\nYou can now invoke your function via HTTP POST requests to this endpoint.`
+              content: `✅ Lambda function "${deployResult.functionName || func.name}" deployed successfully!\n\n🌐 **API Gateway URL:** ${deployResult.apiGatewayUrl}/${deployResult.functionName || func.name}\n\nYou can now invoke your function via HTTP POST requests to this endpoint.`
             });
           } else {
             setConsoleOutput(prev => [...prev, `⚠️ API Gateway creation was skipped or failed`]);
@@ -2258,7 +2268,7 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
           setConsoleOutput(prev => [...prev, `🧪 Testing deployed function: ${func.name}`]);
           
           const testPayload = {
-            functionName: func.name,
+            functionName: deployResult.functionName || func.name,
             payload: {
               test: true,
               message: 'Hello from AI Agent Workspace!',
@@ -2272,7 +2282,7 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
           // Test via API Gateway (should always be available now)
           let testResponse;
           if (deployResult.apiGatewayUrl) {
-            const apiUrl = `${deployResult.apiGatewayUrl}/${func.name}`;
+              const apiUrl = `${deployResult.apiGatewayUrl}/${deployResult.functionName || func.name}`;
             setConsoleOutput(prev => [...prev, `🧪 Testing via API Gateway: ${apiUrl}`]);
             testResponse = await fetch(apiUrl, {
               method: 'POST',
@@ -2326,22 +2336,22 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
     setConsoleOutput(prev => [...prev, '==================']);
     
     // Collect all API Gateway URLs for the summary
-    const apiGatewayUrls = [];
-    
-    lambdaFunctions.forEach((func, index) => {
-      setConsoleOutput(prev => [...prev, `${index + 1}. ${func.name}:`]);
-      setConsoleOutput(prev => [...prev, `   - Runtime: ${func.runtime}`]);
-      setConsoleOutput(prev => [...prev, `   - Handler: ${func.handler}`]);
-      setConsoleOutput(prev => [...prev, `   - Memory: ${func.memory} MB`]);
-      setConsoleOutput(prev => [...prev, `   - Timeout: ${func.timeout} seconds`]);
-      
-      // Show API Gateway URL if available
-      if (deployResult && deployResult.apiGatewayUrl) {
-        const apiUrl = `${deployResult.apiGatewayUrl}/${func.name}`;
-        setConsoleOutput(prev => [...prev, `   - API Gateway: ${apiUrl}`]);
-        apiGatewayUrls.push({ functionName: func.name, url: apiUrl });
-      }
-    });
+    const apiGatewayUrls: Array<{ functionName: string; url: string }> = [];
+
+    // Include current deployment result (sanitized name)
+    if (deployResult && deployResult.apiGatewayUrl) {
+      const currentFn = deployResult.functionName || lambdaForm.functionName || '';
+      const currentUrl = `${deployResult.apiGatewayUrl}/${currentFn}`;
+      apiGatewayUrls.push({ functionName: currentFn, url: currentUrl });
+      setConsoleOutput(prev => [...prev, `   - API Gateway: ${currentUrl}`]);
+    }
+
+    // Include any previously stored successful endpoints
+    if (deployedEndpoints && deployedEndpoints.length > 0) {
+      deployedEndpoints.forEach(ep => {
+        apiGatewayUrls.push({ functionName: ep.functionName, url: ep.apiGatewayUrl });
+      });
+    }
     
     setConsoleOutput(prev => [...prev, '==================']);
     

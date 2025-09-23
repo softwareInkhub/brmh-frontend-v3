@@ -72,7 +72,7 @@ export default function Page({ params }: PageProps) {
       setIsLoading(true);
       setError(null);
       // Fetch triggers from backend API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/lambda/${functionName}/triggers`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/lambda/${functionName}/triggers`);
       if (!response.ok) throw new Error('Failed to fetch triggers');
       const data = await response.json();
       setTriggers(data.items || []);
@@ -91,7 +91,7 @@ export default function Page({ params }: PageProps) {
 
   const fetchVersions = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/lambda/${functionName}/versions`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/lambda/${functionName}/versions`);
       if (!response.ok) throw new Error('Failed to fetch versions');
       const data = await response.json();
       setVersions(data.versions || ['$LATEST']);
@@ -107,7 +107,7 @@ export default function Page({ params }: PageProps) {
 
   const fetchFunctionDetails = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/lambda/functions`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/lambda/functions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ functionName }),
@@ -159,7 +159,7 @@ export default function Page({ params }: PageProps) {
     const fetchCodeAndStructure = async () => {
       setIsLoadingCode(true);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/aws/lambda/${encodeURIComponent(functionName)}/code`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/aws/lambda/${encodeURIComponent(functionName)}/code`);
         if (!response.ok) {
           throw new Error('Failed to fetch function code');
         }
@@ -248,7 +248,7 @@ export default function Page({ params }: PageProps) {
   const handleThrottle = async () => {
     try {
       setIsThrottling(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/lambda/${functionName}/throttle`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/lambda/${functionName}/throttle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reservedConcurrentExecutions: 0 }),
@@ -276,7 +276,7 @@ export default function Page({ params }: PageProps) {
   const handlePublishVersion = async () => {
     try {
       setIsPublishing(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/lambda/${functionName}/publish-version`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/lambda/${functionName}/publish-version`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: `Published from UI on ${new Date().toISOString()}` }),
@@ -303,7 +303,7 @@ export default function Page({ params }: PageProps) {
   const handleCreateAlias = async () => {
     try {
       setIsCreatingAlias(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/lambda/${functionName}/aliases`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/lambda/${functionName}/aliases`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -340,7 +340,7 @@ export default function Page({ params }: PageProps) {
     }
     try {
       setIsDeleting(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/lambda/functions?functionName=${encodeURIComponent(functionName)}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/lambda/functions?functionName=${encodeURIComponent(functionName)}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete function');
@@ -364,7 +364,7 @@ export default function Page({ params }: PageProps) {
 
   const handleDownloadFunctionCode = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/lambda/${functionName}/code`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/lambda/${functionName}/code`);
       if (!response.ok) throw new Error('Failed to get function code');
       const data = await response.json();
       if (data.codeUrl) {
