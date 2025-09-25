@@ -1143,32 +1143,43 @@ What would you like to work on today?`,
                           hasCode: !!data.code,
                           codeLength: data.code?.length || 0
                         });
-                        
-                        if (data.type === 'lambda_code' && data.code) {
-                          console.log('[Frontend Debug] 📝 LAMBDA CODE GENERATED:', {
-                            schemaName: data.schemaName,
-                            codeLength: data.code.length
-                          });
-                          
-                          // Set the generated Lambda code in the Lambda tab's code box
-                          setGeneratedLambdaCode(data.code);
-                          
-                          // Also generate Lambda function structure and add to project files
-                          generateLambdaFileStructure(data.code, data.schemaName + 'Handler', 'nodejs18.x');
-                          
-                          // Switch to Lambda tab to show the generated code
+
+                        // Streamed chunk updates
+                        if (data.type === 'lambda_code_chunk' && data.content) {
                           setActiveTab('lambda');
-                          
-                          // Add success message to chat
+                          setGeneratedLambdaCode(prev => (prev || '') + data.content);
+                          return;
+                        }
+
+                        // Final completion payload with full code
+                        if (data.type === 'lambda_code_complete' && data.code) {
+                          setActiveTab('lambda');
+                          setGeneratedLambdaCode(data.code);
+                          try {
+                            generateLambdaFileStructure(data.code, (data.schemaName || 'Generated') + 'Handler', 'nodejs18.x');
+                          } catch (e) {
+                            console.warn('Failed to generate lambda file structure:', e);
+                          }
+                          return;
+                        }
+
+                        // Backward-compatible single-shot payload
+                        if (data.type === 'lambda_code' && data.code) {
+                          setActiveTab('lambda');
+                          setGeneratedLambdaCode(data.code);
+                          try {
+                            generateLambdaFileStructure(data.code, data.schemaName + 'Handler', 'nodejs18.x');
+                          } catch (e) {
+                            console.warn('Failed to generate lambda file structure:', e);
+                          }
                           const successMessage = {
                             id: getNowId(),
                             role: 'assistant',
-                            content: `✅ Generated Lambda function for schema: **${data.schemaName}**\n\nCheck the Lambda tab to see the generated code!`,
+                            content: `✅ Generated Lambda function${data.schemaName ? ` for schema: **${data.schemaName}**` : ''}.\n\nCheck the Lambda tab to see the generated code!`,
                             timestamp: new Date()
                           };
-                          
                           setMessages(prev => [...prev, successMessage]);
-                          setConsoleOutput(prev => [...prev, `✅ Lambda function generated for schema: ${data.schemaName}`]);
+                          setConsoleOutput(prev => [...prev, `✅ Lambda function generated${data.schemaName ? ` for schema: ${data.schemaName}` : ''}`]);
                         }
                       } else if (data.route === 'chat') {
                         // Handle chat route messages - could be chat content or actions
