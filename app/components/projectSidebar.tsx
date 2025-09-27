@@ -16,6 +16,7 @@ import {
   Rocket,
   BookOpen,
   Plus,
+  Bell,
 } from 'lucide-react';
 
 const sidebarItems = [
@@ -43,6 +44,11 @@ const sidebarItems = [
     name: 'Docs',
     path: '/docsPage',
     icon: <BookOpen size={24} />, // Documentation icon
+  },
+  {
+    name: 'Notification',
+    path: '/notification-service',
+    icon: <Bell size={24} />,
   },
   {
     name: 'Settings',
