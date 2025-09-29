@@ -25,7 +25,7 @@ export function middleware(req: NextRequest) {
   }
 
   const nextUrl = encodeURIComponent(href);
-  return NextResponse.redirect(`https://auth.brmh.in/cognito-login?next=${nextUrl}`);
+  return NextResponse.redirect(`https://auth.brmh.in/login?next=${nextUrl}`);
 }
 
 export const config = {
