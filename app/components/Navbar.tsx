@@ -12,13 +12,20 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   const handleLogout = async () => {
     const api = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
     const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null;
+    
+    // Call backend to revoke tokens
     try {
       await fetch(`${api}/auth/logout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Include cookies for cross-domain logout
         body: JSON.stringify({ refresh_token: refreshToken })
       });
-    } catch {}
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+    
+    // Clear local storage
     try {
       localStorage.removeItem('access_token');
       localStorage.removeItem('id_token');
@@ -26,7 +33,9 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
       sessionStorage.removeItem('oauth_state');
       sessionStorage.removeItem('phone_signup_username');
     } catch {}
-    window.location.href = `${api}/auth/logout-redirect`;
+    
+    // Redirect to auth.brmh.in instead of Cognito
+    window.location.href = 'https://auth.brmh.in/login';
   };
 
   return (
