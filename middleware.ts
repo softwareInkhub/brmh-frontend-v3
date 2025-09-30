@@ -6,28 +6,35 @@ const PUBLIC_FILE = /\.(.*)$/;
 export function middleware(req: NextRequest) {
   const { pathname, href } = req.nextUrl;
 
+  // Allow public files and API routes
   if (
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/public') ||
+    pathname.startsWith('/api') ||
     PUBLIC_FILE.test(pathname)
   ) {
     return NextResponse.next();
   }
 
+  // Check for auth token in cookies
   const idToken = req.cookies.get('id_token')?.value;
-  if (idToken) {
+  const accessToken = req.cookies.get('access_token')?.value;
+  
+  if (idToken || accessToken) {
+    console.log('[Middleware] User authenticated, allowing access');
     return NextResponse.next();
   }
 
-  // Avoid loops if you ever add a local callback route
-  if (pathname.startsWith('/callback')) {
+  // Avoid redirect loops for callback routes
+  if (pathname.startsWith('/callback') || pathname.startsWith('/auth')) {
     return NextResponse.next();
   }
 
+  // Redirect to auth page with return URL
   const nextUrl = encodeURIComponent(href);
+  console.log('[Middleware] No auth token found, redirecting to auth page');
   return NextResponse.redirect(`https://auth.brmh.in/login?next=${nextUrl}`);
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/public).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
