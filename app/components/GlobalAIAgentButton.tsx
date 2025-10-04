@@ -71,19 +71,33 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
     console.log('Drop zone isDragOver:', isDragOver);
   }, [isOver, isDragOver]);
 
-  const handleOpenAIAgent = () => {
+  const handleOpenAIAgent = (forceGeneralContext = false) => {
     // Get current namespace context if available
     const contextNamespace = getCurrentNamespaceContext();
     console.log('Opening AI Agent, current namespace context:', contextNamespace);
-    if (contextNamespace && !droppedNamespace) {
-      console.log('Using current namespace context:', contextNamespace);
-      setDroppedNamespace(contextNamespace);
-      toast.success(`AI Agent opened with current namespace: ${contextNamespace['namespace-name']}`, {
-        description: 'Using current namespace context',
+    
+    if (forceGeneralContext) {
+      // Force general context for namespace generation
+      setDroppedNamespace(null);
+      toast.success('AI Agent opened in general context', {
+        description: 'You can now create new namespaces or work on general tasks',
+        duration: 3000,
+      });
+    } else if (droppedNamespace) {
+      // Use dropped namespace if available
+      console.log('Using dropped namespace context:', droppedNamespace);
+      toast.success(`AI Agent opened with dropped namespace: ${droppedNamespace['namespace-name']}`, {
+        description: 'Using dropped namespace context',
         duration: 3000,
       });
     } else {
-      console.log('No current namespace context or already has dropped namespace');
+      // Default to general context for namespace generation
+      setDroppedNamespace(null);
+      console.log('Opening AI Agent in general context (default)');
+      toast.success('AI Agent opened in general context', {
+        description: 'You can now create new namespaces or work on general tasks',
+        duration: 3000,
+      });
     }
     setIsOpen(true);
     onOpen?.();
@@ -112,16 +126,40 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
         }}
       >
         <button
-          onClick={handleOpenAIAgent}
+          onClick={(e) => {
+            if (e.shiftKey) {
+              // Shift+click opens in general context
+              handleOpenAIAgent(true);
+            } else {
+              handleOpenAIAgent(false);
+            }
+          }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            // Right-click uses current namespace context if available
+            const contextNamespace = getCurrentNamespaceContext();
+            if (contextNamespace) {
+              setDroppedNamespace(contextNamespace);
+              toast.success(`AI Agent opened with current namespace: ${contextNamespace['namespace-name']}`, {
+                description: 'Using current namespace context',
+                duration: 3000,
+              });
+            } else {
+              setDroppedNamespace(null);
+              toast.success('AI Agent opened in general context', {
+                description: 'No current namespace context available',
+                duration: 3000,
+              });
+            }
+            setIsOpen(true);
+            onOpen?.();
+          }}
           className={`group relative flex items-center justify-center w-16 h-16 rounded-full shadow-lg transition-all duration-300 ${
             isDragOver
               ? 'bg-purple-600 shadow-purple-500/50 scale-110 animate-pulse'
               : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/50 hover:shadow-blue-500/70'
           }`}
-          title={currentNamespace 
-            ? `AI Agent Workspace - Click to open with: ${currentNamespace['namespace-name']}`
-            : "AI Agent Workspace (Drag a namespace here for context)"
-          }
+          title="AI Agent Workspace - Click for general context (Right-click for current namespace context)"
         >
           {/* Drag indicator */}
           {isDragOver && (

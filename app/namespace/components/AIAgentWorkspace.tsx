@@ -89,12 +89,14 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
       id: '1',
       role: 'assistant',
       content: `Hello! I'm your AI development assistant. I can help you:
-\n• Design and generate API schemas\n• Write and test code\n• Create database models\n• Set up authentication\n• Run tests and debug issues\n• Manage your project structure
+\n• **Create complete namespaces** from scratch (try: "Create a namespace for an e-commerce platform")
+• Design and generate API schemas\n• Write and test code\n• Create database models\n• Set up authentication\n• Run tests and debug issues\n• Manage your project structure
 
 💡 **Pro Tips:**
 • Upload files using the upload button or drag & drop
 • Drag schemas from the sidebar directly into this chat area for context
 • Drag schemas from the Schema tab for additional context
+• ${namespace ? 'You\'re working with a specific namespace - ask questions about it!' : 'You\'re in general context - perfect for creating new namespaces!'}
 
 What would you like to work on today?`,
       timestamp: new Date()
@@ -1053,7 +1055,7 @@ What would you like to work on today?`,
         
         const requestBody = {
         message: userMessage,
-        namespace: namespace?.['namespace-id'] || 'default',
+        namespace: namespace?.['namespace-id'] || null, // Pass null for general context to enable namespace generation
         history: messages.slice(-10), // Send last 10 messages for context
         schema: currentSchema || (schemas.length > 0 ? schemas[0].schema : null),
         uploadedSchemas: droppedSchemas // Pass dropped schemas for lambda generation
@@ -1205,6 +1207,28 @@ What would you like to work on today?`,
                           contentLength: data.content?.length || 0,
                           hasActions: !!data.actions
                         });
+                        
+                        // Handle namespace generation completion
+                        if (data.type === 'namespace_generated') {
+                          console.log('[Frontend Debug] ✅ Namespace generated:', data.namespaceId);
+                          
+                          // Add the success message to chat
+                          const successMessage = {
+                            id: getNowId(),
+                            role: 'assistant',
+                            content: data.content,
+                            timestamp: new Date()
+                          };
+                          setMessages(prev => [...prev, successMessage]);
+                          
+                          // Show success notification
+                          setConsoleOutput(prev => [...prev, `✅ Complete namespace generated: ${data.namespaceData.namespace['namespace-name']}`]);
+                          
+                          // Optionally redirect to the new namespace or show a success modal
+                          // You can add navigation logic here if needed
+                          
+                          continue;
+                        }
                         
                         if (data.type === 'chat' && data.content) {
                           // This is actual chat content to display
@@ -2678,7 +2702,12 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                   </span>
                 </span>
               ) : (
-                'General Development'
+                <span className="flex items-center gap-2">
+                  <span>General Development</span>
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                    Namespace Generation Mode
+                  </span>
+                </span>
               )}
               {sessionId && (
                 <span className="ml-2 text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
@@ -3645,6 +3674,37 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             Drop schema here to add context
           </div>
         )}
+        
+        {/* Namespace Generation Mode Hint */}
+        {!namespace && messages.length === 0 && !isSchemaDropOver && (
+          <div className="text-center py-8">
+            <div className="max-w-md mx-auto bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="p-3 rounded-full bg-blue-100">
+                  <Bot className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">🚀 Namespace Generation Mode</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Create complete namespaces from scratch! Describe what you want to build and I'll generate:
+              </p>
+              <div className="text-left text-xs text-gray-500 space-y-1">
+                <div>• <strong>Schemas</strong> - Data models and structures</div>
+                <div>• <strong>API Methods</strong> - REST endpoints</div>
+                <div>• <strong>Account Types</strong> - Authentication systems</div>
+                <div>• <strong>Webhooks</strong> - Event integrations</div>
+                <div>• <strong>Lambda Functions</strong> - Serverless logic</div>
+              </div>
+              <div className="mt-4 p-3 bg-white rounded border border-blue-100">
+                <p className="text-xs text-gray-600 font-medium mb-1">Try prompts like:</p>
+                <p className="text-xs text-blue-600">"Create a complete e-commerce system"</p>
+                <p className="text-xs text-blue-600">"Generate a social media platform namespace"</p>
+                <p className="text-xs text-blue-600">"Build a project management tool"</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {messages.map((message) => (
           <div
             key={message.id}
@@ -3782,7 +3842,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Type your message... (Upload files or drag schemas for context)"
+            placeholder={namespace ? "Type your message... (Upload files or drag schemas for context)" : "Type your message... (Try: 'Create a namespace for...' to generate a new project)"}
             className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={1}
             disabled={isLoading}
