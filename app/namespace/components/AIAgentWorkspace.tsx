@@ -260,6 +260,11 @@ What would you like to work on today?`,
     console.log('[Lambda Debug] generatedLambdaCode updated:', generatedLambdaCode);
     console.log('[Lambda Debug] generatedLambdaCode length:', generatedLambdaCode.length);
   }, [generatedLambdaCode]);
+
+  // Debug: Track activeTab changes
+  useEffect(() => {
+    console.log('[Tab Debug] activeTab changed to:', activeTab);
+  }, [activeTab]);
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -1050,7 +1055,8 @@ What would you like to work on today?`,
         message: userMessage,
         namespace: namespace?.['namespace-id'] || 'default',
         history: messages.slice(-10), // Send last 10 messages for context
-        schema: currentSchema || (schemas.length > 0 ? schemas[0].schema : null)
+        schema: currentSchema || (schemas.length > 0 ? schemas[0].schema : null),
+        uploadedSchemas: droppedSchemas // Pass dropped schemas for lambda generation
       };
       
       console.log('[Frontend Debug] 🚀 Making backend request to:', `${API_BASE_URL}/ai-agent/stream`);
@@ -1146,13 +1152,21 @@ What would you like to work on today?`,
 
                         // Streamed chunk updates
                         if (data.type === 'lambda_code_chunk' && data.content) {
+                          console.log('[Frontend Debug] ✅ Processing lambda_code_chunk:', data.content);
+                          console.log('[Frontend Debug] ✅ Switching to lambda tab');
                           setActiveTab('lambda');
-                          setGeneratedLambdaCode(prev => (prev || '') + data.content);
-                          return;
+                          setGeneratedLambdaCode(prev => {
+                            const newCode = (prev || '') + data.content;
+                            console.log('[Frontend Debug] ✅ Updated generatedLambdaCode length:', newCode.length);
+                            console.log('[Frontend Debug] ✅ Current generatedLambdaCode:', newCode.substring(0, 100) + '...');
+                            return newCode;
+                          });
+                          continue; // Continue processing more chunks instead of returning
                         }
 
                         // Final completion payload with full code
                         if (data.type === 'lambda_code_complete' && data.code) {
+                          console.log('[Frontend Debug] ✅ Processing lambda_code_complete:', data.code.length, 'chars');
                           setActiveTab('lambda');
                           setGeneratedLambdaCode(data.code);
                           try {
@@ -1160,7 +1174,7 @@ What would you like to work on today?`,
                           } catch (e) {
                             console.warn('Failed to generate lambda file structure:', e);
                           }
-                          return;
+                          continue; // Continue processing instead of returning
                         }
 
                         // Backward-compatible single-shot payload
@@ -1180,6 +1194,7 @@ What would you like to work on today?`,
                           };
                           setMessages(prev => [...prev, successMessage]);
                           setConsoleOutput(prev => [...prev, `✅ Lambda function generated${data.schemaName ? ` for schema: ${data.schemaName}` : ''}`]);
+                          continue; // Continue processing instead of returning
                         }
                       } else if (data.route === 'chat') {
                         // Handle chat route messages - could be chat content or actions
