@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
-
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -19,8 +17,15 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Determine API URL based on environment
+      const isProduction = window.location.hostname.includes('brmh.in') && !window.location.hostname.includes('localhost');
+      const API_BASE_URL = isProduction 
+        ? (process.env.NEXT_PUBLIC_AWS_URL || 'https://brmh.in')
+        : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001');
+      
       addDebugLog(`🔍 Starting auth check for path: ${pathname}`);
       addDebugLog(`📍 Current URL: ${window.location.href.substring(0, 100)}`);
+      addDebugLog(`🌐 API Base URL: ${API_BASE_URL} (${isProduction ? 'production' : 'development'})`);
       
       // Skip auth check for public routes
       const publicRoutes = ['/authPage', '/login', '/callback', '/register', '/landingPage', '/debug-auth'];
@@ -96,23 +101,55 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       }
 
       // NOW check for tokens in localStorage (after hash extraction is complete)
-      const accessToken = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
-      const idToken = localStorage.getItem('id_token') || localStorage.getItem('idToken');
+      let accessToken = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+      let idToken = localStorage.getItem('id_token') || localStorage.getItem('idToken');
 
-      addDebugLog(`📦 Token check: accessToken=${!!accessToken}, idToken=${!!idToken}`);
+      addDebugLog(`📦 Token check in localStorage: accessToken=${!!accessToken}, idToken=${!!idToken}`);
       
       if (tokensExtractedFromHash) {
         addDebugLog(`✨ Just extracted tokens from hash, proceeding with validation...`);
       }
 
+      // If no tokens in localStorage, try to check if user is authenticated via cookies (production)
       if (!accessToken && !idToken) {
-        // No tokens found, redirect to auth.brmh.in
+        addDebugLog(`🍪 No tokens in localStorage, checking for cookie-based auth...`);
+        
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/me`, {
+            method: 'GET',
+            credentials: 'include' // Send cookies
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            addDebugLog(`✅ Authenticated via cookies! User: ${userData.user?.email || userData.user?.sub}`);
+            
+            // User is authenticated via cookies (production scenario)
+            // Store user data in localStorage for app compatibility
+            if (userData.user) {
+              if (userData.user.sub) localStorage.setItem('user_id', userData.user.sub);
+              if (userData.user.email) localStorage.setItem('user_email', userData.user.email);
+              if (userData.user['cognito:username']) localStorage.setItem('user_name', userData.user['cognito:username']);
+            }
+            
+            setIsAuthenticated(true);
+            setIsChecking(false);
+            addDebugLog(`🎉 Cookie-based authentication successful!`);
+            return;
+          } else {
+            addDebugLog(`❌ Cookie-based auth failed, redirecting to login...`);
+          }
+        } catch (error) {
+          addDebugLog(`⚠️ Cookie auth check failed: ${error}`);
+        }
+        
+        // No tokens and no valid cookies, redirect to auth.brmh.in
         const currentUrl = window.location.href.split('#')[0]; // Remove hash before redirect
         const authUrl = `https://auth.brmh.in/login?next=${encodeURIComponent(currentUrl)}`;
-        addDebugLog(`❌ No tokens found, will redirect to auth in 2 seconds...`);
+        addDebugLog(`❌ No authentication found, will redirect to auth in 2 seconds...`);
         addDebugLog(`🔀 Redirect URL: ${authUrl}`);
         
-        // Give time to see debug info
+        // Give time to see debug info  
         setTimeout(() => {
           window.location.href = authUrl;
         }, 2000);
