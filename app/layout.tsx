@@ -15,6 +15,7 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { usePathname } from 'next/navigation';
 import AppContentClient from "./components/AppContentClient";
+import AuthGuard from "./components/AuthGuard";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -33,9 +34,11 @@ export default function RootLayout({
           <QueryClientProvider client={queryClient}>
             <NamespaceProvider>
               <SidePanelProvider>
-                <AppContentClient>
-                  {children}
-                </AppContentClient>
+                <AuthGuard>
+                  <AppContentClient>
+                    {children}
+                  </AppContentClient>
+                </AuthGuard>
               </SidePanelProvider>
             </NamespaceProvider>
             <Toaster richColors position="top-right" />

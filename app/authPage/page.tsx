@@ -19,35 +19,51 @@ export default function AuthPage() {
   const [oauthLoading, setOauthLoading] = useState(false);
   const router = useRouter();
 
-  // Check if user is already logged in
+  // Check if user is already logged in or just returned from auth.brmh.in
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      // Validate token
-      fetch(`${API_BASE_URL}/auth/validate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-      .then(res => {
-        if (res.ok) {
-          router.push('/namespace'); // Redirect to main app
-        } else {
-          // Token invalid, clear it
+    const checkAuthAndRedirect = async () => {
+      // Check if we have tokens (could be from auth.brmh.in redirect)
+      const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+      
+      if (token) {
+        // Validate token
+        try {
+          const res = await fetch(`${API_BASE_URL}/auth/validate`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+          });
+          
+          if (res.ok) {
+            console.log('[AuthPage] Token valid, redirecting to main app');
+            router.push('/namespace'); // Redirect to main app
+          } else {
+            // Token invalid, clear it
+            console.log('[AuthPage] Token invalid, clearing...');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('id_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('idToken');
+            localStorage.removeItem('refreshToken');
+          }
+        } catch (error) {
+          // Network error, clear tokens
+          console.error('[AuthPage] Token validation error:', error);
           localStorage.removeItem('access_token');
           localStorage.removeItem('id_token');
           localStorage.removeItem('refresh_token');
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('idToken');
+          localStorage.removeItem('refreshToken');
         }
-      })
-      .catch(() => {
-        // Network error, clear tokens
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('id_token');
-        localStorage.removeItem('refresh_token');
-      });
-    }
+      }
+    };
+    
+    checkAuthAndRedirect();
   }, [router]);
 
   // Handle OAuth login
