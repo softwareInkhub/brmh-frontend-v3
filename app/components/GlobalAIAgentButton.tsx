@@ -90,6 +90,14 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
         description: 'Using dropped namespace context',
         duration: 3000,
       });
+    } else if (contextNamespace) {
+      // Prefer current namespace context when available
+      setDroppedNamespace(contextNamespace);
+      console.log('Using current namespace context:', contextNamespace);
+      toast.success(`AI Agent opened with current namespace: ${contextNamespace['namespace-name']}`, {
+        description: 'Using current namespace context',
+        duration: 3000,
+      });
     } else {
       // Default to general context for namespace generation
       setDroppedNamespace(null);

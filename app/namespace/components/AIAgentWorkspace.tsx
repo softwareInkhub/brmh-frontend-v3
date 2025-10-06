@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Bot, Send, File, Folder, Play, Database, Code, X, Upload, FileText, Image, Archive } from 'lucide-react';
 import { useDrop } from 'react-dnd';
 
@@ -18,6 +19,7 @@ interface UploadedFile {
   size: number;
   content?: string;
   url?: string;
+  original?: File;
 }
 
 interface ProjectFile {
@@ -272,6 +274,60 @@ What would you like to work on today?`,
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+  const router = useRouter();
+
+  // Simple intent detection for namespace generation in general context
+  const isNamespaceGenerationIntent = (message: string) => {
+    const lower = message.toLowerCase();
+    const actionWords = ['create', 'generate', 'build', 'make', 'new'];
+    const targetWords = ['namespace', 'project', 'system', 'app', 'application'];
+    const keywords = [
+      'create namespace', 'generate namespace', 'build namespace', 'make namespace', 'new namespace',
+      'create project', 'generate project', 'build project', 'make project', 'new project'
+    ];
+    if (keywords.some(k => lower.includes(k))) return true;
+    return actionWords.some(a => lower.includes(a)) && targetWords.some(t => lower.includes(t));
+  };
+
+  async function generateNamespaceSmart(userMessage: string) {
+    try {
+      setConsoleOutput(prev => [...prev, '🧠 Smart namespace generation starting...']);
+      const form = new FormData();
+      form.append('prompt', userMessage);
+      // Optional: add BRD/HLD/LLD from future UI fields; for now leave blank
+
+      // Attach uploaded files when original is available; fallback to content for text
+      for (const f of uploadedFiles) {
+        if (f.original) {
+          form.append('files', f.original, f.name);
+        } else if (f.content && (f.type.startsWith('text/') || f.type === 'application/json' || f.type === 'text/markdown')) {
+          const blob = new Blob([f.content], { type: f.type || 'text/plain' });
+          form.append('files', new File([blob], f.name, { type: f.type || 'text/plain' }));
+        }
+      }
+
+      const resp = await fetch(`${API_BASE_URL}/ai-agent/generate-namespace-smart`, {
+        method: 'POST',
+        body: form
+      });
+
+      const data = await resp.json();
+      if (!resp.ok || !data?.success) {
+        throw new Error(data?.error || 'Failed to generate namespace');
+      }
+
+      setConsoleOutput(prev => [...prev, `✅ Namespace created: ${data.namespaceId}`]);
+      addMessage({ role: 'assistant', content: `✅ Created namespace: ${data.namespaceId}`, timestamp: new Date() });
+      // Navigate to namespace page
+      try {
+        router.push('/namespace');
+      } catch {}
+    } catch (err: any) {
+      console.error('Smart generation error:', err);
+      setConsoleOutput(prev => [...prev, `❌ Smart generation failed: ${err?.message || 'Unknown error'}`]);
+      addMessage({ role: 'assistant', content: `❌ Smart generation failed: ${err?.message || 'Unknown error'}`, timestamp: new Date() });
+    }
+  }
 
   // File upload and drag-drop functions
   const handleFileUpload = async (files: FileList | File[]) => {
@@ -971,6 +1027,12 @@ What would you like to work on today?`,
     // Add console output for message processing
     setConsoleOutput(prev => [...prev, `👤 User message: ${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}`]);
     
+    // If no namespace context and intent is namespace generation, call smart endpoint
+    if (!namespace?.['namespace-id'] && isNamespaceGenerationIntent(userMessage)) {
+      await generateNamespaceSmart(userMessage);
+      return;
+    }
+
     // Check if user wants to generate Lambda with uploaded schemas
     const hasUploadedSchemas = uploadedFiles.some(file => 
       file.name.endsWith('.json') && file.content && 
