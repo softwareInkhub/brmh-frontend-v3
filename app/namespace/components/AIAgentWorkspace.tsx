@@ -939,7 +939,28 @@ What would you like to work on today?`,
 
       const reader = response.body?.getReader();
       if (!reader) {
-        throw new Error('No response body reader available');
+        // Fallback for non-streaming responses
+        try {
+          const text = await response.text();
+          try {
+            const data = JSON.parse(text);
+            if (data?.code) {
+              setGeneratedLambdaCode(data.code);
+              setActiveTab('lambda');
+              return;
+            }
+          } catch {}
+          // Try to extract code fences
+          const match = text.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
+          if (match && match[1]) {
+            setGeneratedLambdaCode(match[1]);
+            setActiveTab('lambda');
+            return;
+          }
+          throw new Error('No response body reader available');
+        } catch (e) {
+          throw new Error('No response body reader available');
+        }
       }
 
       let generatedCode = '';
@@ -964,7 +985,19 @@ What would you like to work on today?`,
 
             try {
               const data = JSON.parse(dataContent);
-              
+              // Handle lambda streaming payloads
+              if (data.route === 'lambda') {
+                setActiveTab('lambda');
+                if (data.type === 'lambda_code_chunk' && data.content) {
+                  generatedCode += data.content;
+                  continue;
+                }
+                if ((data.type === 'lambda_code_complete' || data.type === 'lambda_code') && data.code) {
+                  generatedCode += data.code; // final code payload
+                  continue;
+                }
+              }
+              // Fallback: accumulate generic content field
               if (data.content) {
                 generatedCode += data.content;
               }
@@ -1030,6 +1063,21 @@ What would you like to work on today?`,
     // If no namespace context and intent is namespace generation, call smart endpoint
     if (!namespace?.['namespace-id'] && isNamespaceGenerationIntent(userMessage)) {
       await generateNamespaceSmart(userMessage);
+      return;
+    }
+
+    // If user explicitly asks to generate a lambda, call dedicated endpoint directly
+    const lowerUM = userMessage.toLowerCase();
+    const lambdaIntent =
+      /generate\s+lambda/.test(lowerUM) ||
+      /generate\s+a\s+lambda/.test(lowerUM) ||
+      /create\s+lambda/.test(lowerUM) ||
+      /lambda\s+(function|handler)/.test(lowerUM) ||
+      /make\s+.*lambda/.test(lowerUM);
+    if (lambdaIntent) {
+      // Try with selected/dropped schema if any; else null for generic lambda
+      const selected = droppedSchemas && droppedSchemas.length > 0 ? droppedSchemas[0] : null;
+      await handleLambdaGeneration(userMessage, selected);
       return;
     }
 
@@ -2291,8 +2339,11 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
     
     for (let i = 0; i < functions.length; i++) {
       const func = functions[i];
+      const nameToDeploy = (lambdaForm.functionName && lambdaForm.functionName.trim())
+        ? lambdaForm.functionName.trim()
+        : func.name;
       
-      setConsoleOutput(prev => [...prev, `📦 Deploying Lambda function: ${func.name}`]);
+      setConsoleOutput(prev => [...prev, `📦 Deploying Lambda function: ${nameToDeploy}`]);
       setConsoleOutput(prev => [...prev, `   Runtime: ${func.runtime}`]);
       setConsoleOutput(prev => [...prev, `   Handler: ${func.handler}`]);
       setConsoleOutput(prev => [...prev, `   Memory: ${func.memory} MB`]);
@@ -2301,7 +2352,7 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
       try {
         // Use mock deployment for now to avoid AWS role issues
         const deployPayload = {
-          functionName: func.name,
+          functionName: nameToDeploy,
           code: func.code,
           runtime: func.runtime,
           handler: func.handler,
@@ -2326,7 +2377,41 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
         
         console.log('Deploy response status:', deployResponse.status);
         
+        let deployResult: any = null;
         if (!deployResponse.ok) {
+          // If retryable from backend, try once
+          if (deployResponse.status === 503) {
+            setConsoleOutput(prev => [...prev, '⏳ Transient AWS error (503). Retrying once...']);
+            await new Promise(r => setTimeout(r, 1200));
+            const retryResp = await fetch(`${API_BASE_URL}/lambda/deploy`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(deployPayload)
+            });
+            if (!retryResp.ok) {
+              let errTxt;
+              try { const jd = await retryResp.json(); errTxt = jd.details || jd.error || `HTTP ${retryResp.status}`; } catch { errTxt = await retryResp.text(); }
+              console.error('Deploy retry error:', errTxt);
+              throw new Error(`Deployment failed: ${errTxt}`);
+            }
+            const retryData = await retryResp.json();
+            if (retryData) {
+              deployResult = retryData;
+              console.log('Deploy result:', deployResult);
+              if (deployResult.success) {
+                setConsoleOutput(prev => [...prev, `✅ Successfully deployed: ${func.name}`]);
+                setConsoleOutput(prev => [...prev, `   Function ARN: ${deployResult.functionArn}`]);
+                setConsoleOutput(prev => [...prev, `   Code Size: ${deployResult.codeSize} bytes`]);
+                if (deployResult.apiGatewayUrl) {
+                  setConsoleOutput(prev => [...prev, `✅ API Gateway created automatically!`]);
+                  setConsoleOutput(prev => [...prev, `🌐 API Gateway URL: ${deployResult.apiGatewayUrl}`]);
+                  setConsoleOutput(prev => [...prev, `   Endpoint: ${deployResult.apiGatewayUrl}/${deployResult.functionName || func.name}`]);
+                }
+                // continue to summary below
+                // intentionally fall-through
+              }
+            }
+          }
           let errorText;
           try {
             const errorData = await deployResponse.json();
@@ -2338,10 +2423,12 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
           throw new Error(`Deployment failed: ${errorText}`);
         }
         
-        const deployResult = await deployResponse.json();
+        if (!deployResult) {
+          deployResult = await deployResponse.json();
+        }
         console.log('Deploy result:', deployResult);
         
-          if (deployResult.success) {
+          if (deployResult && deployResult.success) {
           setConsoleOutput(prev => [...prev, `✅ Successfully deployed: ${func.name}`]);
           setConsoleOutput(prev => [...prev, `   Function ARN: ${deployResult.functionArn}`]);
           setConsoleOutput(prev => [...prev, `   Code Size: ${deployResult.codeSize} bytes`]);
@@ -2449,14 +2536,6 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
     
     // Collect all API Gateway URLs for the summary
     const apiGatewayUrls: Array<{ functionName: string; url: string }> = [];
-
-    // Include current deployment result (sanitized name)
-    if (deployResult && deployResult.apiGatewayUrl) {
-      const currentFn = deployResult.functionName || lambdaForm.functionName || '';
-      const currentUrl = `${deployResult.apiGatewayUrl}/${currentFn}`;
-      apiGatewayUrls.push({ functionName: currentFn, url: currentUrl });
-      setConsoleOutput(prev => [...prev, `   - API Gateway: ${currentUrl}`]);
-    }
 
     // Include any previously stored successful endpoints
     if (deployedEndpoints && deployedEndpoints.length > 0) {
