@@ -98,7 +98,7 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
 • Upload files using the upload button or drag & drop
 • Drag schemas from the sidebar directly into this chat area for context
 • Drag schemas from the Schema tab for additional context
-• ${namespace ? 'You\'re working with a specific namespace - ask questions about it!' : 'You\'re in general context - perfect for creating new namespaces!'}
+• ${namespace ? 'You\'re working with a specific namespace - ask questions about it or generate BRD/HLD/LLD documents!' : 'You\'re in general context - perfect for creating new namespaces or generating documents for any project!'}
 
 What would you like to work on today?`,
       timestamp: new Date()
@@ -1040,6 +1040,243 @@ What would you like to work on today?`,
     }
   };
 
+  // Function to handle document generation (BRD/HLD/LLD)
+  const handleDocumentGeneration = async (message: string) => {
+    try {
+      setConsoleOutput(prev => [...prev, `📄 Generating documents from namespace context...`]);
+      
+      // Parse document types from message
+      const lowerMessage = message.toLowerCase();
+      const documentTypes = [];
+      
+      if (lowerMessage.includes('brd') || 
+          lowerMessage.includes('business requirements') || 
+          lowerMessage.includes('business requirement') ||
+          lowerMessage.includes('requirements document') ||
+          lowerMessage.includes('requirements doc')) {
+        documentTypes.push('brd');
+      }
+      if (lowerMessage.includes('hld') || 
+          lowerMessage.includes('high level design') ||
+          lowerMessage.includes('high-level design') ||
+          lowerMessage.includes('high level') ||
+          lowerMessage.includes('system design') ||
+          lowerMessage.includes('architecture')) {
+        documentTypes.push('hld');
+      }
+      if (lowerMessage.includes('lld') || 
+          lowerMessage.includes('low level design') ||
+          lowerMessage.includes('low-level design') ||
+          lowerMessage.includes('low level') ||
+          lowerMessage.includes('detailed design') ||
+          lowerMessage.includes('technical design')) {
+        documentTypes.push('lld');
+      }
+      
+      // If no specific types mentioned, generate all
+      if (documentTypes.length === 0) {
+        documentTypes.push('brd', 'hld', 'lld');
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/ai-agent/generate-documents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          namespaceId: namespace?.['namespace-id'],
+          documentTypes: documentTypes,
+          format: 'json'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.documents) {
+        setConsoleOutput(prev => [...prev, `✅ Generated ${Object.keys(result.documents).length} documents`]);
+        
+        // Create downloadable files for each document
+        const documentFiles = [];
+        for (const [docType, docContent] of Object.entries(result.documents)) {
+          const fileName = `${namespace?.['namespace-name'] || 'namespace'}_${docType.toUpperCase()}.json`;
+          const fileContent = JSON.stringify(docContent, null, 2);
+          
+          documentFiles.push({
+            name: fileName,
+            content: fileContent,
+            type: 'application/json',
+            size: fileContent.length
+          });
+        }
+        
+        // Add files to uploaded files for download
+        setUploadedFiles(prev => [...prev, ...documentFiles]);
+        
+        // Create download links and show in chat
+        const downloadLinks = documentFiles.map(file => 
+          `[📄 Download ${file.name}](#download:${file.name})`
+        ).join('\n');
+        
+        addMessage({
+          role: 'assistant',
+          content: `📋 **Generated Documents for ${namespace?.['namespace-name']}:**\n\n${downloadLinks}\n\n**Available Documents:**\n${Object.keys(result.documents).map(doc => `• **${doc.toUpperCase()}** - ${result.documents[doc].type || 'Document'}`).join('\n')}\n\n💡 **Tip:** Click the download links above to save the documents to your computer.`,
+          timestamp: new Date()
+        });
+        
+        setConsoleOutput(prev => [...prev, `📄 Documents ready for download: ${Object.keys(result.documents).join(', ')}`]);
+      } else {
+        throw new Error(result.error || 'Failed to generate documents');
+      }
+    } catch (error) {
+      console.error('Error in document generation:', error);
+      setConsoleOutput(prev => [...prev, `❌ Error generating documents: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+      
+      addMessage({
+        role: 'assistant',
+        content: `❌ Failed to generate documents: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  };
+
+  // Function to handle document generation from prompt (creates namespace first)
+  const handleDocumentGenerationFromPrompt = async (message: string) => {
+    try {
+      setConsoleOutput(prev => [...prev, `📄 Creating namespace and generating documents from: ${message}`]);
+      
+      // Parse document types from message
+      const lowerMessage = message.toLowerCase();
+      const documentTypes = [];
+      
+      if (lowerMessage.includes('brd') || 
+          lowerMessage.includes('business requirements') || 
+          lowerMessage.includes('business requirement') ||
+          lowerMessage.includes('requirements document') ||
+          lowerMessage.includes('requirements doc')) {
+        documentTypes.push('brd');
+      }
+      if (lowerMessage.includes('hld') || 
+          lowerMessage.includes('high level design') ||
+          lowerMessage.includes('high-level design') ||
+          lowerMessage.includes('high level') ||
+          lowerMessage.includes('system design') ||
+          lowerMessage.includes('architecture')) {
+        documentTypes.push('hld');
+      }
+      if (lowerMessage.includes('lld') || 
+          lowerMessage.includes('low level design') ||
+          lowerMessage.includes('low-level design') ||
+          lowerMessage.includes('low level') ||
+          lowerMessage.includes('detailed design') ||
+          lowerMessage.includes('technical design')) {
+        documentTypes.push('lld');
+      }
+      
+      // If no specific types mentioned, generate all
+      if (documentTypes.length === 0) {
+        documentTypes.push('brd', 'hld', 'lld');
+      }
+      
+      // First, create a namespace from the prompt
+      addMessage({
+        role: 'assistant',
+        content: `🚀 I'll create a namespace for your project and then generate the requested documents. This may take a moment...`,
+        timestamp: new Date()
+      });
+      
+      const namespaceResponse = await fetch(`${API_BASE_URL}/ai-agent/generate-namespace-smart`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: message,
+          brd: '',
+          hld: '',
+          lld: ''
+        })
+      });
+
+      if (!namespaceResponse.ok) {
+        throw new Error(`Failed to create namespace: ${namespaceResponse.status}`);
+      }
+
+      const namespaceResult = await namespaceResponse.json();
+      
+      if (!namespaceResult.success || !namespaceResult.namespaceId) {
+        throw new Error(namespaceResult.error || 'Failed to create namespace');
+      }
+      
+      setConsoleOutput(prev => [...prev, `✅ Created namespace: ${namespaceResult.namespaceId}`]);
+      
+      // Now generate documents from the created namespace
+      const documentResponse = await fetch(`${API_BASE_URL}/ai-agent/generate-documents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          namespaceId: namespaceResult.namespaceId,
+          documentTypes: documentTypes,
+          format: 'json'
+        })
+      });
+
+      if (!documentResponse.ok) {
+        throw new Error(`Failed to generate documents: ${documentResponse.status}`);
+      }
+
+      const documentResult = await documentResponse.json();
+      
+      if (documentResult.success && documentResult.documents) {
+        setConsoleOutput(prev => [...prev, `✅ Generated ${Object.keys(documentResult.documents).length} documents`]);
+        
+        // Create downloadable files for each document
+        const documentFiles = [];
+        for (const [docType, docContent] of Object.entries(documentResult.documents)) {
+          const fileName = `project_${docType.toUpperCase()}.json`;
+          const fileContent = JSON.stringify(docContent, null, 2);
+          
+          documentFiles.push({
+            name: fileName,
+            content: fileContent,
+            type: 'application/json',
+            size: fileContent.length
+          });
+        }
+        
+        // Add files to uploaded files for download
+        setUploadedFiles(prev => [...prev, ...documentFiles]);
+        
+        // Create download links and show in chat
+        const downloadLinks = documentFiles.map(file => 
+          `[📄 Download ${file.name}](#download:${file.name})`
+        ).join('\n');
+        
+        addMessage({
+          role: 'assistant',
+          content: `📋 **Generated Documents for your project:**\n\n${downloadLinks}\n\n**Available Documents:**\n${Object.keys(documentResult.documents).map(doc => `• **${doc.toUpperCase()}** - ${documentResult.documents[doc].type || 'Document'}`).join('\n')}\n\n💡 **Tip:** Click the download links above to save the documents to your computer.\n\n🎯 **Namespace Created:** You can view and manage the generated namespace [here](/namespace/${namespaceResult.namespaceId}).`,
+          timestamp: new Date()
+        });
+        
+        setConsoleOutput(prev => [...prev, `📄 Documents ready for download: ${Object.keys(documentResult.documents).join(', ')}`]);
+      } else {
+        throw new Error(documentResult.error || 'Failed to generate documents');
+      }
+    } catch (error) {
+      console.error('Error in document generation from prompt:', error);
+      setConsoleOutput(prev => [...prev, `❌ Error generating documents: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+      
+      addMessage({
+        role: 'assistant',
+        content: `❌ Failed to generate documents: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
@@ -1079,6 +1316,50 @@ What would you like to work on today?`,
       const selected = droppedSchemas && droppedSchemas.length > 0 ? droppedSchemas[0] : null;
       await handleLambdaGeneration(userMessage, selected);
       return;
+    }
+
+    // Check for document generation intent (BRD/HLD/LLD)
+    const documentIntent = 
+      /generate\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /create\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /make\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /give\s+me\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /can\s+you\s+(give|provide|create|generate)\s+.*?(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /i\s+need\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /i\s+want\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /show\s+me\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /documentation/.test(lowerUM) ||
+      /document/.test(lowerUM) ||
+      /specification/.test(lowerUM) ||
+      /requirements/.test(lowerUM) ||
+      /design\s+document/.test(lowerUM) ||
+      // More flexible patterns for common phrases
+      /(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)\s+(for|of|about)/.test(lowerUM) ||
+      /(give|provide|create|generate|make|show|need|want)\s+.*?(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM);
+    
+    // Debug logging for document intent detection
+    console.log('[Frontend] 🔍 Document intent detection:', {
+      message: userMessage,
+      lowerMessage: lowerUM,
+      documentIntent: documentIntent,
+      namespace: namespace?.['namespace-id']
+    });
+    
+    if (documentIntent) {
+      console.log('[Frontend] 🎯 Document generation intent detected!');
+      setConsoleOutput(prev => [...prev, `🎯 Document generation intent detected: ${userMessage}`]);
+      
+      if (namespace?.['namespace-id']) {
+        // Generate documents from existing namespace
+        console.log('[Frontend] 📄 Generating documents from existing namespace');
+        await handleDocumentGeneration(userMessage);
+        return;
+      } else {
+        // Generate documents by creating a namespace first
+        console.log('[Frontend] 📄 Generating documents by creating namespace first');
+        await handleDocumentGenerationFromPrompt(userMessage);
+        return;
+      }
     }
 
     // Check if user wants to generate Lambda with uploaded schemas
@@ -2743,6 +3024,26 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
     }
   }
 
+  // Function to download individual files
+  const downloadFile = (fileName: string, content: string, mimeType: string = 'application/json') => {
+    try {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      setConsoleOutput(prev => [...prev, `📥 Downloaded: ${fileName}`]);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      setConsoleOutput(prev => [...prev, `❌ Error downloading ${fileName}: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+    }
+  };
+
   async function saveLambdaToNamespace() {
     if (!generatedLambdaCode || !lambdaForm.functionName) {
       alert('Please generate Lambda code and provide a function name first');
@@ -3858,7 +4159,28 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                   : 'bg-gray-100 text-gray-900'
               }`}
             >
-              <div className="whitespace-pre-wrap">{message.content}</div>
+              <div 
+                className="whitespace-pre-wrap"
+                onClick={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.tagName === 'A' && target.getAttribute('href')?.startsWith('#download:')) {
+                    e.preventDefault();
+                    const fileName = target.getAttribute('href')?.replace('#download:', '');
+                    if (fileName) {
+                      const file = uploadedFiles.find(f => f.name === fileName);
+                      if (file && file.content) {
+                        downloadFile(file.name, file.content, file.type);
+                      }
+                    }
+                  }
+                }}
+                dangerouslySetInnerHTML={{
+                  __html: message.content.replace(
+                    /\[📄 Download ([^\]]+)\]\(#download:([^)]+)\)/g,
+                    '<a href="#download:$2" style="color: #3b82f6; text-decoration: underline; cursor: pointer;">📄 Download $1</a>'
+                  )
+                }}
+              />
               <div className="text-xs opacity-70 mt-1">
                 {message.timestamp.toLocaleTimeString()}
               </div>
