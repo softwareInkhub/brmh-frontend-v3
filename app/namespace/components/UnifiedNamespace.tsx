@@ -291,9 +291,10 @@ export interface UnifiedNamespaceProps {
   onViewAccount?: (account: any, ns?: any) => void;
   onViewMethod?: (method: any, ns?: any) => void;
   onViewSchema?: (schema: any, ns?: any) => void;
+  onOpenNamespaceTab?: (namespace: any) => void;
 }
 
-const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigger, onModalClose, fetchNamespaceDetails, namespaceDetailsMap, setNamespaceDetailsMap, refreshData, onViewAccount, onViewMethod, onViewSchema }) => {
+const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigger, onModalClose, fetchNamespaceDetails, namespaceDetailsMap, setNamespaceDetailsMap, refreshData, onViewAccount, onViewMethod, onViewSchema, onOpenNamespaceTab }) => {
   const { isCollapsed } = useSidePanel();
   // --- State ---
   const [namespaces, setNamespaces] = useState<UnifiedNamespace[]>([]);
@@ -310,6 +311,19 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedNamespace, setSelectedNamespace] = useState<UnifiedNamespace | null>(null);
   const [selectedNamespaceId, setSelectedNamespaceId] = useState<string | null>(null);
+  const [floatingNamespaceDetails, setFloatingNamespaceDetails] = useState<UnifiedNamespace | null>(null);
+  const [showFloatingDetails, setShowFloatingDetails] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState({
+    accounts: false,
+    methods: false,
+    schemas: false
+  });
+  const [panelHeight, setPanelHeight] = useState(60); // Height as percentage of viewport
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [dragAnimationFrame, setDragAnimationFrame] = useState<number | null>(null);
+  const [isPanelAnimating, setIsPanelAnimating] = useState(false);
+  const [showContent, setShowContent] = useState(false);
   const [showUnifiedSchemaModal, setShowUnifiedSchemaModal] = useState(false);
   const [expandedNamespaceId, setExpandedNamespaceId] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
@@ -411,6 +425,12 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
   // Add state for schema modal namespace context
   const [schemaModalNamespace, setSchemaModalNamespace] = useState<any>(null);
 
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [namespaceToDelete, setNamespaceToDelete] = useState<UnifiedNamespace | null>(null);
+
   // --- Fetch Data ---
   const fetchData = useCallback(async () => {
     setLoading({ namespaces: true, schemas: true });
@@ -448,6 +468,22 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Control body scroll when floating panel is open
+  useEffect(() => {
+    if (showFloatingDetails) {
+      // Prevent background scrolling
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Restore normal scrolling
+      document.body.style.overflow = '';
+    }
+
+    // Cleanup function to ensure overflow is reset when component unmounts
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showFloatingDetails]);
 
   useEffect(() => {
     const handler = () => { fetchData(); };
@@ -540,17 +576,79 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
   };
 
   const handleDelete = async (type: 'namespace' | 'schema', id: string) => {
+    if (type === 'namespace') {
+      // For namespace deletion, use the modal
+      const namespace = namespaces.find(ns => ns["namespace-id"] === id);
+      if (namespace) {
+        setNamespaceToDelete(namespace);
+        setShowDeleteModal(true);
+        setDeleteConfirmText('');
+      }
+      return;
+    }
+    
+    // For schema deletion, keep the simple confirm
     if (!window.confirm(`Delete this ${type}?`)) return;
     try {
-      const url = type === 'namespace'
-        ? `${API_BASE_URL}/unified/namespaces/${id}`
-        : `${API_BASE_URL}/unified/schema/${id}`;
-
+      const url = `${API_BASE_URL}/unified/schema/${id}`;
       const res = await fetch(url, { method: 'DELETE' });
       if (!res.ok) throw new Error(`Failed to delete ${type}`);
       fetchData();
     } catch (err: any) {
       setError(prev => ({ ...prev, [type + 's']: err.message }));
+    }
+  };
+
+  const deleteNamespace = async () => {
+    // Validate confirmation text
+    if (deleteConfirmText !== 'DELETE') {
+      return;
+    }
+
+    if (!namespaceToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      console.log(`🗑️ Deleting namespace:`, namespaceToDelete["namespace-id"]);
+      
+      const res = await fetch(`${API_BASE_URL}/unified/namespaces/${namespaceToDelete["namespace-id"]}`, {
+        method: 'DELETE',
+      });
+      
+      if (res.ok) {
+        let result = null;
+        try {
+          const text = await res.text();
+          if (text) {
+            result = JSON.parse(text);
+          }
+        } catch (parseError) {
+          console.warn('Could not parse response as JSON:', parseError);
+        }
+        
+        console.log(`Successfully deleted namespace:`, result);
+        
+        const successMessage = `✅ Namespace deleted successfully!\n\n` +
+          `Deleted:\n` +
+          `• ${result?.deletedCounts?.accounts || 0} accounts\n` +
+          `• ${result?.deletedCounts?.methods || 0} methods\n` +
+          `• ${result?.deletedCounts?.schemas || 0} schemas`;
+        
+        alert(successMessage);
+        setShowDeleteModal(false);
+        setDeleteConfirmText('');
+        setNamespaceToDelete(null);
+        setIsDeleting(false);
+        fetchData(); // Refresh the data
+      } else {
+        console.error(`Failed to delete namespace`);
+        alert('Failed to delete namespace');
+        setIsDeleting(false);
+      }
+    } catch (error) {
+      console.error(`Error deleting namespace:`, error);
+      alert('Error deleting namespace');
+      setIsDeleting(false);
     }
   };
 
@@ -593,15 +691,21 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
   };
 
   const handleNamespaceClick = async (ns: UnifiedNamespace) => {
-    // Set selected namespace
+    // Set floating namespace details
+    setFloatingNamespaceDetails(ns);
     setSelectedNamespaceId(ns["namespace-id"]);
     setSelectedNamespace(ns);
     
-    if (expandedNamespaceId === ns["namespace-id"]) {
-      setExpandedNamespaceId(null);
-      return;
-    }
-    setExpandedNamespaceId(ns["namespace-id"]);
+    // Start opening animation
+    setIsPanelAnimating(true);
+    setShowFloatingDetails(true);
+    
+    // Show content after panel animation starts
+    setTimeout(() => {
+      setShowContent(true);
+    }, 200);
+    
+    // Load namespace details if not already loaded
     if (!namespaceDetailsMap[ns["namespace-id"]]) {
       setLoadingDetails(true);
       try {
@@ -629,7 +733,113 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
         setLoadingDetails(false);
       }
     }
+    
+    // End animation after a short delay
+    setTimeout(() => {
+      setIsPanelAnimating(false);
+    }, 500);
   };
+
+  const closeFloatingDetails = () => {
+    // Start closing animation
+    setIsPanelAnimating(true);
+    setShowContent(false);
+    
+    // Close after animation completes
+    setTimeout(() => {
+      setShowFloatingDetails(false);
+      setFloatingNamespaceDetails(null);
+      setSelectedNamespace(null);
+      setSelectedNamespaceId(null);
+      setPanelHeight(60); // Reset to default height
+      setIsPanelAnimating(false);
+    }, 300);
+  };
+
+  const handleSidePanelAdd = (type: string, parentData?: any) => {
+    if (type === 'account') {
+      setShowAccountModal(true);
+    } else if (type === 'method') {
+      setShowMethodModal(true);
+    }
+  };
+
+  const toggleSectionCollapse = (section: 'accounts' | 'methods' | 'schemas') => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  // Drag functionality for resizing panel
+  const handleDragStart = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStartY(e.clientY);
+    e.preventDefault();
+  };
+
+  const handleDragMove = (e: MouseEvent) => {
+    if (!isDragging) return;
+    
+    // Cancel previous animation frame if it exists
+    if (dragAnimationFrame) {
+      cancelAnimationFrame(dragAnimationFrame);
+    }
+    
+    // Use requestAnimationFrame for smoother updates
+    const frame = requestAnimationFrame(() => {
+      const viewportHeight = window.innerHeight;
+      const deltaY = dragStartY - e.clientY;
+      const deltaHeight = (deltaY / viewportHeight) * 100;
+      const newHeight = panelHeight + deltaHeight;
+      
+      // Constrain height between 30% and 80% of viewport
+      const constrainedHeight = Math.min(Math.max(newHeight, 30), 80);
+      setPanelHeight(constrainedHeight);
+      setDragStartY(e.clientY); // Update start position for next move
+    });
+    
+    setDragAnimationFrame(frame);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    setDragStartY(0);
+    
+    // Cancel any pending animation frame
+    if (dragAnimationFrame) {
+      cancelAnimationFrame(dragAnimationFrame);
+      setDragAnimationFrame(null);
+    }
+  };
+
+  // Add event listeners for drag functionality
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleDragMove);
+      document.addEventListener('mouseup', handleDragEnd);
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.removeEventListener('mousemove', handleDragMove);
+      document.removeEventListener('mouseup', handleDragEnd);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleDragMove);
+      document.removeEventListener('mouseup', handleDragEnd);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      
+      // Clean up any pending animation frame
+      if (dragAnimationFrame) {
+        cancelAnimationFrame(dragAnimationFrame);
+        setDragAnimationFrame(null);
+      }
+    };
+  }, [isDragging]);
 
   const closeDrawer = () => {
     setDrawerOpen(false);
@@ -840,7 +1050,8 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
 
   return (
     <div 
-      className={`p-0 transition-all duration-200 ${isCollapsed ? 'ml-10' : 'ml-10'}`}
+      className={`p-0 ${!isDragging ? 'transition-all duration-300 ease-out' : ''} ${isCollapsed ? 'ml-10' : 'ml-10'}`}
+      style={{ paddingBottom: showFloatingDetails ? `${panelHeight + 5}vh` : '0px' }}
       onClick={(e) => {
         // Clear selection when clicking on the background
         if (e.target === e.currentTarget) {
@@ -851,7 +1062,12 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold">Namesapce</h2>
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-xl font-semibold">Namespace</h2>
+            <p className="text-sm text-gray-500">Select a namespace to view details</p>
+          </div>
+        </div>
         <div className="flex items-center gap-4">
           <div className="relative">
             <input
@@ -964,7 +1180,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                               </span>
                             ))}
                             {ns.tags.length > 3 && (
-                              <span className="px-2 py-0.5 bg-gray-50 text-gray-700 text-[11px] rounded-full border border-gray-200">
+                              <span key={`${ns["namespace-id"]}-more`} className="px-2 py-0.5 bg-gray-50 text-gray-700 text-[11px] rounded-full border border-gray-200">
                                 +{ns.tags.length - 3}
                               </span>
                             )}
@@ -1004,178 +1220,253 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
             );
             })}
           </div>
-          {/* Expanded details below the grid */}
-          {expandedNamespaceId && (
-            <div className="w-full bg-white/60 backdrop-blur-sm rounded-xl p-4 mt-4 mb-2 shadow-sm border border-gray-200">
-                    {/* Accounts */}
-                    <div className="mb-4 rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-gray-800 text-sm flex items-center gap-2"><span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100"><Users size={14} className="text-blue-600"/></span>Accounts</span>
-                        <button className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow hover:shadow-md active:scale-[0.98]" onClick={() => {
-                          const event = new CustomEvent('open-all-accounts-tab', { detail: { namespaceId: expandedNamespaceId } });
-                          window.dispatchEvent(event);
-                        }}><Plus size={12} /> Add Account</button>
                       </div>
-                {loadingDetails && !namespaceDetailsMap[expandedNamespaceId] ? (
-                        <div className="text-gray-500 text-xs flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg"><div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"/> Loading accounts...</div>
-                ) : (!namespaceDetailsMap[expandedNamespaceId]?.accounts || !Array.isArray(namespaceDetailsMap[expandedNamespaceId]?.accounts) || namespaceDetailsMap[expandedNamespaceId]?.accounts.length === 0 ? (
-                        <div className="text-gray-500 text-xs flex items-center gap-2 bg-gray-50 border border-dashed border-gray-300 px-4 py-3 rounded-lg"><Info size={12}/> No accounts found.</div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
-                    {namespaceDetailsMap[expandedNamespaceId]?.accounts?.map(account => (
-                            <div key={account["namespace-account-id"]} className="group rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-3 flex items-center gap-3 hover:shadow-md transition cursor-pointer" onClick={() => {
-                              // Open the single namespace tab and trigger account view
-                              const currentNamespace = filteredNamespaces.find(ns => ns["namespace-id"] === expandedNamespaceId);
-                              if (currentNamespace && onViewAccount) {
-                                onViewAccount(account, currentNamespace);
-                              }
-                            }}>
-                              <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/70 border border-blue-100"><User size={14} className="text-blue-600"/></div>
-                              <div className="min-w-0">
-                                <div className="font-medium text-gray-900 text-sm truncate">{account["namespace-account-name"]}</div>
-                                {account["namespace-account-url-override"] && <div className="text-xs text-gray-500 truncate">{account["namespace-account-url-override"]}</div>}
-                              </div>
-                              <div className="ml-auto flex items-center gap-1">
-                                {account.tags && Array.isArray(account.tags) && account.tags.length > 0 && account.tags.slice(0,2).map((tag: string) => (
-                                  <span key={`${account["namespace-account-id"]}-${tag}`} className="px-2 py-0.5 bg-white/80 border border-blue-100 text-blue-700 text-[10px] rounded-full">{tag}</span>
-                                ))}
-                                {account.tags && account.tags.length > 2 && (
-                                  <span className="px-2 py-0.5 bg-white/80 border border-blue-100 text-blue-700 text-[10px] rounded-full">+{account.tags.length - 2}</span>
-                                )}
+      </div>
 
-                                <button className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-white/70 rounded-md transition" onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  // Open the account tab in edit mode
-                                  const currentNamespace = filteredNamespaces.find(ns => ns["namespace-id"] === expandedNamespaceId);
-                                  if (currentNamespace && onViewAccount) {
-                                    onViewAccount(account, currentNamespace);
-                                  }
-                                }}><Edit size={12} /></button>
-                                <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-white/70 rounded-md transition" onClick={(e) => { e.stopPropagation(); handleDeleteAccount(account); }}><Trash2 size={12} /></button>
+      {/* Bottom Sliding Namespace Details */}
+      {showFloatingDetails && floatingNamespaceDetails && (
+        <>
+          {/* Panel */}
+          <div className={`fixed bottom-0 z-40 bg-white border-t-2 border-blue-200 shadow-2xl rounded-t-2xl ${!isDragging ? 'transition-all duration-300 ease-out' : ''}`} 
+               style={{
+                 left: isCollapsed ? '80px' : '336px', // Align with content area
+                 right: '0px', // Remove empty space on right
+                 maxWidth: isCollapsed ? 'calc(100vw - 80px)' : 'calc(100vw - 336px)', // Fill to edge
+                 minWidth: '400px', // Minimum width for content readability
+                 height: `${panelHeight}vh`, // Dynamic height based on drag
+                 transform: isPanelAnimating && !showContent ? 'translateY(100%)' : 'translateY(0)',
+                 opacity: isPanelAnimating && !showContent ? '0' : '1'
+               }}>
+            {/* Drag Handle */}
+            <div 
+              className={`flex justify-center pt-2 pb-1 cursor-ns-resize hover:bg-gray-50 transition-colors border-t border-gray-100 ${isDragging ? 'bg-blue-50' : ''}`}
+              onMouseDown={handleDragStart}
+              title="Drag to resize panel height"
+            >
+              <div className={`w-12 h-1 rounded-full transition-colors ${isDragging ? 'bg-blue-500' : 'bg-gray-300 hover:bg-gray-400'}`}></div>
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      ))}
+            
+            {/* Header */}
+            <div className={`flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 transition-all duration-500 ease-out ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+              <div className="flex items-center gap-4">
+                {/* Namespace Icon */}
+                <button
+                  onClick={() => onOpenNamespaceTab && onOpenNamespaceTab(floatingNamespaceDetails)}
+                  className="hover:scale-105 transition-transform duration-200"
+                  title="Open in tab"
+                >
+                  {floatingNamespaceDetails["icon-url"] ? (
+                    <img 
+                      src={floatingNamespaceDetails["icon-url"]} 
+                      alt={floatingNamespaceDetails["namespace-name"]}
+                      className="w-12 h-12 rounded-xl object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                      <Database className="w-7 h-7 text-white" />
                     </div>
-                    {/* Methods */}
-                    <div className="mt-4 rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-gray-800 text-sm flex items-center gap-2"><span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-gradient-to-br from-sky-50 to-cyan-50 border border-sky-100"><Terminal size={14} className="text-sky-600"/></span>Methods</span>
-                        <button className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-gradient-to-r from-sky-600 to-cyan-600 text-white shadow hover:shadow-md active:scale-[0.98]" onClick={() => {
-                          const event = new CustomEvent('open-all-methods-tab', { detail: { namespaceId: expandedNamespaceId } });
-                          window.dispatchEvent(event);
-                        }}><Plus size={12} /> Add Method</button>
+                  )}
+                </button>
+                
+                {/* Namespace Info */}
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">{floatingNamespaceDetails["namespace-name"]}</h2>
+                  <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                    <span>{floatingNamespaceDetails["namespace-url"]}</span>
+                    {namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]] && (
+                      <>
+                        <span>•</span>
+                        <span>{namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]].accounts.length} accounts</span>
+                        <span>•</span>
+                        <span>{namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]].methods.length} methods</span>
+                      </>
+                    )}
+                    {floatingNamespaceDetails.tags && floatingNamespaceDetails.tags.length > 0 && (
+                      <>
+                        <span>•</span>
+                        <div className="flex items-center gap-1">
+                            {floatingNamespaceDetails.tags.slice(0, 3).map((tag: string, index: number) => (
+                            <span key={index} className="px-2 py-1 bg-white text-gray-700 rounded-full text-xs border border-blue-200">
+                              {tag}
+                            </span>
+                          ))}
+                          {floatingNamespaceDetails.tags.length > 3 && (
+                            <span key="floating-namespace-more" className="text-xs text-gray-500">+{floatingNamespaceDetails.tags.length - 3}</span>
+                          )}
+                              </div>
+                      </>
+                    )}
+                            </div>
+                        </div>
+                    </div>
+              
+              {/* Close Button */}
+              <button
+                onClick={closeFloatingDetails}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white/70 rounded-lg transition-colors"
+                title="Close"
+              >
+                <X size={24} />
+              </button>
                       </div>
-                {loadingDetails && !namespaceDetailsMap[expandedNamespaceId] ? (
-                        <div className="text-gray-500 text-xs flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg"><div className="w-3 h-3 border-2 border-sky-600 border-t-transparent rounded-full animate-spin"/> Loading methods...</div>
-                ) : (!namespaceDetailsMap[expandedNamespaceId]?.methods || !Array.isArray(namespaceDetailsMap[expandedNamespaceId]?.methods) || namespaceDetailsMap[expandedNamespaceId]?.methods.length === 0 ? (
-                        <div className="text-gray-500 text-xs flex items-center gap-2 bg-gray-50 border border-dashed border-gray-300 px-4 py-3 rounded-lg"><Info size={12}/> No methods found.</div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
-                    {namespaceDetailsMap[expandedNamespaceId]?.methods?.map((method, index) => (
-                            <div key={method["namespace-method-id"] || `method-${expandedNamespaceId}-${index}`} className="group rounded-xl border border-gray-200 bg-gray-50/80 px-4 py-3 flex items-center gap-3 hover:shadow-md transition cursor-pointer" onClick={() => {
-                              // Open the single namespace tab and trigger method view
-                              const currentNamespace = filteredNamespaces.find(ns => ns["namespace-id"] === expandedNamespaceId);
-                              if (currentNamespace && onViewMethod) {
-                                onViewMethod(method, currentNamespace);
-                              }
-                            }}>
-                              <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-white border border-gray-200"><Terminal size={14} className="text-gray-700"/></div>
-                              <div className="min-w-0">
-                                <div className="font-medium text-gray-900 text-sm truncate">{method["namespace-method-name"]}</div>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className={`text-[10px] px-2 py-0.5 rounded-full border ${method["namespace-method-type"] === 'GET' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>{method["namespace-method-type"]}</span>
-                                  {method.tags && Array.isArray(method.tags) && method.tags.length > 0 && method.tags.slice(0,2).map((tag: string) => (
-                                    <span key={`${method["namespace-method-id"]}-${tag}`} className="px-2 py-0.5 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-full">{tag}</span>
-                                  ))}
-                                  {method.tags && method.tags.length > 2 && (
-                                    <span className="px-2 py-0.5 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-full">+{method.tags.length - 2}</span>
-                                  )}
+            
+            {/* Content */}
+            <div className={`p-6 overflow-y-auto pb-20 ${!isDragging ? 'transition-all duration-300 ease-out' : ''} transition-all duration-500 ease-out ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ height: `calc(${panelHeight}vh - 120px)` }}>
+              {loadingDetails && !namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]] ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-500">Loading namespace details...</p>
                                 </div>
                               </div>
-                              <div className="ml-auto flex items-center gap-1">
-
-                                <button className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-white/70 rounded-md transition" onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  // Open the method tab in edit mode
-                                  const currentNamespace = filteredNamespaces.find(ns => ns["namespace-id"] === expandedNamespaceId);
-                                  if (currentNamespace && onViewMethod) {
-                                    onViewMethod(method, currentNamespace);
-                                  }
-                                }}><Edit size={12} /></button>
-                                <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-white/70 rounded-md transition" onClick={(e) => { e.stopPropagation(); handleDeleteMethod(method); }}><Trash2 size={12} /></button>
+              ) : (
+                <div className="space-y-6">
+                  {/* Accounts Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <button 
+                        onClick={() => toggleSectionCollapse('accounts')}
+                        className="flex items-center gap-2 text-lg font-semibold text-gray-800 hover:text-blue-600 transition-colors"
+                      >
+                        {collapsedSections.accounts ? (
+                          <ChevronRight className="w-5 h-5 text-blue-600" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-blue-600" />
+                        )}
+                        <Users className="w-5 h-5 text-blue-600" />
+                        Accounts ({namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.accounts?.length || 0})
+                      </button>
+                      <button 
+                        onClick={() => handleSidePanelAdd('account', floatingNamespaceDetails)}
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-1"
+                      >
+                        <UserPlus size={14} />
+                        Add Account
+                      </button>
+                                </div>
+                    
+                    {!collapsedSections.accounts && (
+                      <>
+                        {!namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.accounts?.length ? (
+                          <div className="text-center py-8 text-gray-500">
+                            <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                            <p>No accounts found</p>
                               </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.accounts?.map(account => (
+                              <div key={account["namespace-account-id"]} className="p-4 bg-blue-50 rounded-lg border border-blue-200 hover:shadow-md transition-shadow">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-blue-200">
+                                    <User className="w-4 h-4 text-blue-600" />
                             </div>
-                          ))}
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-gray-900 truncate">{account["namespace-account-name"]}</h4>
+                                    <p className="text-sm text-gray-500 truncate">{account["namespace-account-url-override"]}</p>
+                                  </div>
+                                </div>
+                                {account.tags && account.tags.length > 0 && (
+                                  <div className="mt-2 flex flex-wrap gap-1">
+                                    {account.tags.slice(0, 2).map((tag: string, index: number) => (
+                                      <span key={index} className="px-2 py-0.5 bg-white text-blue-700 rounded-full text-xs">
+                                        {tag}
+                                      </span>
+                                    ))}
+                                    {account.tags.length > 2 && (
+                                      <span key={`${account["namespace-account-id"]}-more`} className="px-2 py-0.5 bg-white text-blue-700 rounded-full text-xs">+{account.tags.length - 2}</span>
+                                    )}
+                                  </div>
+                                )}
                         </div>
                       ))}
                     </div>
-              {/* Schemas for selected namespace */}
-              <div className="mt-4 rounded-xl">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-gray-800 text-sm flex items-center gap-2"><span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100"><FileCode size={14} className="text-purple-600"/></span>Schemas</span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  
+                  {/* Methods Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
                   <button
-                    className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow hover:shadow-md active:scale-[0.98]"
-                    onClick={() => {
-                      const event = new CustomEvent('open-create-schema-tab', { detail: { namespaceId: expandedNamespaceId } });
-                      window.dispatchEvent(event);
-                    }}
-                  >
-                    <Plus size={12}/> Create Schema
+                        onClick={() => toggleSectionCollapse('methods')}
+                        className="flex items-center gap-2 text-lg font-semibold text-gray-800 hover:text-green-600 transition-colors"
+                      >
+                        {collapsedSections.methods ? (
+                          <ChevronRight className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-green-600" />
+                        )}
+                        <Terminal className="w-5 h-5 text-green-600" />
+                        Methods ({namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.methods?.length || 0})
+                      </button>
+                      <button
+                        onClick={() => handleSidePanelAdd('method', floatingNamespaceDetails)}
+                        className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-1"
+                      >
+                        <Plus size={14} />
+                        Add Method
                   </button>
                 </div>
-                {
-                  (() => {
-                    const ns = filteredNamespaces.find(ns => ns["namespace-id"] === expandedNamespaceId);
-                    const nsSchemaIds = ns && Array.isArray((ns as any).schemaIds) ? (ns as any).schemaIds : [];
-                    if (!Array.isArray(nsSchemaIds)) return null;
-                    const nsSchemas = schemas.filter(s => nsSchemaIds.includes(s.id));
-                    if (nsSchemas.length === 0) {
-                      return <div className="text-gray-500 text-xs flex items-center gap-2 bg-gray-50 border border-dashed border-gray-300 px-4 py-3 rounded-lg"><Info size={12}/> No schemas found.</div>;
-                    }
-              return (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2 max-h-80 overflow-y-auto">
-                        {nsSchemas.map(schema => (
-                          <div key={schema.id} className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-3 hover:shadow-md transition cursor-pointer" onClick={() => {
-                            // Open the single namespace tab and trigger schema view
-                            const currentNamespace = filteredNamespaces.find(ns => ns["namespace-id"] === expandedNamespaceId);
-                            if (currentNamespace && onViewSchema) {
-                              onViewSchema(schema, currentNamespace);
-                            }
-                          }}>
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-lg bg-white/70 border border-purple-100 flex items-center justify-center"><FileCode size={14} className="text-purple-600"/></div>
-                                <span className="font-semibold text-purple-700 text-sm truncate">{schema.schemaName}</span>
+                    
+                    {!collapsedSections.methods && (
+                      <>
+                        {!namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.methods?.length ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <Terminal className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p>No methods found</p>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <button className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-white/70 rounded-md transition" onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  // Open the schema tab in edit mode
-                                  const currentNamespace = filteredNamespaces.find(ns => ns["namespace-id"] === expandedNamespaceId);
-                                  if (currentNamespace && onViewSchema) {
-                                    onViewSchema(schema, currentNamespace);
-                                  }
-                                }}><Edit size={12} /></button>
-                                <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-white/70 rounded-md transition" onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  handleDelete('schema', schema.id); 
-                                }}><Trash2 size={12} /></button>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.methods?.map(method => (
+                          <div key={method["namespace-method-id"]} className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-gray-200">
+                                <Terminal className="w-4 h-4 text-gray-600" />
                               </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-gray-900 truncate">{method["namespace-method-name"]}</h4>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    method["namespace-method-type"] === 'GET' ? 'bg-green-100 text-green-700' :
+                                    method["namespace-method-type"] === 'POST' ? 'bg-blue-100 text-blue-700' :
+                                    method["namespace-method-type"] === 'PUT' ? 'bg-yellow-100 text-yellow-700' :
+                                    method["namespace-method-type"] === 'DELETE' ? 'bg-red-100 text-red-700' :
+                                    'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {method["namespace-method-type"]}
+                                  </span>
                             </div>
-                            <span className="text-xs text-gray-600">{schema.originalType}{schema.isArray ? ' (Array)' : ''}</span>
                           </div>
-                        ))}
+                            </div>
+                            {method.tags && method.tags.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {method.tags.slice(0, 2).map((tag: string, index: number) => (
+                                  <span key={index} className="px-2 py-0.5 bg-white text-gray-700 rounded-full text-xs">
+                                    {tag}
+                                  </span>
+                                ))}
+                                {method.tags.length > 2 && (
+                                  <span key={`${method["namespace-method-id"]}-more`} className="px-2 py-0.5 bg-white text-gray-700 rounded-full text-xs">+{method.tags.length - 2}</span>
+                                )}
                 </div>
-              );
-                  })()
-                }
+                            )}
           </div>
+                        ))}
             </div>
+                        )}
+                      </>
           )}
         </div>
       </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Schema Preview Modal */}
       <SchemaPreviewModal
@@ -1702,8 +1993,170 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
         tableName={dataTableName}
         onSuccess={() => { setShowDataModal(false); }}
       />
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && namespaceToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="flex items-start gap-4 mb-4">
+              <div className="p-3 bg-red-100 rounded-full">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Delete Namespace</h2>
+                <p className="text-sm text-gray-600">This action cannot be undone</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteConfirmText('');
+                  setNamespaceToDelete(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                disabled={isDeleting}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Warning Message */}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-900 mb-2">⚠️ WARNING: This will permanently delete:</p>
+                  <ul className="space-y-1 text-sm text-red-800">
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span>
+                      <span><strong>Namespace:</strong> "{namespaceToDelete["namespace-name"]}"</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span>
+                      <span>All <strong>accounts</strong> associated with this namespace</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span>
+                      <span>All <strong>methods</strong> associated with this namespace</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span>
+                      <span>All <strong>schemas</strong> associated with this namespace</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span>
+                      <span>All associated <strong>files and data</strong></span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Confirmation Input */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                To confirm, type <span className="font-mono font-bold text-red-600">DELETE</span> in the box below:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Type DELETE to confirm"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                disabled={isDeleting}
+                autoFocus
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteConfirmText('');
+                  setNamespaceToDelete(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteNamespace}
+                disabled={deleteConfirmText !== 'DELETE' || isDeleting}
+                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                  deleteConfirmText === 'DELETE' && !isDeleting
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Namespace'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Indicator - Bottom Left */}
+      {isDeleting && (
+        <div className="fixed bottom-4 left-4 bg-white rounded-lg shadow-2xl border border-gray-200 p-4 z-50 animate-in slide-in-from-bottom duration-300">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-10 h-10 border-4 border-red-200 rounded-full"></div>
+              <div className="w-10 h-10 border-4 border-red-600 rounded-full border-t-transparent absolute top-0 left-0 animate-spin"></div>
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">Deleting Namespace</p>
+              <p className="text-sm text-gray-600">Please wait, removing all data...</p>
+            </div>
+          </div>
+          <div className="mt-3 space-y-1 text-xs text-gray-500">
+            <p>• Deleting accounts...</p>
+            <p>• Deleting methods...</p>
+            <p>• Deleting schemas...</p>
+            <p>• Cleaning up files...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default UnifiedNamespace; 
+
+/* Bottom sliding namespace details animations */
+<style jsx global>{`
+  @keyframes slideUpFromBottom {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slideDownToBottom {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+  }
+  
+  .bottom-slide-up {
+    animation: slideUpFromBottom 0.4s ease-out;
+  }
+  
+  .bottom-slide-down {
+    animation: slideDownToBottom 0.3s ease-in;
+  }
+`}</style> 

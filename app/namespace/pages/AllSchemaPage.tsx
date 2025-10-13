@@ -7,7 +7,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:50
 
 
 
-export default function AllSchemaPage({ namespace, onViewSchema, openCreate = false, onCreateNew }: { namespace?: any, onViewSchema?: (schema: any, ns?: any) => void, openCreate?: boolean, onCreateNew?: () => void }) {
+export default function AllSchemaPage({ namespace, onViewSchema, onEditSchema, openCreate = false, onCreateNew, refreshSidePanelData }: { namespace?: any, onViewSchema?: (schema: any, ns?: any) => void, onEditSchema?: (schema: any, ns?: any) => void, openCreate?: boolean, onCreateNew?: () => void, refreshSidePanelData?: () => Promise<void> }) {
   const [schemas, setSchemas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,6 +45,11 @@ export default function AllSchemaPage({ namespace, onViewSchema, openCreate = fa
       if (res.ok) {
         // Remove the deleted schema from the state
         setSchemas(prevSchemas => prevSchemas.filter(s => s.id !== schemaId));
+        
+        // Refresh side panel data to remove the deleted schema
+        if (refreshSidePanelData) {
+          await refreshSidePanelData();
+        }
       } else {
         const error = await res.json();
         alert(`Failed to delete schema: ${error.message || 'Unknown error'}`);
@@ -85,7 +90,11 @@ export default function AllSchemaPage({ namespace, onViewSchema, openCreate = fa
                   <button className="text-blue-600 hover:text-blue-800 p-1" title="View" onClick={() => onViewSchema && onViewSchema(schema, namespace)}>
                     <Eye size={18} />
                   </button>
-                  <button className="text-green-600 hover:text-green-800 p-1" title="Edit">
+                  <button 
+                    className="text-green-600 hover:text-green-800 p-1" 
+                    title="Edit"
+                    onClick={() => onEditSchema && onEditSchema(schema, namespace)}
+                  >
                     <Edit size={18} />
                   </button>
                   <button 

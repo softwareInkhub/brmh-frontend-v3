@@ -179,70 +179,81 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
     Object.entries(namespaceDetailsMap).map(([nsId, v]) => [nsId, v.methods])
   );
 
-  // Fetch namespaces and schemas for SidePanel
-  useEffect(() => {
-    const fetchData = async () => {
-      console.log('Fetching namespaces and schemas...');
+  // Extract fetchData function so it can be called manually
+  const fetchData = async () => {
+    console.log('Fetching namespaces and schemas...');
+    
+    try {
+  // Fetch namespaces
+      const namespacesRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/unified/namespaces`);
+      console.log('Namespaces response status:', namespacesRes.status);
+      if (!namespacesRes.ok) {
+        throw new Error(`HTTP error! status: ${namespacesRes.status}`);
+      }
+      const namespacesData = await namespacesRes.json();
+      console.log('Namespaces data received:', namespacesData);
+      // Fix: Handle both formats - direct array or wrapped in body
+      const namespacesArray = Array.isArray(namespacesData) ? namespacesData : 
+                             (namespacesData && Array.isArray(namespacesData.body) ? namespacesData.body : []);
+      setNamespaces(namespacesArray);
       
+      // Also refresh namespace details for all namespaces to update side panel
+      console.log('Refreshing namespace details for side panel...');
+      for (const namespace of namespacesArray) {
+        if (namespace['namespace-id']) {
+          await fetchNamespaceDetails(namespace['namespace-id']);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching namespaces:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          type: error.constructor.name
+        });
+      } else {
+        console.error('Unknown error type:', error);
+      }
+      setNamespaces([]);
+    }
+
+    try {
+  // Fetch schemas
+      const schemasRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/unified/schema`);
+      console.log('Schemas response status:', schemasRes.status);
+      if (!schemasRes.ok) {
+        throw new Error(`HTTP error! status: ${schemasRes.status}`);
+      }
+      const schemasData = await schemasRes.json();
+      console.log('Schemas data received:', schemasData);
+      // Fix: Handle both formats - direct array or wrapped in body
+      const schemasArray = Array.isArray(schemasData) ? schemasData : 
+                         (schemasData && Array.isArray(schemasData.body) ? schemasData.body : []);
+      setSchemas(schemasArray);
+    } catch (error) {
+      console.error('Error fetching schemas:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          type: error.constructor.name
+        });
+      } else {
+        console.error('Unknown error type:', error);
+      }
+      setSchemas([]);
+    }
+  };
+
+  // Fetch namespaces and schemas for SidePanel on mount
+  useEffect(() => {
+    const initialFetch = async () => {
       // Add a small delay to ensure backend is ready
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      try {
-    // Fetch namespaces
-        const namespacesRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/unified/namespaces`);
-        console.log('Namespaces response status:', namespacesRes.status);
-        if (!namespacesRes.ok) {
-          throw new Error(`HTTP error! status: ${namespacesRes.status}`);
-        }
-        const namespacesData = await namespacesRes.json();
-        console.log('Namespaces data received:', namespacesData);
-        // Fix: Handle both formats - direct array or wrapped in body
-        const namespacesArray = Array.isArray(namespacesData) ? namespacesData : 
-                               (namespacesData && Array.isArray(namespacesData.body) ? namespacesData.body : []);
-        setNamespaces(namespacesArray);
-      } catch (error) {
-        console.error('Error fetching namespaces:', error);
-        if (error instanceof Error) {
-          console.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            type: error.constructor.name
-          });
-        } else {
-          console.error('Unknown error type:', error);
-        }
-        setNamespaces([]);
-      }
-
-      try {
-    // Fetch schemas
-        const schemasRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/unified/schema`);
-        console.log('Schemas response status:', schemasRes.status);
-        if (!schemasRes.ok) {
-          throw new Error(`HTTP error! status: ${schemasRes.status}`);
-        }
-        const schemasData = await schemasRes.json();
-        console.log('Schemas data received:', schemasData);
-        // Fix: Handle both formats - direct array or wrapped in body
-        const schemasArray = Array.isArray(schemasData) ? schemasData : 
-                           (schemasData && Array.isArray(schemasData.body) ? schemasData.body : []);
-        setSchemas(schemasArray);
-      } catch (error) {
-        console.error('Error fetching schemas:', error);
-        if (error instanceof Error) {
-          console.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            type: error.constructor.name
-          });
-        } else {
-          console.error('Unknown error type:', error);
-        }
-        setSchemas([]);
-      }
+      await fetchData();
     };
-
-    fetchData();
+    initialFetch();
   }, []);
 
   // Listen to SingleNamespacePage events to open tabs in-place
@@ -369,7 +380,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
       setActiveTab(key);
       setSchemaPageTabs(prev => {
         if (prev.find(t => t.key === key)) return prev;
-        return [...prev, { key, schema: data.schema, mode: 'preview', initialSchemaName: data.schemaName, namespace: data.namespace }];
+        return [...prev, { key, schema: data, mode: 'preview', initialSchemaName: data.schemaName, namespace: data.namespace }];
       });
       setSelectedSchemaId(data.id);
       return;
@@ -511,6 +522,11 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
       });
       return;
     }
+  };
+
+  // Function to open SingleNamespacePage tab
+  const handleOpenNamespaceTab = (namespace: any) => {
+    handleSidePanelAdd('singleNamespace', namespace);
   };
 
   // Bidirectional sync
@@ -691,11 +707,9 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
       const savedNamespace = await response.json();
       console.log('Success Response Body:', savedNamespace);
       
-      if (isEdit) {
-        setNamespaces(prev => prev.map(ns => ns["namespace-id"] === savedNamespace["namespace-id"] ? savedNamespace : ns));
-      } else {
-        setNamespaces(prev => [...prev, savedNamespace]);
-      }
+      // Refresh all data from the server to ensure side panel is updated
+      await fetchData();
+      
       setNamespaceModal({ isOpen: false, namespace: null });
     } catch (error) {
       console.error('Error saving namespace:', error);
@@ -900,6 +914,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
               onAdd={handleSidePanelAdd}
               fetchNamespaceDetails={fetchNamespaceDetails}
               selectedSchemaId={selectedSchemaId}
+              refreshData={fetchData}
               onEditSchema={schema => {
                 setShowSchemaModal(true);
                 setPreviewSchema(null);
@@ -1051,12 +1066,12 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           fetchNamespaceDetails={fetchNamespaceDetails}
                           namespaceDetailsMap={namespaceDetailsMap}
                           setNamespaceDetailsMap={setNamespaceDetailsMap}
-                          refreshData={() => {
+                          refreshData={async () => {
                             // re-fetch all data
+                            await fetchData();
                             setNamespaceDetailsMap({});
-                            // trigger fetchData in useEffect
-                            setNamespaces([]);
                           }}
+                          onOpenNamespaceTab={handleOpenNamespaceTab}
                           onViewAccount={(account, ns) => {
                             const tabKey = `accountPage-${account['namespace-account-id']}`;
                             if (!tabs.find(tab => tab.key === tabKey)) {
@@ -1102,12 +1117,12 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           fetchNamespaceDetails={fetchNamespaceDetails}
                           namespaceDetailsMap={namespaceDetailsMap}
                           setNamespaceDetailsMap={setNamespaceDetailsMap}
-                          refreshData={() => {
+                          refreshData={async () => {
                             // re-fetch all data
+                            await fetchData();
                             setNamespaceDetailsMap({});
-                            // trigger fetchData in useEffect
-                            setNamespaces([]);
                           }}
+                          onOpenNamespaceTab={handleOpenNamespaceTab}
                           onViewAccount={(account, ns) => {
                             const tabKey = `accountPage-${account['namespace-account-id']}`;
                             if (!tabs.find(tab => tab.key === tabKey)) {
@@ -1143,13 +1158,18 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           }}
                         />
                       )}
-                      {activeTab === 'schema' && <SchemaCreatePage onSchemaNameChange={name => {
-                        setTabs(tabs => tabs.map(tab =>
-                          tab.key === 'schema'
-                            ? { ...tab, label: name.trim() ? name : 'New Schema', pinned: false }
-                            : tab
-                        ));
-                      }} />}
+                      {activeTab === 'schema' && <SchemaCreatePage 
+                        onSchemaNameChange={name => {
+                          setTabs(tabs => tabs.map(tab =>
+                            tab.key === 'schema'
+                              ? { ...tab, label: name.trim() ? name : 'New Schema', pinned: false }
+                              : tab
+                          ));
+                        }}
+                        onSuccess={async () => {
+                          await fetchData(); // Refresh side panel when schema is created
+                        }}
+                      />}
                       {(activeTab === 'new' || activeTab.startsWith('tab-')) && (
                         <NewTabContent onOpenTab={handleOpenTab} />
                       )}
@@ -1161,6 +1181,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           <AllAccountPage
                             namespace={namespace}
                             openCreate={!!openCreate}
+                            refreshSidePanelData={fetchData}
                             onViewAccount={(account, ns) => {
                               const tabKey = `accountPage-${account['namespace-account-id']}`;
                               if (!tabs.find(tab => tab.key === tabKey)) {
@@ -1183,6 +1204,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           <AllMethodPage
                             namespace={namespace}
                             openCreate={!!openCreate}
+                            refreshSidePanelData={fetchData}
                             onViewMethod={(method, ns) => {
                               const tabKey = `methodPage-${method['namespace-method-id']}`;
                               if (!tabs.find(tab => tab.key === tabKey)) {
@@ -1202,7 +1224,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           key={key}
                           style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
                         >
-                          <AccountPage account={account} namespace={namespace} openEdit={openEdit} />
+                          <AccountPage account={account} namespace={namespace} openEdit={openEdit} refreshSidePanelData={fetchData} />
                         </div>
                       ))}
                       {methodPageTabs.map(({ key, method, namespace, openEdit }) => (
@@ -1214,6 +1236,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                             method={method}
                             namespace={namespace}
                             openEdit={openEdit}
+                            refreshSidePanelData={fetchData}
                             onTest={(m, ns) => {
                               const testKey = `methodTest-${m['namespace-method-id']}`;
                               if (!tabs.find(tab => tab.key === testKey)) {
@@ -1237,6 +1260,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                             method={method}
                             namespace={namespace}
                             onOpenSchemaTab={(schema, schemaName) => handleOpenSchemaTabFromTest(schema, schemaName, namespace, method['namespace-method-id'])}
+                            refreshSidePanelData={fetchData}
                           />
                         </div>
                       ))}
@@ -1249,11 +1273,23 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                             initialSchema={schema}
                             initialSchemaName={initialSchemaName}
                             namespace={namespace}
-                            mode={mode === 'create' ? 'create' : 'edit'}
+                            mode={mode === 'create' ? 'create' : (mode === 'preview' ? 'preview' : 'edit')}
                             methodId={methodId}
-                            onSuccess={() => {
+                            onSuccess={async () => {
+                              // Always refresh side panel for both create and edit operations
+                              await fetchData();
+                              
                               if (mode === 'create' && namespace?.['namespace-id']) {
-                                fetchNamespaceDetails(namespace['namespace-id']);
+                                await fetchNamespaceDetails(namespace['namespace-id']);
+                                
+                                // Navigate back to All Schemas tab and close create tab
+                                const allSchemasTabKey = `all-schemas-${namespace['namespace-id']}`;
+                                if (tabs.find(tab => tab.key === allSchemasTabKey)) {
+                                  setActiveTab(allSchemasTabKey);
+                                  // Close the create schema tab
+                                  setTabs(prev => prev.filter(tab => tab.key !== key));
+                                  setSchemaPageTabs(prev => prev.filter(tab => tab.key !== key));
+                                }
                               }
                             }}
                           />
@@ -1266,6 +1302,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                         >
                           <AllSchemaPage
                             namespace={namespace}
+                            refreshSidePanelData={fetchData}
                             onViewSchema={(schema, ns) => {
                               const tabKey = `schema-preview-${schema.id}`;
                               if (!tabs.find(tab => tab.key === tabKey)) {
@@ -1274,7 +1311,29 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                               setActiveTab(tabKey);
                               setSchemaPageTabs(prev => {
                                 if (prev.find(t => t.key === tabKey)) return prev;
-                                return [...prev, { key: tabKey, schema: schema.schema, mode: 'preview', initialSchemaName: schema.schemaName, namespace: ns }];
+                                return [...prev, { key: tabKey, schema: schema, mode: 'preview', initialSchemaName: schema.schemaName, namespace: ns }];
+                              });
+                            }}
+                            onEditSchema={(schema, ns) => {
+                              const tabKey = `schema-edit-${schema.id}`;
+                              if (!tabs.find(tab => tab.key === tabKey)) {
+                                setTabs([...tabs, { key: tabKey, label: `Edit: ${schema.schemaName}`, pinned: false }]);
+                              }
+                              setActiveTab(tabKey);
+                              setSchemaPageTabs(prev => {
+                                if (prev.find(t => t.key === tabKey)) return prev;
+                                return [...prev, { key: tabKey, schema: schema, mode: 'edit', initialSchemaName: schema.schemaName, namespace: ns }];
+                              });
+                            }}
+                            onCreateNew={() => {
+                              const tabKey = `schema-create-${namespace?.['namespace-id'] || 'new'}`;
+                              if (!tabs.find(tab => tab.key === tabKey)) {
+                                setTabs([...tabs, { key: tabKey, label: 'New Schema', pinned: false }]);
+                              }
+                              setActiveTab(tabKey);
+                              setSchemaPageTabs(prev => {
+                                if (prev.find(t => t.key === tabKey)) return prev;
+                                return [...prev, { key: tabKey, mode: 'create', namespace: namespace }];
                               });
                             }}
                           />
@@ -1288,6 +1347,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           <SingleNamespacePage 
                             namespaceId={namespace['namespace-id']} 
                             initialNamespace={namespace}
+                            refreshSidePanelData={fetchData}
                             onViewAccount={(account, ns) => {
                               const tabKey = `accountPage-${account['namespace-account-id']}`;
                               if (!tabs.find(tab => tab.key === tabKey)) {
@@ -1459,6 +1519,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                   // trigger fetchData in useEffect
                   setNamespaces([]);
                 }}
+                onOpenNamespaceTab={handleOpenNamespaceTab}
               />
             )}
             {activeTab === 'namespace' && <Namespace />}
@@ -1477,15 +1538,21 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                   // trigger fetchData in useEffect
                   setNamespaces([]);
                 }}
+                onOpenNamespaceTab={handleOpenNamespaceTab}
               />
             )}
-            {activeTab === 'schema' && <SchemaCreatePage onSchemaNameChange={name => {
-              setTabs(tabs => tabs.map(tab =>
-                tab.key === 'schema'
-                            ? { ...tab, label: name.trim() ? name : 'New Schema', pinned: false }
-                  : tab
-              ));
-            }} />}
+            {activeTab === 'schema' && <SchemaCreatePage 
+              onSchemaNameChange={name => {
+                setTabs(tabs => tabs.map(tab =>
+                  tab.key === 'schema'
+                    ? { ...tab, label: name.trim() ? name : 'New Schema', pinned: false }
+                    : tab
+                ));
+              }}
+              onSuccess={async () => {
+                await fetchData(); // Refresh side panel when schema is created
+              }}
+            />}
             {(activeTab === 'new' || activeTab.startsWith('tab-')) && (
               <NewTabContent onOpenTab={handleOpenTab} />
             )}
@@ -1496,6 +1563,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
               >
                 <AllAccountPage
                   namespace={namespace}
+                  refreshSidePanelData={fetchData}
                   onViewAccount={(account, ns) => {
                     const tabKey = `accountPage-${account['namespace-account-id']}`;
                     if (!tabs.find(tab => tab.key === tabKey)) {
@@ -1517,6 +1585,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
               >
                 <AllMethodPage
                   namespace={namespace}
+                  refreshSidePanelData={fetchData}
                   onViewMethod={(method, ns) => {
                     const tabKey = `methodPage-${method['namespace-method-id']}`;
                     if (!tabs.find(tab => tab.key === tabKey)) {
@@ -1536,7 +1605,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                 key={key}
                 style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
               >
-                <AccountPage account={account} namespace={namespace} openEdit={openEdit} />
+                <AccountPage account={account} namespace={namespace} openEdit={openEdit} refreshSidePanelData={fetchData} />
               </div>
             ))}
             {methodPageTabs.map(({ key, method, namespace }) => (
@@ -1547,6 +1616,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                 <MethodPage
                   method={method}
                   namespace={namespace}
+                  refreshSidePanelData={fetchData}
                   onTest={(m, ns) => {
                     const testKey = `methodTest-${m['namespace-method-id']}`;
                     if (!tabs.find(tab => tab.key === testKey)) {
@@ -1570,6 +1640,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                   method={method}
                   namespace={namespace}
                   onOpenSchemaTab={(schema, schemaName) => handleOpenSchemaTabFromTest(schema, schemaName, namespace, method['namespace-method-id'])}
+                  refreshSidePanelData={fetchData}
                 />
               </div>
             ))}
@@ -1582,11 +1653,23 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                   initialSchema={schema}
                   initialSchemaName={initialSchemaName}
                   namespace={namespace}
-                  mode={mode === 'create' ? 'create' : 'edit'}
+                  mode={mode === 'create' ? 'create' : (mode === 'preview' ? 'preview' : 'edit')}
                   methodId={methodId}
-                  onSuccess={() => {
+                  onSuccess={async () => {
+                    // Always refresh side panel for both create and edit operations
+                    await fetchData();
+                    
                     if (mode === 'create' && namespace?.['namespace-id']) {
-                      fetchNamespaceDetails(namespace['namespace-id']);
+                      await fetchNamespaceDetails(namespace['namespace-id']);
+                      
+                      // Navigate back to All Schemas tab and close create tab
+                      const allSchemasTabKey = `all-schemas-${namespace['namespace-id']}`;
+                      if (tabs.find(tab => tab.key === allSchemasTabKey)) {
+                        setActiveTab(allSchemasTabKey);
+                        // Close the create schema tab
+                        setTabs(prev => prev.filter(tab => tab.key !== key));
+                        setSchemaPageTabs(prev => prev.filter(tab => tab.key !== key));
+                      }
                     }
                   }}
                 />
@@ -1599,6 +1682,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
               >
                 <AllSchemaPage
                   namespace={namespace}
+                  refreshSidePanelData={fetchData}
                   onViewSchema={(schema, ns) => {
                     const tabKey = `schema-preview-${schema.id}`;
                     if (!tabs.find(tab => tab.key === tabKey)) {
@@ -1607,7 +1691,29 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                     setActiveTab(tabKey);
                     setSchemaPageTabs(prev => {
                       if (prev.find(t => t.key === tabKey)) return prev;
-                      return [...prev, { key: tabKey, schema: schema.schema, mode: 'preview', initialSchemaName: schema.schemaName, namespace: ns }];
+                      return [...prev, { key: tabKey, schema: schema, mode: 'preview', initialSchemaName: schema.schemaName, namespace: ns }];
+                    });
+                  }}
+                  onEditSchema={(schema, ns) => {
+                    const tabKey = `schema-edit-${schema.id}`;
+                    if (!tabs.find(tab => tab.key === tabKey)) {
+                      setTabs([...tabs, { key: tabKey, label: `Edit: ${schema.schemaName}`, pinned: false }]);
+                    }
+                    setActiveTab(tabKey);
+                    setSchemaPageTabs(prev => {
+                      if (prev.find(t => t.key === tabKey)) return prev;
+                      return [...prev, { key: tabKey, schema: schema, mode: 'edit', initialSchemaName: schema.schemaName, namespace: ns }];
+                    });
+                  }}
+                  onCreateNew={() => {
+                    const tabKey = `schema-create-${namespace?.['namespace-id'] || 'new'}`;
+                    if (!tabs.find(tab => tab.key === tabKey)) {
+                      setTabs([...tabs, { key: tabKey, label: 'New Schema', pinned: false }]);
+                    }
+                    setActiveTab(tabKey);
+                    setSchemaPageTabs(prev => {
+                      if (prev.find(t => t.key === tabKey)) return prev;
+                      return [...prev, { key: tabKey, mode: 'create', namespace: namespace }];
                     });
                   }}
                 />
@@ -1618,7 +1724,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                 key={key}
                 style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
               >
-                <SingleNamespacePage namespaceId={namespace['namespace-id']} initialNamespace={namespace} />
+                <SingleNamespacePage namespaceId={namespace['namespace-id']} initialNamespace={namespace} refreshSidePanelData={fetchData} />
               </div>
             ))}
             {allWebhooksTabs.map(({ key, namespace }) => (
@@ -1759,7 +1865,10 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
             onClose={() => setAccountModal({ isOpen: false, account: null })}
             account={accountModal.account}
             namespaceId={namespaces[0]?.["namespace-id"] || ''}
-            refreshNamespaceDetails={() => fetchNamespaceDetails(namespaces[0]?.["namespace-id"])}
+            refreshNamespaceDetails={async () => {
+              await fetchNamespaceDetails(namespaces[0]?.["namespace-id"]);
+              await fetchData(); // Also refresh side panel
+            }}
           />
 
           <MethodModal
@@ -1767,7 +1876,10 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
             onClose={() => setMethodModal({ isOpen: false, method: null })}
             method={methodModal.method}
             namespaceId={namespaces[0]?.["namespace-id"]}
-            refreshNamespaceDetails={() => fetchNamespaceDetails(namespaces[0]?.["namespace-id"])}
+            refreshNamespaceDetails={async () => {
+              await fetchNamespaceDetails(namespaces[0]?.["namespace-id"]);
+              await fetchData(); // Also refresh side panel
+            }}
           />
      
       <NamespaceModal

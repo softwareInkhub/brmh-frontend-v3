@@ -158,7 +158,7 @@ const CollapsibleJson = ({ data, level = 0, collapsedPaths = new Set(), onToggle
   );
 };
 
-export default function MethodTestPage({ method, namespace, onOpenSchemaTab }: { method: any, namespace: any, onOpenSchemaTab?: (schema: any, schemaName: string) => void }) {
+export default function MethodTestPage({ method, namespace, onOpenSchemaTab, refreshSidePanelData }: { method: any, namespace: any, onOpenSchemaTab?: (schema: any, schemaName: string) => void, refreshSidePanelData?: () => Promise<void> }) {
   const namespaceId = namespace?.['namespace-id'] || '';
   const methodName = method?.['namespace-method-name'] || '';
   const methodType = method?.['namespace-method-type'] || '';
@@ -624,6 +624,11 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab }: {
           body: JSON.stringify(methodUpdatePayload),
         });
         toast.success('Method updated with schemaId');
+      }
+      
+      // Refresh side panel data to show the new schema
+      if (refreshSidePanelData) {
+        await refreshSidePanelData();
       }
     } catch (error) {
       console.error('Error saving schema:', error);

@@ -3,7 +3,7 @@ import { Pencil, Trash2, User, Plus, X } from 'lucide-react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
-function AllAccountPage({ namespace, onViewAccount, openCreate = false }: { namespace?: any, onViewAccount?: (account: any, ns?: any) => void, openCreate?: boolean }) {
+function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshSidePanelData }: { namespace?: any, onViewAccount?: (account: any, ns?: any) => void, openCreate?: boolean, refreshSidePanelData?: () => Promise<void> }) {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidePanel, setSidePanel] = useState<'create' | { account: any } | null>(null);
@@ -154,6 +154,11 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false }: { name
         const accRes = await fetch(`${API_BASE_URL}/unified/namespaces/${nsId}/accounts`);
         const nsAccounts = await accRes.json();
         setAccounts((nsAccounts || []).map((acc: any) => ({ ...acc, namespace })));
+        
+        // Refresh side panel data to show the new account
+        if (refreshSidePanelData) {
+          await refreshSidePanelData();
+        }
       } else {
         setCreateMsg('Failed to create account.');
       }
@@ -201,7 +206,12 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false }: { name
             setLoading(false);
           }
         };
-        fetchAllAccounts();
+        await fetchAllAccounts();
+        
+        // Refresh side panel data to remove the deleted account
+        if (refreshSidePanelData) {
+          await refreshSidePanelData();
+        }
       } catch (error) {
         console.error('Delete account error:', error);
         alert(`Failed to delete account: ${error instanceof Error ? error.message : 'Unknown error'}`);

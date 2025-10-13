@@ -5,9 +5,10 @@ type Props = {
   account: any;
   namespace?: any;
   openEdit?: boolean;
+  refreshSidePanelData?: () => Promise<void>;
 };
 
-export default function AccountPage({ account, namespace, openEdit }: Props) {
+export default function AccountPage({ account, namespace, openEdit, refreshSidePanelData }: Props) {
   const [editMode, setEditMode] = useState(false);
   const [editAccount, setEditAccount] = useState<any>(account || {});
   const [saveMsg, setSaveMsg] = useState('');
@@ -83,9 +84,42 @@ export default function AccountPage({ account, namespace, openEdit }: Props) {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaveMsg('');
-    // TODO: Implement save logic (API call)
-    setSaveMsg('Account updated!');
-    setEditMode(false);
+    
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/unified/accounts/${editAccount['namespace-account-id']}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(editAccount),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to update account');
+      }
+
+      const updatedAccount = await response.json();
+      setEditAccount(updatedAccount);
+      setSaveMsg('Account updated successfully!');
+      
+      // Refresh side panel data to show the updated account name
+      if (refreshSidePanelData) {
+        await refreshSidePanelData();
+      }
+      
+      // Close edit mode after a short delay
+      setTimeout(() => {
+        setEditMode(false);
+        setSaveMsg('');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error updating account:', error);
+      setSaveMsg('Failed to update account. Please try again.');
+    }
   };
 
   // Helper to render header variables if present
@@ -247,10 +281,17 @@ export default function AccountPage({ account, namespace, openEdit }: Props) {
           { method: 'DELETE' }
         );
         if (!response.ok) throw new Error('Failed to delete account');
-        // Optionally: close tab or show a message
+        
+        // Refresh side panel data to remove the deleted account
+        if (refreshSidePanelData) {
+          await refreshSidePanelData();
+        }
+        
         alert('Account deleted!');
-        // window.location.reload();
+        // Close the tab or redirect
+        window.close();
       } catch (error) {
+        console.error('Error deleting account:', error);
         alert('Failed to delete account');
       }
     }

@@ -17,6 +17,7 @@ interface SidePanelProps {
   onEditSchema?: (schema: any) => void;
   onDeleteSchema?: (schema: any) => void;
   onDeleteNamespace?: (namespace: any) => void;
+  refreshData?: () => Promise<void>; // Add this prop to refresh side panel data
 }
 
 const methodColor = (type: string) => {
@@ -110,11 +111,23 @@ const DraggableSchema: React.FC<{ schema: any; children: React.ReactNode; onClic
   );
 };
 
-const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, methods, webhooks, lambdas, onItemClick, onAdd, fetchNamespaceDetails, selectedSchemaId, onEditSchema, onDeleteSchema, onDeleteNamespace }) => {
+const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, methods, webhooks, lambdas, onItemClick, onAdd, fetchNamespaceDetails, selectedSchemaId, onEditSchema, onDeleteSchema, onDeleteNamespace, refreshData }) => {
   // Debug logs
   console.log('SidePanel namespaces:', namespaces);
   console.log('SidePanel schemas:', schemas);
   console.log('SidePanel lambdas:', lambdas);
+  
+  // Debug schema filtering for each namespace
+  namespaces.forEach(ns => {
+    const namespaceSchemas = schemas.filter(s => {
+      const hasSchemaId = Array.isArray(ns.schemaIds) && ns.schemaIds.includes(s.id);
+      const hasNamespaceId = s.namespaceId === ns['namespace-id'];
+      return hasSchemaId || hasNamespaceId;
+    });
+    console.log(`Schemas for namespace ${ns['namespace-name']} (${ns['namespace-id']}):`, namespaceSchemas);
+    console.log(`  - schemaIds:`, ns.schemaIds);
+    console.log(`  - Found ${namespaceSchemas.length} schemas`);
+  });
 
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState({
@@ -158,7 +171,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
     : [];
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-100 h-full flex flex-col shadow-sm p-0 overflow-y-auto select-none scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 custom-scrollbar">
+    <aside className="w-64 bg-white border-r border-gray-100 h-full flex flex-col shadow-sm p-0 pb-8 overflow-y-auto select-none scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 custom-scrollbar">
       {/* Header */}
       <div className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 rounded-lg px-3 py-2 mb-2">
         <LayoutDashboard className="text-blue-600" size={20} />
@@ -393,7 +406,12 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                         </div>
                         {expandedSection[ns['namespace-id']]?.schemas && (
                           <div className="space-y-1">
-                            {(schemas.filter(s => Array.isArray(ns.schemaIds) && ns.schemaIds.includes(s.id)) || []).map((schema, schemaIdx) => (
+                            {(schemas.filter(s => {
+                              // Check both schemaIds array and namespaceId field for better compatibility
+                              const hasSchemaId = Array.isArray(ns.schemaIds) && ns.schemaIds.includes(s.id);
+                              const hasNamespaceId = s.namespaceId === ns['namespace-id'];
+                              return hasSchemaId || hasNamespaceId;
+                            }) || []).map((schema, schemaIdx) => (
                               <DraggableSchema
                                 key={schema.id || schemaIdx}
                                 schema={schema}

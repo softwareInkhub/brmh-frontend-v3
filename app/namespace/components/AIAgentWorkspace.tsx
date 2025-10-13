@@ -2694,6 +2694,16 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
               role: 'assistant',
               content: `✅ Lambda function "${func.name}" deployed successfully!\n\n🌐 **API Gateway URL:** ${deployResult.apiGatewayUrl}/${func.name}\n\nYou can now invoke your function via HTTP POST requests to this endpoint.`
             });
+          } else if (deployResult.apiGatewayError) {
+            setConsoleOutput(prev => [...prev, `❌ API Gateway creation failed: ${deployResult.apiGatewayError}`]);
+            setConsoleOutput(prev => [...prev, `   Lambda function deployed but no API Gateway trigger created`]);
+            setConsoleOutput(prev => [...prev, `   You can manually create an API Gateway trigger in the AWS Console`]);
+            
+            // Add warning message to chat
+            addMessage({
+              role: 'assistant',
+              content: `⚠️ Lambda function "${func.name}" deployed successfully, but API Gateway creation failed.\n\n**Error:** ${deployResult.apiGatewayError}\n\nYou can manually create an API Gateway trigger in the AWS Console or try deploying again.`
+            });
           } else {
             setConsoleOutput(prev => [...prev, `⚠️ API Gateway creation was skipped or failed`]);
             setConsoleOutput(prev => [...prev, `   Using Function URL as fallback`]);

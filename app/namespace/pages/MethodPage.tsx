@@ -4,7 +4,7 @@ import MethodTestModal from '@/app/components/MethodTestModal';
 import { v4 as uuidv4 } from 'uuid';
 
 type Method = { id: string; name: string };
-type Props = { onSelect?: (m: Method) => void; method?: any; namespace?: any; onTest?: (method: any, namespace: any) => void; openEdit?: boolean };
+type Props = { onSelect?: (m: Method) => void; method?: any; namespace?: any; onTest?: (method: any, namespace: any) => void; openEdit?: boolean; refreshSidePanelData?: () => Promise<void> };
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 const methods = [
   { id: 'm1', name: 'GET /users' },
@@ -25,7 +25,7 @@ function getPartitionKey(method: any) {
   return '';
 }
 
-export default function MethodPage({ onSelect, method, namespace, onTest, openEdit }: Props) {
+export default function MethodPage({ onSelect, method, namespace, onTest, openEdit, refreshSidePanelData }: Props) {
   const [editMethod, setEditMethod] = useState<any>(method || {});
   const [saveMsg, setSaveMsg] = useState('');
   const [editMode, setEditMode] = useState(false);
@@ -438,13 +438,28 @@ export default function MethodPage({ onSelect, method, namespace, onTest, openEd
         body: JSON.stringify(requestBody),
       });
       if (res.ok) {
+        const updatedMethod = await res.json();
+        console.log('Method updated successfully:', updatedMethod);
         setSaveMsg('Method updated successfully!');
-        setEditMode(false);
+        
+        // Refresh side panel data to show the updated method name
+        if (refreshSidePanelData) {
+          await refreshSidePanelData();
+        }
+        
+        // Close edit mode after a short delay
+        setTimeout(() => {
+          setEditMode(false);
+          setSaveMsg('');
+        }, 2000);
       } else {
-        setSaveMsg('Failed to update method.');
+        const errorText = await res.text();
+        console.error('Failed to update method:', errorText);
+        setSaveMsg(`Failed to update method: ${errorText || res.statusText}`);
       }
-    } catch {
-      setSaveMsg('Failed to update method.');
+    } catch (error) {
+      console.error('Error updating method:', error);
+      setSaveMsg(`Failed to update method: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -1301,8 +1316,16 @@ Please select an indexing configuration above.`);
                           method: 'DELETE',
                         });
                         if (!res.ok && res.status !== 204) throw new Error('Failed to delete method');
-                        window.location.reload();
-                      } catch {
+                        
+                        // Refresh side panel data to remove the deleted method
+                        if (refreshSidePanelData) {
+                          await refreshSidePanelData();
+                        }
+                        
+                        alert('Method deleted successfully!');
+                        window.close();
+                      } catch (error) {
+                        console.error('Error deleting method:', error);
                         alert('Failed to delete method');
                       }
                     }

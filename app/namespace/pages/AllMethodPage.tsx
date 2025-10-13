@@ -3,7 +3,7 @@ import { Eye, Pencil, Trash2, Zap, Send, Database, Plus, X } from 'lucide-react'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
-export default function AllMethodPage({ namespace, onViewMethod, openCreate = false }: { namespace?: any, onViewMethod?: (method: any, ns?: any) => void, openCreate?: boolean }) {
+export default function AllMethodPage({ namespace, onViewMethod, openCreate = false, refreshSidePanelData }: { namespace?: any, onViewMethod?: (method: any, ns?: any) => void, openCreate?: boolean, refreshSidePanelData?: () => Promise<void> }) {
   const [methods, setMethods] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidePanel, setSidePanel] = useState<'create' | { method: any } | null>(null);
@@ -98,9 +98,14 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
         method: 'DELETE',
       });
       if (!res.ok && res.status !== 204) throw new Error('Failed to delete method');
-      fetchAllMethods();
+      await fetchAllMethods();
       if (sidePanel && typeof sidePanel === 'object' && sidePanel.method && sidePanel.method['namespace-method-id'] === methodId) {
         setSidePanel(null);
+      }
+      
+      // Refresh side panel data to remove the deleted method
+      if (refreshSidePanelData) {
+        await refreshSidePanelData();
       }
     } catch (err) {
       alert('Failed to delete method: ' + (err as Error).message);
@@ -164,14 +169,29 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
       setCreateMsg('Name and Type are required.');
       return;
     }
+    
+    // Validate namespace exists
+    if (!namespace || !namespace['namespace-id']) {
+      setCreateMsg('Namespace is required to create a method.');
+      return;
+    }
+    
     try {
-      const nsId = namespace ? namespace['namespace-id'] : '';
+      const nsId = namespace['namespace-id'];
+      console.log('Creating method for namespace:', nsId);
+      console.log('Method data:', createData);
+      
       const res = await fetch(`${API_BASE_URL}/unified/namespaces/${nsId}/methods`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createData),
       });
+      
+      console.log('Method creation response status:', res.status);
+      
       if (res.ok) {
+        const result = await res.json();
+        console.log('Method created successfully:', result);
         setCreateMsg('Method created successfully!');
         setSidePanel(null);
         setCreateData({
@@ -184,12 +204,20 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
           "isInitialized": false,
           "tags": [],
         });
-        fetchAllMethods();
+        await fetchAllMethods();
+        
+        // Refresh side panel data to show the new method
+        if (refreshSidePanelData) {
+          await refreshSidePanelData();
+        }
       } else {
-        setCreateMsg('Failed to create method.');
+        const errorText = await res.text();
+        console.error('Failed to create method:', errorText);
+        setCreateMsg(`Failed to create method: ${errorText || res.statusText}`);
       }
-    } catch {
-      setCreateMsg('Failed to create method.');
+    } catch (error) {
+      console.error('Error creating method:', error);
+      setCreateMsg(`Failed to create method: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

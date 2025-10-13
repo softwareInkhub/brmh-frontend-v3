@@ -4,7 +4,7 @@ import RecursiveDataForm from '../../components/common/RecursiveDataForm';
 import MockDataPanel from '../components/MockDataPanel';
 import Ajv from 'ajv';
 import { v4 as uuidv4 } from 'uuid';
-import { Edit, PlusCircle, RefreshCw, Eye, Trash2 } from "lucide-react";
+import { Edit, PlusCircle, RefreshCw, Eye, Trash2, Code2, FileText, Zap, Palette, Sparkles, Layers, Database, Settings, Save, X, CheckCircle, AlertTriangle } from "lucide-react";
 
 function fieldsToSchema(fields: any[]): Record<string, any> {
   const properties: Record<string, any> = {};
@@ -63,17 +63,26 @@ interface SchemaCreatePageProps {
   initialSchema?: any;
   initialSchemaName?: string;
   onSuccess?: () => void;
-  mode?: 'create' | 'edit';
+  mode?: 'create' | 'edit' | 'preview';
   methodId?: string;
 }
 
 export default function SchemaCreatePage({ onSchemaNameChange, namespace, initialSchema, initialSchemaName, onSuccess, mode, methodId }: SchemaCreatePageProps) {
-  const [schemaName, setSchemaName] = useState(initialSchemaName || '');
-  const [fields, setFields] = useState<any[]>(initialSchema ? schemaToFields(initialSchema) : []);
+  // Debug logging for props
+  console.log('🔍 SchemaCreatePage Props:', {
+    mode,
+    initialSchema,
+    initialSchemaName,
+    hasInitialSchemaId: initialSchema?.id || initialSchema?.schemaId,
+    namespace: namespace?.['namespace-id']
+  });
+
+  const [schemaName, setSchemaName] = useState(initialSchemaName || initialSchema?.schemaName || '');
+  const [fields, setFields] = useState<any[]>(initialSchema ? schemaToFields(initialSchema.schema || initialSchema) : []);
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
   const [rawFields, setRawFields] = useState('');
   const [rawFieldsError, setRawFieldsError] = useState<string | null>(null);
-  const [jsonSchema, setJsonSchema] = useState(initialSchema ? JSON.stringify(initialSchema, null, 2) : `{
+  const [jsonSchema, setJsonSchema] = useState(initialSchema ? JSON.stringify(initialSchema.schema || initialSchema, null, 2) : `{
   "type": "object",
   "properties": {},
   "required": []
@@ -95,10 +104,25 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
   const [newTableName, setNewTableName] = useState(schemaName || '');
   const [tableCreateError, setTableCreateError] = useState<string | null>(null);
   const [creatingTable, setCreatingTable] = useState(false);
-  const [schemaObj, setSchemaObj] = useState<any>(null);
+  const [schemaObj, setSchemaObj] = useState<any>(
+    (initialSchema && (initialSchema.id || initialSchema.schemaId)) ? initialSchema : null
+  );
   const [showRawFields, setShowRawFields] = useState(false);
   const [formErrors, setFormErrors] = useState<string | null>(null);
-  const isEditing = mode === 'edit' || (!mode && (!!initialSchema || !!initialSchemaName));
+  const [isInEditMode, setIsInEditMode] = useState(mode === 'edit' || mode === 'create');
+  const isEditing = schemaObj && (schemaObj.id || schemaObj.schemaId); // True if we have an existing schema
+  const isCreating = mode === 'create';
+  const isReadOnly = mode === 'preview' && !isInEditMode;
+  
+  // Debug the final editing state
+  console.log('🎯 Schema Mode State:', {
+    mode,
+    isInEditMode,
+    isEditing,
+    isCreating,
+    isReadOnly,
+    schemaObjHasId: !!(schemaObj?.id || schemaObj?.schemaId)
+  });
 
   // 1. Add state for accounts and selected account
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -169,13 +193,42 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
   // Update fields and JSON schema when initialSchema changes
   useEffect(() => {
     if (initialSchema) {
-      setFields(schemaToFields(initialSchema));
-      setJsonSchema(JSON.stringify(initialSchema, null, 2));
+      console.log('📝 Processing initialSchema:', {
+        hasSchemaProperty: !!initialSchema.schema,
+        hasId: !!(initialSchema.id || initialSchema.schemaId),
+        schemaName: initialSchema.schemaName
+      });
+      // If initialSchema has a .schema property, it's the full schema object
+      const schemaDefinition = initialSchema.schema || initialSchema;
+      setFields(schemaToFields(schemaDefinition));
+      setJsonSchema(JSON.stringify(schemaDefinition, null, 2));
+      // Always set the schema name from initialSchema if available
+      if (initialSchema.schemaName) {
+        console.log('📝 Setting schema name from initialSchema:', initialSchema.schemaName);
+        setSchemaName(initialSchema.schemaName);
+      }
     }
   }, [initialSchema]);
 
+  // Set schemaObj from initialSchema if it has an ID (for editing)
   React.useEffect(() => {
-    if (!schemaName) return;
+    if (initialSchema && (initialSchema.id || initialSchema.schemaId)) {
+      console.log('✅ Setting schemaObj from initialSchema:', {
+        id: initialSchema.id || initialSchema.schemaId,
+        schemaName: initialSchema.schemaName,
+        hasSchemaProperty: !!initialSchema.schema
+      });
+      setSchemaObj(initialSchema);
+      setTableName(initialSchema.tableName || null);
+      setResolvedSchema(null);
+      setResolveError(null);
+      return;
+    }
+  }, [initialSchema]);
+
+  // Fetch schemaObj by schemaName only if we don't have it from initialSchema
+  React.useEffect(() => {
+    if (!schemaName || (initialSchema && (initialSchema.id || initialSchema.schemaId))) return;
     const fetchSchemaObj = async () => {
       try {
         const resSchemas = await fetch(`${API_BASE_URL}/unified/schema`);
@@ -203,7 +256,7 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
       }
     };
     fetchSchemaObj();
-  }, [schemaName]);
+  }, [schemaName, initialSchema]);
 
   // Bidirectional sync: update JSON from fields
   React.useEffect(() => {
@@ -359,7 +412,12 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
       // If we're editing and have a schema object with an ID, update it
       if (isEditing && schemaObj && (schemaObj.id || schemaObj.schemaId)) {
         const existingSchemaId = schemaObj.id || schemaObj.schemaId;
-        console.log('Updating schema with ID:', existingSchemaId);
+        console.log('🔄 EDITING SCHEMA:', {
+          isEditing,
+          schemaObj,
+          existingSchemaId,
+          schemaName: schemaName.trim()
+        });
         const response = await fetch(`${API_BASE_URL}/unified/schema/${existingSchemaId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -374,7 +432,11 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
         setSaveMessage('Schema updated successfully!');
       } else {
         // Create new schema
-        console.log('Creating new schema');
+        console.log('🆕 CREATING NEW SCHEMA:', {
+          isEditing,
+          schemaObj,
+          schemaName: schemaName.trim()
+        });
         const response = await fetch(`${API_BASE_URL}/unified/schema`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -628,96 +690,190 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
     }
   };
 
-
-
   return (
-    <div className="h-full w-full flex flex-col bg-white">
-      {/* Header Section - Method and Schema Name */}
-      <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
+    <div className="h-screen w-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50/30 overflow-hidden">
+      {/* Header Section - Modern Design */}
+      <div className="px-6 py-4 border-b border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="text-xs text-gray-600">
-              <span className="font-medium">Method:</span> {methodName || <span className="italic text-gray-400">None</span>}
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <div className="p-1.5 bg-purple-100 rounded-lg">
+                <Zap size={16} className="text-purple-600" />
+              </div>
+              <span className="font-medium">Method:</span> 
+              <span className="text-slate-900">{methodName || <span className="italic text-slate-400">None</span>}</span>
             </div>
             {namespace && (
-              <div className="text-xs text-gray-600">
-                <span className="font-medium">Namespace:</span> {namespace['namespace-name']}
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="p-1.5 bg-blue-100 rounded-lg">
+                  <Database size={16} className="text-blue-600" />
+                </div>
+                <span className="font-medium">Namespace:</span> 
+                <span className="text-slate-900 font-medium">{namespace['namespace-name']}</span>
+              </div>
+            )}
+            {isReadOnly && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 rounded-lg">
+                <Eye size={14} className="text-blue-600" />
+                <span className="text-xs font-semibold text-blue-700">Preview Mode</span>
               </div>
             )}
           </div>
-          <div className="flex items-center space-x-2">
-            <label className="text-xs font-medium text-gray-700" htmlFor="schema-name">
-              Schema Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="schema-name"
-              className="border border-gray-200 px-2 py-1 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition bg-white placeholder-gray-400 w-48"
-              placeholder="Schema Name (required)"
-              value={schemaName}
-              onChange={e => {
-                setSchemaName(e.target.value);
-                if (onSchemaNameChange) onSchemaNameChange(e.target.value);
-              }}
-              required
+          <div className="flex items-center space-x-3">
+            {isReadOnly && (
+              <button
+                onClick={() => setIsInEditMode(true)}
+                className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+              >
+                <Edit size={16} />
+                Edit Schema
+              </button>
+            )}
+            {isInEditMode && !isCreating && (
+              <button
+                onClick={() => {
+                  setIsInEditMode(false);
+                  if (initialSchema) {
+                    const schemaDefinition = initialSchema.schema || initialSchema;
+                    setFields(schemaToFields(schemaDefinition));
+                    setJsonSchema(JSON.stringify(schemaDefinition, null, 2));
+                    if (initialSchema.schemaName) {
+                      setSchemaName(initialSchema.schemaName);
+                    }
+                  }
+                  setSaveMessage('');
+                }}
+                className="flex items-center gap-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+              >
+                <X size={16} />
+                Cancel Edit
+              </button>
+            )}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <FileText size={16} className="text-slate-600" />
+                Schema Name
+                <span className="text-red-500">*</span>
+              </div>
+              <input
+                id="schema-name"
+                className={`border border-slate-200 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 w-56 ${isReadOnly ? 'bg-slate-50 cursor-not-allowed text-slate-500' : 'bg-white shadow-sm hover:shadow-md'}`}
+                placeholder="Enter schema name..."
+                value={schemaName}
+                onChange={e => {
+                  if (!isReadOnly) {
+                    setSchemaName(e.target.value);
+                    if (onSchemaNameChange) onSchemaNameChange(e.target.value);
+                  }
+                }}
+                required
+                readOnly={isReadOnly}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Database Operations Section - Right below header */}
+      {isEditing && (
+        <div className="px-6 py-4 bg-gradient-to-br from-slate-50/50 to-white border-b border-slate-200/60">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg">
+                <Database size={18} className="text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg text-slate-800">Database Operations</h3>
+                <p className="text-sm text-slate-500">Manage your schema data</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {/* Create Data Button */}
+              <button
+                onClick={() => setActiveTab('createData')}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+              >
+                <PlusCircle size={16} />
+                Create Data
+              </button>
+
+              {/* Update Data Button */}
+              <button
+                onClick={() => setActiveTab('updateData')}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+              >
+                <RefreshCw size={16} />
+                Update Data
+              </button>
+
+              {/* Read Data Button */}
+              <button
+                onClick={() => setActiveTab('readData')}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+              >
+                <Eye size={16} />
+                Read Data
+              </button>
+
+              {/* Delete Data Button */}
+              <button
+                onClick={() => setActiveTab('deleteData')}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+              >
+                <Trash2 size={16} />
+                Delete Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schema Editor Section */}
+      {activeTab === 'edit' || !activeTab ? (
+        <div className="flex-1 grid grid-cols-2 gap-6 min-h-0 w-full px-6 py-4">
+        {/* Modern Form Editor */}
+        <div className={`flex flex-col min-h-0 bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 ${isReadOnly ? 'opacity-75' : ''}`}>
+          <div className="flex items-center justify-between p-4 border-b border-slate-200/60 bg-gradient-to-r from-slate-50 to-white">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg">
+                <Layers size={18} className="text-purple-600" />
+              </div>
+              <div>
+                <div className="font-semibold text-sm text-slate-800">{isReadOnly ? 'Schema Structure' : 'Visual Editor'}</div>
+                <div className="text-xs text-slate-500">Drag & drop interface</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200/50 rounded-lg">
+              <Sparkles size={14} className="text-emerald-600" />
+              <span className="text-xs font-semibold text-emerald-700">{fields.length} fields</span>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-br from-slate-50/50 to-white">
+            <NestedFieldsEditor 
+              fields={fields} 
+              onChange={isReadOnly ? () => {} : setFields} 
+              collapsedNodes={collapsedNodes} 
+              setCollapsedNodes={setCollapsedNodes} 
+              nodePath="root" 
             />
           </div>
         </div>
-      </div>
 
-      {/* Tab Switcher */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
-        <nav className="flex gap-1 px-4 py-2 overflow-x-auto" role="tablist">
-          {[
-            { key: 'edit', label: 'Edit Schema', icon: <Edit size={14} /> },
-            { key: 'createData', label: 'Create Data', icon: <PlusCircle size={14} /> },
-            { key: 'updateData', label: 'Update Data', icon: <RefreshCw size={14} /> },
-            { key: 'readData', label: 'Read Data', icon: <Eye size={14} /> },
-            { key: 'deleteData', label: 'Delete Data', icon: <Trash2 size={14} /> },
-          ].map(tab => (
-            (tab.key === 'edit' || isEditing) && (
-        <button
-                key={tab.key}
-                role="tab"
-                aria-selected={activeTab === tab.key}
-                className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition
-                  ${activeTab === tab.key
-                    ? 'bg-purple-100 text-purple-700 border border-purple-200'
-                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
-                  }`}
-                onClick={() => setActiveTab(tab.key as any)}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-        </button>
-            )
-          ))}
-        </nav>
-      </div>
-
-      {/* Edit Schema Tab */}
-      {activeTab === 'edit' && (
-        <>
-      <div className="flex-1 grid grid-cols-2 gap-4 min-h-0 w-full px-4 pb-4">
-        {/* Form Editor */}
-        <div className="flex flex-col min-h-0 bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-gray-50">
-            <div className="font-semibold text-sm text-gray-800">Form Editor</div>
-            <div className="text-xs text-gray-500">
-              {fields.length} fields
+        {/* Modern JSON Schema Editor */}
+        <div className="flex flex-col min-h-0 bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
+          <div className="flex items-center justify-between p-4 border-b border-slate-200/60 bg-gradient-to-r from-slate-50 to-white">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-blue-100 to-cyan-100 rounded-lg">
+                <Code2 size={18} className="text-blue-600" />
+              </div>
+              <div>
+                <div className="font-semibold text-sm text-slate-800">JSON Schema Editor</div>
+                <div className="text-xs text-slate-500">Code & configuration</div>
+              </div>
             </div>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3">
-            <NestedFieldsEditor fields={fields} onChange={setFields} collapsedNodes={collapsedNodes} setCollapsedNodes={setCollapsedNodes} nodePath="root" />
-          </div>
-        </div>
-
-        {/* JSON Schema Editor */}
-        <div className="flex flex-col min-h-0 bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-gray-50">
-            <div className="font-semibold text-sm text-gray-800">JSON Schema Editor</div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               <button
-                className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs border border-gray-200 font-medium transition"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-slate-100 to-gray-100 hover:from-slate-200 hover:to-gray-200 text-slate-700 rounded-lg text-xs border border-slate-200/50 font-medium transition-all duration-200 shadow-sm hover:shadow-md"
                 onClick={() => {
                   try {
                     setJsonSchema(JSON.stringify(JSON.parse(jsonSchema), null, 2));
@@ -725,10 +881,15 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
                 }}
                 title="Format JSON"
               >
+                <Palette size={14} />
                 Format
               </button>
               <button
-                className={`px-2 py-1 rounded text-xs border font-medium transition ${resolvedView ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border font-medium transition-all duration-200 ${
+                  resolvedView 
+                    ? 'bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 border-purple-200/50 shadow-md' 
+                    : 'bg-gradient-to-r from-slate-100 to-gray-100 hover:from-slate-200 hover:to-gray-200 text-slate-700 border-slate-200/50 shadow-sm hover:shadow-md'
+                }`}
                 onClick={async () => {
                   const next = !resolvedView;
                   setResolvedView(next);
@@ -738,130 +899,195 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
                 }}
                 title="Toggle resolved view"
               >
-                {isResolving ? 'Resolving...' : (resolvedView ? 'Resolved ✓' : 'Resolved')}
+                <Sparkles size={14} />
+                {isResolving ? 'Resolving...' : (resolvedView ? 'Resolved ✓' : 'Resolve')}
               </button>
             </div>
           </div>
           
-          {/* Raw Fields Section */}
-          <div className="border-b border-gray-100">
+          {/* Modern Raw Fields Section */}
+          <div className="border-b border-slate-200/60">
             <div
-              className="flex items-center justify-between p-2 cursor-pointer hover:bg-gray-50 transition"
+              className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50/50 transition-all duration-200"
               onClick={() => setShowRawFields(v => !v)}
             >
-              <span className="text-xs font-medium text-gray-700">TypeScript/Raw Fields</span>
-              <span className="text-blue-500 text-xs">{showRawFields ? '▲' : '▼'}</span>
+              <div className="flex items-center gap-2">
+                <Settings size={14} className="text-slate-500" />
+                <span className="text-sm font-medium text-slate-700">TypeScript/Raw Fields</span>
+              </div>
+              <div className={`p-1 rounded-md transition-all duration-200 ${showRawFields ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>
+                {showRawFields ? '▲' : '▼'}
+              </div>
             </div>
             {showRawFields && (
-              <div className="p-3 border-t border-gray-100 bg-gray-50">
+              <div className="p-4 border-t border-slate-200/60 bg-gradient-to-r from-slate-50/50 to-white">
                 <textarea
-                  className="w-full border border-gray-200 rounded p-2 font-mono text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition"
-                  placeholder={`Paste fields like:\nid: string;\nemail: string;\nrole: \"ADMIN\" | \"USER\";\ndepartmentId: string | null;`}
+                  className="w-full border border-slate-200 rounded-lg p-3 font-mono text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                  placeholder={`Paste fields like:\nid: string;\nemail: string;\nrole: "ADMIN" | "USER";\ndepartmentId: string | null;`}
                   value={rawFields}
                   onChange={e => setRawFields(e.target.value)}
                   rows={3}
-                  style={{ minHeight: 50 }}
+                  style={{ minHeight: 80 }}
                 />
-                <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center justify-between mt-3">
                   <button
-                    className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium border border-blue-600 transition"
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
                     onClick={handleConvertRawFields}
                     type="button"
                   >
+                    <Zap size={14} />
                     Convert to JSON Schema
                   </button>
                   {rawFieldsError && (
-                    <div className="text-xs text-red-600">{rawFieldsError}</div>
+                    <div className="flex items-center gap-1 text-sm text-red-600">
+                      <AlertTriangle size={14} />
+                      {rawFieldsError}
+                    </div>
                   )}
                 </div>
               </div>
             )}
           </div>
 
-          {/* JSON Schema Content */}
+          {/* Modern JSON Schema Content */}
           <div className="flex-1 flex flex-col min-h-0">
-            <div className="p-2 border-b border-gray-100 bg-gray-50">
-              <div className="text-xs text-gray-500">
-                OpenAPI 3.0+ spec: Use type: <code>["string", "null"]</code> for nullable fields, and <code>required: ["field1", ...]</code> for required fields.
+            <div className="p-3 border-b border-slate-200/60 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
+              <div className="text-sm text-slate-600 flex items-center gap-2">
+                <Code2 size={14} className="text-blue-500" />
+                OpenAPI 3.0+ spec: Use <code className="px-1.5 py-0.5 bg-blue-100 rounded text-xs font-mono">["string", "null"]</code> for nullable fields, and <code className="px-1.5 py-0.5 bg-blue-100 rounded text-xs font-mono">required: ["field1", ...]</code> for required fields.
               </div>
             </div>
             {resolvedView ? (
               <textarea
-                className="flex-1 border-0 p-3 font-mono text-xs bg-white focus:outline-none focus:ring-0 resize-none overflow-y-auto"
+                className="flex-1 border-0 p-4 font-mono text-sm bg-gradient-to-br from-slate-50 to-white focus:outline-none focus:ring-0 resize-none overflow-y-auto leading-relaxed"
                 value={resolvedSchema ? JSON.stringify(resolvedSchema, null, 2) : (resolveError ? `// ${resolveError}` : (isResolving ? '// Resolving...' : '// No resolved schema yet'))}
                 readOnly
               />
             ) : (
               <textarea
-                className="flex-1 border-0 p-3 font-mono text-xs bg-white focus:outline-none focus:ring-0 resize-none overflow-y-auto"
+                className={`flex-1 border-0 p-4 font-mono text-sm focus:outline-none focus:ring-0 resize-none overflow-y-auto leading-relaxed transition-all duration-200 ${isReadOnly ? 'bg-slate-50 cursor-not-allowed text-slate-500' : 'bg-gradient-to-br from-slate-50 to-white'}`}
                 value={jsonSchema}
                 onChange={handleJsonChange}
+                readOnly={isReadOnly}
               />
             )}
             {jsonError && (
-              <div className="p-2 border-t border-gray-100 bg-red-50">
-                <div className="text-xs text-red-600">{jsonError}</div>
+              <div className="p-3 border-t border-red-200/60 bg-gradient-to-r from-red-50 to-pink-50">
+                <div className="flex items-center gap-2 text-sm text-red-600">
+                  <AlertTriangle size={14} />
+                  {jsonError}
+                </div>
               </div>
             )}
           </div>
         </div>
-      </div>
-      {/* Sticky action buttons */}
-      <div className="flex flex-col md:flex-row justify-end md:gap-2 gap-2 mt-3 bg-white pt-2 pb-1 border-t border-gray-100 px-4">
-        <button
-          className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1.5 rounded text-xs font-medium w-full md:w-auto transition"
-          onClick={handleValidate}
-        >
-          Validate
-        </button>
-        <button
-          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs font-medium w-full md:w-auto transition"
-          disabled={isSaving}
-          onClick={handleSave}
-        >
-              {isEditing ? (isSaving ? 'Saving...' : 'Edit') : (isSaving ? 'Saving...' : 'Create')}
-        </button>
-        {isEditing && schemaObj && (schemaObj.id || schemaObj.schemaId) && (
-          <button
-            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-medium w-full md:w-auto transition"
-            onClick={async () => {
-              if (!window.confirm('Are you sure you want to delete this schema?')) return;
-              const schemaId = schemaObj.id || schemaObj.schemaId;
-              try {
-                const res = await fetch(`${API_BASE_URL}/unified/schema/${schemaId}`, {
-                  method: 'DELETE',
-                });
-                if (!res.ok) throw new Error('Failed to delete schema');
-                setSaveMessage('Schema deleted successfully!');
-                if (onSuccess) onSuccess();
-              } catch (err: any) {
-                setSaveMessage('Failed to delete schema.');
-              }
-            }}
-            type="button"
-          >
-            Delete
-          </button>
-        )}
-      </div>
-      {validationResult && (
-        <div className="mt-2 px-4">
-          <div className="font-semibold text-xs">Validation Result:</div>
-          <pre className="bg-gray-100 p-2 rounded text-xs">
-            {JSON.stringify(validationResult, null, 2)}
-          </pre>
-        </div>
-      )}
-      {saveMessage && (
-        <div className="mt-2 text-blue-700 font-semibold text-xs px-4">{saveMessage}</div>
+        
+        {/* Modern Sticky Action Buttons */}
+        {!isReadOnly && (
+        <div className="flex flex-col md:flex-row justify-end md:gap-3 gap-3 mt-4 bg-white/90 backdrop-blur-sm pt-4 pb-4 border-t border-slate-200/60 px-6 shadow-lg">
+          {isInEditMode && !isCreating && (
+            <button
+              className="flex items-center gap-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium w-full md:w-auto transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+              onClick={() => {
+                setIsInEditMode(false);
+                if (initialSchema) {
+                  const schemaDefinition = initialSchema.schema || initialSchema;
+                  setFields(schemaToFields(schemaDefinition));
+                  setJsonSchema(JSON.stringify(schemaDefinition, null, 2));
+                  if (initialSchema.schemaName) {
+                    setSchemaName(initialSchema.schemaName);
+                  }
+                }
+                setSaveMessage('');
+              }}
+            >
+              <X size={16} />
+              Cancel
+            </button>
           )}
-        </>
-      )}
+          <button
+            className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium w-full md:w-auto transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+            onClick={handleValidate}
+          >
+            <CheckCircle size={16} />
+            Validate
+          </button>
+          <button
+            className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium w-full md:w-auto transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            disabled={isSaving}
+            onClick={handleSave}
+          >
+            <Save size={16} />
+            {isEditing ? (isSaving ? 'Updating...' : 'Update Schema') : (isSaving ? 'Creating...' : 'Create Schema')}
+          </button>
+          {isEditing && schemaObj && (schemaObj.id || schemaObj.schemaId) && (
+            <button
+              className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium w-full md:w-auto transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+              onClick={async () => {
+                if (!window.confirm('Are you sure you want to delete this schema?')) return;
+                const schemaId = schemaObj.id || schemaObj.schemaId;
+                try {
+                  const res = await fetch(`${API_BASE_URL}/unified/schema/${schemaId}`, {
+                    method: 'DELETE',
+                  });
+                  if (!res.ok) throw new Error('Failed to delete schema');
+                  setSaveMessage('Schema deleted successfully!');
+                  if (onSuccess) onSuccess();
+                } catch (err: any) {
+                  setSaveMessage('Failed to delete schema.');
+                }
+              }}
+              type="button"
+            >
+              <Trash2 size={16} />
+              Delete Schema
+            </button>
+          )}
+        </div>
+        )}
+        {validationResult && (
+          <div className="mx-6 mt-4 p-4 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200/50 rounded-xl shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle size={16} className="text-emerald-600" />
+              <div className="font-semibold text-sm text-emerald-800">Validation Result</div>
+            </div>
+            <pre className="bg-white/80 p-3 rounded-lg text-sm font-mono border border-emerald-200/50 overflow-x-auto">
+              {JSON.stringify(validationResult, null, 2)}
+            </pre>
+          </div>
+        )}
+        {saveMessage && (
+          <div className="mx-6 mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 rounded-xl shadow-sm">
+            <div className="flex items-center gap-2">
+              <CheckCircle size={16} className="text-blue-600" />
+              <div className="text-blue-700 font-semibold text-sm">{saveMessage}</div>
+            </div>
+          </div>
+        )}
+        </div>
+      ) : null}
 
-      {/* Create Data Tab */}
-      {isEditing && activeTab === 'createData' && (
-        <div className="px-8 pb-8">
-          <h2 className="text-lg font-semibold mb-4">Create Data for Table</h2>
+      {/* CRUD Operations Section */}
+      {activeTab === 'createData' && (
+        <div className="px-6 py-4 bg-white/90 backdrop-blur-sm border-t border-slate-200/60">
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={() => setActiveTab('edit')}
+              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              <X size={16} />
+              Back to Editor
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-blue-100 to-cyan-100 rounded-lg">
+                <PlusCircle size={18} className="text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800">Create Data for Table</h2>
+                <div className="text-sm text-slate-500">Add new records to your schema table</div>
+              </div>
+            </div>
+          </div>
           
           <label className="block text-sm font-medium mb-2">Account</label>
           <select
@@ -989,10 +1215,27 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
           })()}
         </div>
       )}
-      {/* Update Data Tab */}
-      {isEditing && activeTab === 'updateData' && (
-        <div className="px-4 pb-4">
-          <h2 className="text-base font-semibold mb-3">Update Data in Table</h2>
+
+      {activeTab === 'updateData' && (
+        <div className="px-6 py-4 bg-white/90 backdrop-blur-sm border-t border-slate-200/60">
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={() => setActiveTab('edit')}
+              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              <X size={16} />
+              Back to Editor
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-orange-100 to-amber-100 rounded-lg">
+                <RefreshCw size={18} className="text-orange-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800">Update Data in Table</h2>
+                <div className="text-sm text-slate-500">Modify existing records in your schema table</div>
+              </div>
+            </div>
+          </div>
           <label className="block text-xs font-medium mb-1">Account</label>
           <select
             className="border border-gray-200 p-2 rounded text-xs w-full mb-3"
@@ -1057,10 +1300,27 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
           })()}
         </div>
       )}
-      {/* Read Data Tab */}
-      {isEditing && activeTab === 'readData' && (
-        <div className="px-4 pb-4">
-          <h2 className="text-base font-semibold mb-3">Read Data from Table</h2>
+
+      {activeTab === 'readData' && (
+        <div className="px-6 py-4 bg-white/90 backdrop-blur-sm border-t border-slate-200/60">
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={() => setActiveTab('edit')}
+              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              <X size={16} />
+              Back to Editor
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg">
+                <Eye size={18} className="text-purple-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800">Read Data from Table</h2>
+                <div className="text-sm text-slate-500">View and search records in your schema table</div>
+              </div>
+            </div>
+          </div>
           <label className="block text-xs font-medium mb-1">Account</label>
           <select
             className="border border-gray-200 p-2 rounded text-xs w-full mb-3"
@@ -1134,10 +1394,27 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
           })()}
         </div>
       )}
-      {/* Delete Data Tab */}
-      {isEditing && activeTab === 'deleteData' && (
-        <div className="px-4 pb-4">
-          <h2 className="text-base font-semibold mb-3">Delete Data from Table</h2>
+
+      {activeTab === 'deleteData' && (
+        <div className="px-6 py-4 bg-white/90 backdrop-blur-sm border-t border-slate-200/60">
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={() => setActiveTab('edit')}
+              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              <X size={16} />
+              Back to Editor
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-red-100 to-pink-100 rounded-lg">
+                <Trash2 size={18} className="text-red-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800">Delete Data from Table</h2>
+                <div className="text-sm text-slate-500">Remove records from your schema table</div>
+              </div>
+            </div>
+          </div>
           <label className="block text-xs font-medium mb-1">Account</label>
           <select
             className="border border-gray-200 p-2 rounded text-xs w-full mb-3"
