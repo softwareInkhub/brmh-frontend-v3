@@ -1,7 +1,7 @@
 'use client'
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Landmark, Database, Cloud, Shield, Radio, Globe } from 'lucide-react';
+import { Landmark, Database, Cloud, Shield, Radio, Globe, UserCog } from 'lucide-react';
 
 const SIDEPANEL_WIDTH = 256; // px, w-64
 
@@ -9,7 +9,8 @@ const awsServices = [
   { id: 'lambda', name: 'Lambda', icon: <Landmark className="text-orange-500" />, route: '/aws/lambda' },
   { id: 's3', name: 'S3', icon: <Cloud className="text-yellow-500" />, route: '/aws/s3' },
   { id: 'dynamodb', name: 'DynamoDB', icon: <Database className="text-green-500" />, route: '/aws/dynamodb' },
-  { id: 'iam', name: 'IAM', icon: <Shield className="text-blue-500" />, route: '/aws/iam' },
+  { id: 'iam', name: 'AWS IAM', icon: <Shield className="text-blue-500" />, route: '/aws/iam' },
+  { id: 'brmh-iam', name: 'BRMH IAM', icon: <UserCog className="text-indigo-600" />, route: '/BRMH-IAM' },
   { id: 'sns', name: 'SNS', icon: <Radio className="text-purple-500" />, route: '/aws/sns' },
   { id: 'apigateway', name: 'API Gateway', icon: <Globe className="text-rose-900" />, route: '/aws/apigateway' },
 ];
