@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bot, Send, File, Folder, Play, Database, Code, X, Upload, FileText, Image, Archive } from 'lucide-react';
 import { useDrop } from 'react-dnd';
+import { useNamespaceContext } from '../../components/NamespaceContext';
 
 interface Message {
   id: string;
@@ -77,6 +78,12 @@ const getErrorSuggestions = (errorType: string): string => {
 };
 
 const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose }) => {
+  const { currentNamespace, setCurrentNamespace } = useNamespaceContext();
+  // When context switches via drop, reflect it locally so effects use new namespace
+  const [localNamespace, setLocalNamespace] = useState<any>(namespace || currentNamespace);
+  useEffect(() => {
+    setLocalNamespace(namespace || currentNamespace);
+  }, [namespace, currentNamespace]);
   console.log('AIAgentWorkspace rendered with props:', { namespace, onClose });
   // Force rebuild to ensure latest changes are applied
   
@@ -132,6 +139,31 @@ What would you like to work on today?`,
   const [selectedFile, setSelectedFile] = useState<ProjectFile | null>(null);
   const [fileContent, setFileContent] = useState('');
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
+  const [pendingSchemaSelection, setPendingSchemaSelection] = useState<{
+    prompt: string;
+    candidates: Array<{ id?: string; name?: string; schemaName?: string; namespaceId?: string; schema?: any }>;
+  } | null>(null);
+
+  // Helper: list schemas from backend, trying multiple endpoints for compatibility
+  const listSchemas = async (nsId?: string | null): Promise<any[]> => {
+    if (!nsId) return [];
+    const endpoints: string[] = [
+      `${API_BASE_URL}/unified/schema?namespaceId=${encodeURIComponent(nsId)}`,
+      `${API_BASE_URL}/unified/schemas?namespaceId=${encodeURIComponent(nsId)}`,
+      `${API_BASE_URL}/unified/schema/list?namespaceId=${encodeURIComponent(nsId)}`
+    ];
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) return data;
+          if (Array.isArray((data || {}).items)) return (data as any).items;
+        }
+      } catch {}
+    }
+    return [];
+  };
   const [schemas, setSchemas] = useState<any[]>([]);
   const [rawSchemas, setRawSchemas] = useState<{ id: string; content: string }[]>([]);
   const [showRawSchema, setShowRawSchema] = useState<{ [key: number]: boolean }>({});
@@ -273,6 +305,7 @@ What would you like to work on today?`,
   const terminalInstance = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Use centralized constant so it always matches env
   const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
   const router = useRouter();
 
@@ -416,7 +449,55 @@ What would you like to work on today?`,
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    // Explicitly allow copy to ensure drop fires
+    try {
+      (e.dataTransfer as any).dropEffect = 'copy';
+    } catch {}
     setIsDragOver(true);
+  };
+
+  // Recursively collect files when a directory is dropped (webkit)
+  const collectFilesFromItems = async (items: DataTransferItemList): Promise<File[]> => {
+    const collected: File[] = [];
+    const readEntry = (entry: any, pathPrefix = ''): Promise<void> => {
+      return new Promise((resolve) => {
+        if (!entry) return resolve();
+        if (entry.isFile) {
+          entry.file((file: File) => {
+            // Preserve folder structure in path within name (optional)
+            const namedFile = new File([file], pathPrefix ? `${pathPrefix}/${file.name}` : file.name, { type: file.type, lastModified: file.lastModified });
+            collected.push(namedFile);
+            resolve();
+          });
+        } else if (entry.isDirectory) {
+          const reader = entry.createReader();
+          reader.readEntries(async (entries: any[]) => {
+            for (const child of entries) {
+              await readEntry(child, pathPrefix ? `${pathPrefix}/${entry.name}` : entry.name);
+            }
+            resolve();
+          });
+        } else {
+          resolve();
+        }
+      });
+    };
+
+    const pending: Promise<void>[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (it.kind === 'file') {
+        const entry = (it as any).webkitGetAsEntry ? (it as any).webkitGetAsEntry() : null;
+        if (entry) {
+          pending.push(readEntry(entry));
+        } else {
+          const f = it.getAsFile();
+          if (f) collected.push(f);
+        }
+      }
+    }
+    await Promise.all(pending);
+    return collected;
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
@@ -428,44 +509,57 @@ What would you like to work on today?`,
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
     setIsDraggingSchema(false);
     
     try {
-      const files = e.dataTransfer.files;
+      let files = e.dataTransfer.files;
+      // Some browsers set files empty but items populated; also support folders
+      if ((!files || files.length === 0) && e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+        const collected = await collectFilesFromItems(e.dataTransfer.items);
+        if (collected.length > 0) {
+          const dt = new DataTransfer();
+          collected.forEach(f => dt.items.add(f));
+          files = dt.files;
+        }
+      }
+
       if (files && files.length > 0) {
         handleFileUpload(files);
       }
       
-      // Also check for schema data
+      // Also check for schema data (namespaces or schema cards may set this)
       const schemaData = e.dataTransfer.getData('application/json');
       if (schemaData) {
         try {
-          // Handle case where data might already be an object
-          let schema;
+          let schema: any;
           if (typeof schemaData === 'string') {
-            schema = JSON.parse(schemaData);
-          } else if (typeof schemaData === 'object') {
+            const trimmed = schemaData.trim();
+            if (trimmed && trimmed !== '[object Object]') {
+              try {
+                schema = JSON.parse(trimmed);
+              } catch {
+                schema = null;
+              }
+            }
+          } else if (typeof (schemaData as any) === 'object') {
             schema = schemaData;
-          } else {
-            console.warn('Invalid schema data type:', typeof schemaData);
-            return;
           }
+          
+          if (!schema || typeof schema !== 'object') return;
           
           const schemaWithSource = { ...schema, source: 'workspace' };
           setDroppedSchemas(prev => [...prev, schemaWithSource]);
           
-          // Add message about dropped schema
           addMessage({
             role: 'user',
             content: `Added schema context from workspace: ${schema.schemaName || schema.name || 'Unknown Schema'}`
           });
         } catch (parseError) {
           console.error('Error parsing schema data:', parseError);
-          console.error('Schema data received:', schemaData);
         }
       }
     } catch (error) {
@@ -501,28 +595,32 @@ What would you like to work on today?`,
       const schemaData = e.dataTransfer.getData('application/json');
       if (schemaData) {
         try {
-          // Handle case where data might already be an object
-          let schema;
+          let schema: any;
           if (typeof schemaData === 'string') {
-            schema = JSON.parse(schemaData);
-          } else if (typeof schemaData === 'object') {
+            const trimmed = schemaData.trim();
+            if (trimmed && trimmed !== '[object Object]') {
+              try {
+                schema = JSON.parse(trimmed);
+              } catch {
+                // Not valid JSON string; ignore
+                schema = null;
+              }
+            }
+          } else if (typeof (schemaData as any) === 'object') {
             schema = schemaData;
-          } else {
-            console.warn('Invalid schema data type:', typeof schemaData);
-            return;
           }
+          
+          if (!schema || typeof schema !== 'object') return;
           
           const schemaWithSource = { ...schema, source: 'workspace' };
           setDroppedSchemas(prev => [...prev, schemaWithSource]);
           
-          // Add message about dropped schema
           addMessage({
             role: 'user',
             content: `Added schema context from workspace: ${schema.schemaName || schema.name || 'Unknown Schema'}`
           });
         } catch (parseError) {
           console.error('Error parsing schema data:', parseError);
-          console.error('Schema data received:', schemaData);
         }
       }
     } catch (error) {
@@ -541,25 +639,39 @@ What would you like to work on today?`,
       if (item.type === 'SCHEMA') {
         const schema = { ...item.data, source: 'sidebar' };
         setDroppedSchemas(prev => [...prev, schema]);
-        
-        // Add message about dropped schema
-        addMessage({
-          role: 'user',
-          content: `Added schema context from sidebar: ${schema.schemaName || schema.name || 'Unknown Schema'}`
-        });
+        addMessage({ role: 'user', content: `Added schema context from sidebar: ${schema.schemaName || schema.name || 'Unknown Schema'}` });
       }
     },
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-    }),
+    collect: (monitor) => ({ isOver: monitor.isOver() }),
+  });
+
+  // React-DnD drop functionality for namespaces to switch context inside workspace
+  const [{ isOver: isNamespaceDropOver }, namespaceDropRef] = useDrop({
+    accept: 'namespace',
+    drop: (item: any) => {
+      try {
+        const droppedNs = item.namespace || item.data || item;
+        if (droppedNs && (droppedNs['namespace-id'] || droppedNs.id)) {
+          setCurrentNamespace(droppedNs);
+          setLocalNamespace(droppedNs);
+          setConsoleOutput(prev => [...prev, `🔁 Switched context to namespace: ${droppedNs['namespace-name'] || droppedNs.name || droppedNs.id}`]);
+          addMessage({ role: 'assistant', content: `Context switched to namespace: ${droppedNs['namespace-name'] || droppedNs.name}` });
+        } else {
+          setConsoleOutput(prev => [...prev, '⚠️ Dropped item is not a valid namespace']);
+        }
+      } catch (e: any) {
+        setConsoleOutput(prev => [...prev, `❌ Error switching namespace: ${e?.message || 'Unknown error'}`]);
+      }
+    },
+    collect: (monitor) => ({ isOver: monitor.isOver() })
   });
 
   // Load available schemas for drag-drop functionality
   const loadAvailableSchemas = async () => {
-    if (!namespace?.['namespace-id']) return;
+    if (!localNamespace?.['namespace-id']) return;
     
     try {
-      const response = await fetch(`/unified/schema?namespaceId=${namespace['namespace-id']}`);
+      const response = await fetch(`/unified/schema?namespaceId=${localNamespace?.['namespace-id'] || ''}`);
       if (response.ok) {
         const schemas = await response.json();
         setDragDropSchemas(schemas);
@@ -634,7 +746,7 @@ What would you like to work on today?`,
   };
 
   const handleScrapeAndSave = async () => {
-    if (!selectedService || !namespace?.['namespace-id']) return;
+    if (!selectedService || !localNamespace?.['namespace-id']) return;
     
     const serviceToScrape = selectedService === 'custom-url' ? customUrl : selectedService;
     if (selectedService === 'custom-url' && !customUrl) {
@@ -651,7 +763,7 @@ What would you like to work on today?`,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           serviceName: serviceToScrape,
-          namespaceId: namespace['namespace-id'],
+          namespaceId: localNamespace?.['namespace-id'] || '',
           options: scrapeOptions
         })
       });
@@ -730,7 +842,7 @@ What would you like to work on today?`,
 
   // Load file tree and workspace state when namespace changes
   useEffect(() => {
-    if (namespace?.['namespace-id']) {
+    if (localNamespace?.['namespace-id']) {
       refreshFileTree();
       loadWorkspaceState();
       loadAvailableSchemas(); // Load schemas for drag-drop functionality
@@ -745,11 +857,11 @@ What would you like to work on today?`,
         }
       }, 1000);
     }
-  }, [namespace?.['namespace-id'], workspaceState]);
+  }, [localNamespace?.['namespace-id'], workspaceState]);
 
   // Initialize session and load history when component mounts
   useEffect(() => {
-    if (namespace?.['namespace-id']) {
+    if (localNamespace?.['namespace-id']) {
       const newSessionId = `${userId}-ai-agent-workspace-${Date.now()}`;
       setSessionId(newSessionId);
       
@@ -758,18 +870,18 @@ What would you like to work on today?`,
         loadChatHistory();
       }, 100);
     }
-  }, [namespace?.['namespace-id'], userId]);
+  }, [localNamespace?.['namespace-id'], userId]);
 
   useEffect(() => {
-    if (namespace?.['namespace-id'] && sessionId) {
+    if (localNamespace?.['namespace-id'] && sessionId) {
       // Clear generated schemas for this session/namespace on mount/refresh
       fetch(`${process.env.NEXT_PUBLIC_API_BACKEND_URL}/ai-agent/clear-generated-schemas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, namespaceId: namespace['namespace-id'] })
+        body: JSON.stringify({ sessionId, namespaceId: localNamespace?.['namespace-id'] || '' })
       });
     }
-  }, [namespace?.['namespace-id'], sessionId]);
+  }, [localNamespace?.['namespace-id'], sessionId]);
 
 
 
@@ -777,13 +889,13 @@ What would you like to work on today?`,
 
   // Memory service functions
   const loadWorkspaceState = async () => {
-    if (!sessionId || !namespace?.['namespace-id']) return;
+    if (!sessionId || !localNamespace?.['namespace-id']) return;
     
     try {
       const response = await fetch(`${API_BASE_URL}/ai-agent/get-workspace-state`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, namespaceId: namespace['namespace-id'] })
+        body: JSON.stringify({ sessionId, namespaceId: localNamespace?.['namespace-id'] || '' })
       });
       
       if (response.ok) {
@@ -800,7 +912,7 @@ What would you like to work on today?`,
   };
 
   const saveWorkspaceState = async () => {
-    if (!sessionId || !namespace?.['namespace-id']) return;
+    if (!sessionId || !localNamespace?.['namespace-id']) return;
     
     const currentState: WorkspaceState = {
       files: [], // No longer tracking generated files
@@ -816,7 +928,7 @@ What would you like to work on today?`,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          namespaceId: namespace['namespace-id'],
+          namespaceId: localNamespace?.['namespace-id'] || '',
           workspaceState: currentState
         })
       });
@@ -920,7 +1032,7 @@ What would you like to work on today?`,
         body: JSON.stringify({
           message: message,
           originalMessage: message,
-          namespace: namespace?.['namespace-id'],
+          namespace: localNamespace?.['namespace-id'],
           selectedSchema: selectedSchema,
           functionName: (lambdaForm.functionName && lambdaForm.functionName.trim()) 
             ? lambdaForm.functionName.trim() 
@@ -1282,11 +1394,33 @@ What would you like to work on today?`,
 
     const userMessage = inputMessage.trim();
     setInputMessage('');
+
+    // Handle pending schema selection by name or natural language
+    if (pendingSchemaSelection) {
+      const reply = userMessage.trim().toLowerCase();
+      const candidates = pendingSchemaSelection.candidates;
+      const match = candidates.find(c => {
+        const n1 = (c.schemaName || c.name || '').toLowerCase();
+        // support phrasing like "use X", "select X", "schema X"
+        return n1 && (reply === n1 || reply.includes(n1) || /use\s+/.test(reply) || /select\s+/.test(reply));
+      });
+      if (match) {
+        setPendingSchemaSelection(null);
+        const chosenName = match.schemaName || match.name || 'Selected Schema';
+        setConsoleOutput(prev => [...prev, `✅ Selected schema: ${chosenName}`]);
+        addMessage({ role: 'assistant', content: `Using schema: ${chosenName}` });
+        const schemaObj = match.schema || match;
+        await handleLambdaGeneration(pendingSchemaSelection.prompt, schemaObj);
+        return;
+      }
+      addMessage({ role: 'assistant', content: 'I did not recognize that schema name. Please reply with the exact schema name as shown in the list (e.g., "Use Users").' });
+      return;
+    }
     
     // Debug: Log the message being processed
     console.log('[Frontend] 🎯 Processing message:', userMessage);
     console.log('[Frontend] 🔍 Current messages count:', messages.length);
-    console.log('[Frontend] 🏠 Current namespace:', namespace?.['namespace-id']);
+    console.log('[Frontend] 🏠 Current namespace:', localNamespace?.['namespace-id']);
     
     // Add user message to chat
     addMessage({
@@ -1298,7 +1432,7 @@ What would you like to work on today?`,
     setConsoleOutput(prev => [...prev, `👤 User message: ${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}`]);
     
     // If no namespace context and intent is namespace generation, call smart endpoint
-    if (!namespace?.['namespace-id'] && isNamespaceGenerationIntent(userMessage)) {
+    if (!localNamespace?.['namespace-id'] && isNamespaceGenerationIntent(userMessage)) {
       await generateNamespaceSmart(userMessage);
       return;
     }
@@ -1312,10 +1446,37 @@ What would you like to work on today?`,
       /lambda\s+(function|handler)/.test(lowerUM) ||
       /make\s+.*lambda/.test(lowerUM);
     if (lambdaIntent) {
-      // Try with selected/dropped schema if any; else null for generic lambda
-      const selected = droppedSchemas && droppedSchemas.length > 0 ? droppedSchemas[0] : null;
-      await handleLambdaGeneration(userMessage, selected);
-      return;
+      // If a schema was dropped, use that; else prompt user with available schemas
+      const dropped = droppedSchemas && droppedSchemas.length > 0 ? droppedSchemas[0] : null;
+      if (dropped) {
+        await handleLambdaGeneration(userMessage, dropped);
+        return;
+      }
+
+      // Fetch available schemas for current namespace only
+      try {
+        const nsId = localNamespace?.['namespace-id'] || null;
+        if (!nsId) {
+          addMessage({ role: 'assistant', content: 'No namespace selected. Please open the AI Agent within a namespace to list its schemas.' });
+          return;
+        }
+        const schemasList = await listSchemas(nsId);
+        if (schemasList && schemasList.length > 0) {
+          // Print all schemas with bullet list and instruction
+          const lines = schemasList.map((s: any) => `• ${s.schemaName || s.name}`).join('\n');
+          addMessage({ role: 'assistant', content: `Available schemas:${schemasList.length > 0 ? '\n' : ' None'}${lines}\n\nReply with: "Use <SchemaName>" or just the schema name.` });
+          setConsoleOutput(prev => [...prev, `📋 Listed ${schemasList.length} schema(s)`]);
+          setPendingSchemaSelection({ prompt: userMessage, candidates: schemasList });
+          return;
+        } else {
+          addMessage({ role: 'assistant', content: 'No schemas available. Please create a schema first or upload one, then ask again.' });
+          return;
+        }
+      } catch (e: any) {
+        setConsoleOutput(prev => [...prev, `❌ Failed to list schemas: ${e?.message || 'Unknown error'}`]);
+        addMessage({ role: 'assistant', content: 'I could not fetch schemas. Please try again.' });
+        return;
+      }
     }
 
     // Check for document generation intent (BRD/HLD/LLD)
@@ -1446,7 +1607,7 @@ What would you like to work on today?`,
         
         const requestBody = {
         message: userMessage,
-        namespace: namespace?.['namespace-id'] || null, // Pass null for general context to enable namespace generation
+        namespace: localNamespace?.['namespace-id'] || null, // Pass null for general context to enable namespace generation
         history: messages.slice(-10), // Send last 10 messages for context
         schema: currentSchema || (schemas.length > 0 ? schemas[0].schema : null),
         uploadedSchemas: droppedSchemas // Pass dropped schemas for lambda generation
@@ -1772,10 +1933,10 @@ What would you like to work on today?`,
   };
 
   const refreshFileTree = async () => {
-    if (!namespace?.['namespace-id']) return;
+    if (!localNamespace?.['namespace-id']) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/code-generation/files/${namespace['namespace-id']}`);
+      const response = await fetch(`${API_BASE_URL}/code-generation/files/${localNamespace?.['namespace-id'] || ''}`);
       if (response.ok) {
         const data = await response.json();
         if (data.files) {
@@ -1828,10 +1989,10 @@ What would you like to work on today?`,
   };
 
   const readFileContent = async (filePath: string) => {
-    if (!namespace?.['namespace-id']) return;
+    if (!localNamespace?.['namespace-id']) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/code-generation/files/${namespace['namespace-id']}/${encodeURIComponent(filePath)}`);
+      const response = await fetch(`${API_BASE_URL}/code-generation/files/${localNamespace?.['namespace-id'] || ''}/${encodeURIComponent(filePath)}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -1960,10 +2121,10 @@ What would you like to work on today?`,
             style={{ paddingLeft: `${level * 16 + 8}px` }}
             onClick={async () => {
               setSelectedFile(file);
-              if (file.type === 'file' && namespace?.['namespace-id']) {
+              if (file.type === 'file' && localNamespace?.['namespace-id']) {
                 // Load actual file content
                 try {
-                  const response = await fetch(`${API_BASE_URL}/code-generation/files/${namespace['namespace-id']}/${encodeURIComponent(file.path)}`);
+                  const response = await fetch(`${API_BASE_URL}/code-generation/files/${localNamespace?.['namespace-id'] || ''}/${encodeURIComponent(file.path)}`);
                   
                   if (response.ok) {
                     const data = await response.json();
@@ -2047,7 +2208,7 @@ What would you like to work on today?`,
   };
 
   const handleSaveApiToNamespace = async (apiData: any) => {
-    if (!namespace?.['namespace-id'] || !apiData.canSaveToNamespace) {
+    if (!localNamespace?.['namespace-id'] || !apiData.canSaveToNamespace) {
       console.warn('Cannot save API: missing namespace or save not allowed');
       return;
     }
@@ -2058,7 +2219,7 @@ What would you like to work on today?`,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          namespaceId: namespace['namespace-id'],
+          namespaceId: localNamespace?.['namespace-id'] || '',
           apiData: apiData
         })
       });
@@ -2175,7 +2336,7 @@ What would you like to work on today?`,
       setConsoleOutput(prev => [...prev, `📊 Using ${currentSchemas.length} schemas and ${currentApis.length} APIs from workspace`]);
       
       const requestBody = {
-        namespaceId: namespace['namespace-id'],
+        namespaceId: localNamespace?.['namespace-id'] || '',
         schemas: currentSchemas,
         apis: currentApis,
         projectType,
@@ -3136,9 +3297,9 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           <div>
             <h2 className="font-semibold text-gray-900">AI Assistant</h2>
             <p className="text-sm text-gray-500">
-              {namespace ? (
+              {localNamespace ? (
                 <span className="flex items-center gap-2">
-                  <span className="text-blue-600 font-medium">Working with: {namespace['namespace-name']}</span>
+                  <span className="text-blue-600 font-medium">Working with: {localNamespace['namespace-name']}</span>
                   <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
                     Context Active
                   </span>
@@ -4262,6 +4423,15 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           </div>
         </div>
       )}
+
+      {/* Namespace Context Drop Target */}
+      <div
+        ref={namespaceDropRef}
+        className="mb-2 p-2 text-xs text-gray-600 border border-dashed border-purple-300 rounded"
+        title="Drop a namespace here to switch context"
+      >
+        Drop a namespace here to switch context
+      </div>
 
       {/* File Upload Drop Zone */}
       <div
