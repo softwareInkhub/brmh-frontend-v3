@@ -10,6 +10,7 @@ const awsServices = [
   { id: 'apigateway', name: 'API Gateway', desc: 'Manage your API endpoints', icon: <Network className="w-7 h-7 text-rose-900" />, route: '/aws/apigateway' },
   { id: 'iam', name: 'IAM Roles', desc: 'Manage your IAM roles and policies', icon: <UserCheck className="w-7 h-7 text-blue-600" />, route: '/aws/iam' },
   { id: 'sns', name: 'SNS', desc: 'Manage your SNS topics', icon: <Radio className="w-7 h-7 text-purple-500" />, route: '/aws/sns' },
+  { id: 'brmh-iam', name: 'BRMH IAM', desc: 'Manage BRMH namespace roles and permissions', icon: <UserCheck className="w-7 h-7 text-indigo-600" />, route: '/BRMH-IAM' },
 ];
 
 export default function AwsPage() {

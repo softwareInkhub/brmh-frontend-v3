@@ -31,9 +31,9 @@ const sidebarItems = [
     icon: <Database size={24} />,
   },
   {
-    name: 'AWS',
-    path: '/aws-services',
-    icon: <Cloud size={24} />, // AWS icon
+  name: 'AWS',
+  path: '/aws',
+  icon: <Cloud size={24} />, // AWS icon
   },
   {
     name: 'Tests',

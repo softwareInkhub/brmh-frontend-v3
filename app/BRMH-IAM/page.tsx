@@ -36,7 +36,7 @@ import { toast } from '@/app/hooks/use-toast';
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
 import { Checkbox } from '@/app/components/ui3/checkbox';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://brmh.in';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
 const ALL_PERMISSIONS = [
   'read:files', 'write:files', 'delete:files', 'manage:folders', 'share:files', 'export:files', 'import:files',
@@ -110,8 +110,48 @@ export default function BRMHIAMPage() {
 
   useEffect(() => {
     fetchUsers();
-    loadTemplatesFromLocalStorage();
+    fetchNamespaces();
+    fetchRoleTemplates();
   }, []);
+
+  const fetchNamespaces = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/crud?tableName=brmh-namespace&pagination=true&itemPerPage=100`);
+      const data = await response.json();
+      const items = Array.isArray(data.items) ? data.items : [];
+
+      // Resolve namespace name from the Dynamo-style AttributeValue map stored under `data`
+      const namesUnfiltered = (items as any[]).map((item: any): string | undefined => {
+        const d = item?.data || item?.Item || item;
+        // Prefer explicit namespace-name
+        const nameFromAttr = d?.["namespace-name"]?.S || d?.namespaceName?.S || d?.namespace?.S;
+        if (typeof nameFromAttr === 'string' && nameFromAttr.trim()) return nameFromAttr.trim();
+
+        // Some backends may materialize plain strings instead of AttributeValues
+        const namePlain = d?.["namespace-name"] || d?.namespaceName || d?.name;
+        if (typeof namePlain === 'string' && namePlain.trim()) return namePlain.trim();
+
+        // Fallback to namespace-id if name missing
+        const idAttr = d?.["namespace-id"]?.S || d?.id?.S;
+        if (typeof idAttr === 'string' && idAttr.trim()) return idAttr.trim();
+
+        const idPlain = d?.["namespace-id"] || d?.id || d?.slug;
+        if (typeof idPlain === 'string' && idPlain.trim()) return idPlain.trim();
+
+        return undefined;
+      });
+      const names: string[] = namesUnfiltered
+        .filter((v: unknown): v is string => typeof v === 'string' && v.length > 0)
+        .map((v: string) => v);
+
+      const unique: string[] = Array.from(new Set<string>(names)).sort();
+      if (unique.length > 0) {
+        setAvailableNamespaces(unique);
+      }
+    } catch (err) {
+      // Silently ignore and fallback to user-derived namespaces
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -135,7 +175,8 @@ export default function BRMHIAMPage() {
       });
       
       const namespaces = Array.from(namespacesSet).sort();
-      setAvailableNamespaces(namespaces.length > 0 ? namespaces : ['drive', 'admin', 'projectmangement', 'auth', 'api']);
+      // Do not override namespaces fetched from brmh-namespaces if present
+      setAvailableNamespaces((prev) => prev.length > 0 ? prev : (namespaces.length > 0 ? namespaces : ['drive', 'admin', 'projectmangement', 'auth', 'api']));
     } catch (error) {
       toast({
         title: 'Error',
@@ -154,11 +195,63 @@ export default function BRMHIAMPage() {
     }
   };
 
+  const parseAttribute = (val: any): any => {
+    if (!val) return undefined;
+    if (typeof val !== 'object') return val;
+    if ('S' in val) return val.S;
+    if ('N' in val) return Number(val.N);
+    if ('BOOL' in val) return !!val.BOOL;
+    if ('L' in val && Array.isArray(val.L)) return val.L.map((v: any) => parseAttribute(v)).filter((x: any) => x !== undefined);
+    if ('M' in val && typeof val.M === 'object') {
+      const obj: Record<string, any> = {};
+      Object.entries(val.M).forEach(([k, v]) => {
+        obj[k] = parseAttribute(v);
+      });
+      return obj;
+    }
+    return undefined;
+  };
+
+  const parseTemplateItem = (item: any): RoleTemplate | null => {
+    const d = item?.data || item?.Item || item;
+    if (!d) return null;
+    const get = (k: string) => parseAttribute(d[k]) ?? d[k];
+    const id = get('id') || get('templateId') || d?.id;
+    const name = get('name');
+    const namespace = get('namespace') || 'general';
+    const role = get('role');
+    const permissions = (get('permissions') || []) as string[];
+    const tags = (get('tags') || []) as string[];
+    const createdAt = get('createdAt') || new Date().toISOString();
+    const createdBy = get('createdBy') || 'superadmin';
+    if (!id || !name || !role) return null;
+    return { id, name, namespace, role, permissions, tags, createdAt, createdBy };
+  };
+
+  const fetchRoleTemplates = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/crud?tableName=brmh-role-templates&pagination=true&itemPerPage=200`);
+      const data = await res.json();
+      const items = Array.isArray(data.items) ? data.items : [];
+      const parsed: RoleTemplate[] = items.map(parseTemplateItem).filter(Boolean) as RoleTemplate[];
+      if (parsed.length > 0) {
+        setRoleTemplates(parsed);
+        // keep a cache for offline fallback
+        saveTemplatesToLocalStorage(parsed);
+      } else {
+        loadTemplatesFromLocalStorage();
+      }
+    } catch (err) {
+      // Fallback to local storage if API not yet available/table not created
+      loadTemplatesFromLocalStorage();
+    }
+  };
+
   const saveTemplatesToLocalStorage = (templates: RoleTemplate[]) => {
     localStorage.setItem('brmh-role-templates', JSON.stringify(templates));
   };
 
-  const createTemplate = () => {
+  const createTemplate = async () => {
     if (!newTemplate.name || !newTemplate.role || !newTemplate.permissions || newTemplate.permissions.length === 0) {
       toast({
         title: 'Validation Error',
@@ -178,7 +271,18 @@ export default function BRMHIAMPage() {
       createdAt: new Date().toISOString(),
       createdBy: 'superadmin',
     };
+    try {
+      // Attempt to persist in DynamoDB via CRUD API
+      await fetch(`${API_BASE_URL}/crud?tableName=brmh-role-templates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item: template }),
+      });
+    } catch (e) {
+      // Ignore errors; we'll still cache locally
+    }
 
+    // Optimistically update UI and cache
     const updated = [...roleTemplates, template];
     setRoleTemplates(updated);
     saveTemplatesToLocalStorage(updated);
@@ -193,10 +297,19 @@ export default function BRMHIAMPage() {
     setTemplateTags('');
   };
 
-  const deleteTemplate = (id: string) => {
+  const deleteTemplate = async (id: string) => {
     const updated = roleTemplates.filter(t => t.id !== id);
     setRoleTemplates(updated);
     saveTemplatesToLocalStorage(updated);
+    try {
+      await fetch(`${API_BASE_URL}/crud?tableName=brmh-role-templates`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ Key: { id } }),
+      });
+    } catch (e) {
+      // best-effort delete
+    }
     toast({
       title: 'Success',
       description: 'Template deleted successfully',
@@ -726,7 +839,7 @@ export default function BRMHIAMPage() {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" onCloseAutoFocus={(e) => e.preventDefault()} className="max-h-64 overflow-y-auto">
                     <SelectItem value="general">🌐 General (All Namespaces)</SelectItem>
                     {availableNamespaces.map((ns) => (
                       <SelectItem key={ns} value={ns}>
@@ -897,7 +1010,7 @@ export default function BRMHIAMPage() {
                   <SelectTrigger>
                     <SelectValue placeholder="Select namespace" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" onCloseAutoFocus={(e) => e.preventDefault()} className="max-h-64 overflow-y-auto">
                     {availableNamespaces.map((ns) => (
                       <SelectItem key={ns} value={ns}>
                         {ns}
