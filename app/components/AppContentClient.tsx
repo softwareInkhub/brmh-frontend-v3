@@ -5,6 +5,7 @@ import Sidebar from "./projectSidebar";
 import Navbar from "./Navbar";
 import FooterWithCollapseButton from "./FooterWithCollapseButton";
 import GlobalAIAgentButton from "./GlobalAIAgentButton";
+import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 
 export default function AppContentClient({ children }: { children: React.ReactNode }) {
@@ -27,12 +28,14 @@ export default function AppContentClient({ children }: { children: React.ReactNo
       </div>
       {!hideSidebar && <FooterWithCollapseButton />}
       
-      {/* Global AI Agent Button */}
-      <GlobalAIAgentButton 
-        isVisible={!hideSidebar} 
-        onOpen={() => setIsAIAgentOpen(true)}
-        onClose={() => setIsAIAgentOpen(false)}
-      />
+      {/* Global AI Agent Button (rendered via portal to avoid invalid nesting) */}
+      {typeof window !== 'undefined' && createPortal(
+        <GlobalAIAgentButton 
+          isVisible={!hideSidebar} 
+          onOpen={() => setIsAIAgentOpen(true)}
+          onClose={() => setIsAIAgentOpen(false)}
+        />, document.body
+      )}
     </>
   );
 } 

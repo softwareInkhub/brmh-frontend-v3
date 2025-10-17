@@ -53,7 +53,18 @@ const DraggableNamespace: React.FC<{ namespace: any; children: React.ReactNode }
     item: () => {
       console.log('Drag started for namespace:', namespace);
       console.log('Namespace keys:', Object.keys(namespace || {}));
-      return { namespace };
+      console.log('Namespace ID:', namespace?.['namespace-id']);
+      console.log('Namespace name:', namespace?.['namespace-name']);
+      
+      // Ensure we send the correct namespace structure
+      const namespaceData = {
+        'namespace-id': namespace?.['namespace-id'] || namespace?.id,
+        'namespace-name': namespace?.['namespace-name'] || namespace?.name,
+        ...namespace // Include all other fields
+      };
+      
+      console.log('Sending namespace data:', namespaceData);
+      return { namespace: namespaceData };
     },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
@@ -95,7 +106,12 @@ const DraggableMethod: React.FC<{ method: any; namespace: any; children: React.R
 const DraggableSchema: React.FC<{ schema: any; children: React.ReactNode; onClick: () => void }> = ({ schema, children, onClick }) => {
   const [{ isDragging }, drag] = useDrag({
     type: 'SCHEMA',
-    item: { type: 'SCHEMA', data: schema },
+    item: () => {
+      console.log('🚀 Schema drag started!');
+      console.log('Schema being dragged:', schema);
+      console.log('Schema keys:', Object.keys(schema || {}));
+      return { type: 'SCHEMA', data: schema };
+    },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
