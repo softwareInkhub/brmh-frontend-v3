@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import { Bot, Send, File, Folder, Play, Database, Code, X, Upload, FileText, Image, Archive } from 'lucide-react';
 import { useDrop } from 'react-dnd';
 import { useNamespaceContext } from '../../components/NamespaceContext';
+import APIMethodCreationAgent from './APIMethodCreationAgent';
 
 interface Message {
   id: string;
@@ -269,18 +270,6 @@ What would you like to work on today?`,
   const [lambdaPrompt, setLambdaPrompt] = useState('');
   const [generatedLambdaCode, setGeneratedLambdaCode] = useState('');
   
-  // API Generation state
-  const [generatedApiCode, setGeneratedApiCode] = useState('');
-  const [apiDocumentation, setApiDocumentation] = useState('');
-  const [isStreamingApi, setIsStreamingApi] = useState(false);
-  const [apiForm, setApiForm] = useState({
-    apiName: '',
-    baseUrl: '',
-    description: '',
-    version: '1.0.0',
-    authentication: 'none',
-    rateLimit: 1000,
-  });
   
   // Web Scraping state
   const [selectedService, setSelectedService] = useState('');
@@ -3478,36 +3467,24 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         {activeTab === 'api' && (
           <div className="h-full overflow-y-auto">
             <div className="mb-4">
-              <h3 className="font-medium text-lg mb-2">API Generation & Management</h3>
+              <h3 className="font-medium text-lg mb-2">API Method Creation & Management</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Use the chat below to generate and manage APIs. The AI will create API endpoints, routes, and documentation based on your descriptions.
+                Create reusable API methods from API Gateway URLs with OpenAPI specifications. 
+                Generate methods that can be overridden with different URLs and saved to your namespace.
                 <br />
-                <span className="text-blue-600 font-medium">💡 Tip:</span> Drag schemas from the Schema tab to provide context for API generation!
+                <span className="text-blue-600 font-medium">💡 Tip:</span> Use deployed Lambda endpoints or any API Gateway URL to create methods!
               </p>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h4 className="font-medium text-green-800 mb-2">Instructions:</h4>
-                <ul className="text-sm text-green-700 space-y-1">
-                  <li>• Describe the API endpoints you want to create</li>
-                  <li>• Specify HTTP methods (GET, POST, PUT, DELETE)</li>
-                  <li>• Include authentication and validation requirements</li>
-                  <li>• The AI will generate complete API code and documentation</li>
-                </ul>
-              </div>
             </div>
             
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h4 className="font-medium mb-2">Generated API Code</h4>
-              <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto" style={{ minHeight: 120 }}>
-                {generatedApiCode || '// API code will appear here after generation'}
-              </pre>
-            </div>
-            
-            <div className="mt-4 bg-white border border-gray-200 rounded-lg p-4">
-              <h4 className="font-medium mb-2">API Documentation</h4>
-              <div className="bg-gray-100 p-3 rounded text-xs overflow-x-auto" style={{ minHeight: 80 }}>
-                {apiDocumentation || '// API documentation will appear here after generation'}
-              </div>
-            </div>
+            {/* API Method Creation Agent */}
+            <APIMethodCreationAgent 
+              namespace={localNamespace}
+              deployedEndpoints={deployedEndpoints}
+              onMethodCreated={(method) => {
+                console.log('New method created:', method);
+                // Optionally refresh namespace data or show success message
+              }}
+            />
           </div>
         )}
         {activeTab === 'web-scraping' && (

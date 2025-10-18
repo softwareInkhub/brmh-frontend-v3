@@ -27,6 +27,8 @@ import MethodPage from './pages/MethodPage';
 import AllSchemaPage from './pages/AllSchemaPage';
 import SingleNamespacePage from './pages/SingleNamespacePage';
 import MethodTestPage from './pages/MethodTestPage';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import AllWebhookPage from './pages/AllWebhookPage';
 import WebhookPage from './pages/WebhookPage';
 import AllLambdasPage from './pages/AllLambdasPage';
@@ -867,6 +869,8 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
 
   return (
     <div className="relative h-full w-full">
+
+      <DndProvider backend={HTML5Backend}>
         <div className="flex flex-col h-full w-full">
     <div className="bg-[#f7f8fa] min-h-screen">
             <div className="flex h-screen">
@@ -1840,6 +1844,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
         }}
       />
         </div>
+      </DndProvider>
     </div>
   );
 }
