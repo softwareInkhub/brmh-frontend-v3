@@ -67,6 +67,35 @@ interface SchemaCreatePageProps {
   methodId?: string;
 }
 
+// JSON Syntax Highlighter
+const highlightJSON = (json: string): string => {
+  if (!json) return '';
+  
+  return json
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, (match) => {
+      let cls = 'text-slate-300'; // default
+      if (/^"/.test(match)) {
+        if (/:$/.test(match)) {
+          cls = 'text-blue-400'; // keys
+        } else {
+          cls = 'text-green-400'; // strings
+        }
+      } else if (/true|false/.test(match)) {
+        cls = 'text-purple-400'; // booleans
+      } else if (/null/.test(match)) {
+        cls = 'text-orange-400'; // null
+      } else if (/^\d/.test(match)) {
+        cls = 'text-cyan-400'; // numbers
+      }
+      return `<span class="${cls}">${match}</span>`;
+    })
+    .replace(/([{}[\]])/g, '<span class="text-slate-200">$1</span>') // brackets
+    .replace(/([,:])/g, '<span class="text-slate-300">$1</span>'); // punctuation
+};
+
 export default function SchemaCreatePage({ onSchemaNameChange, namespace, initialSchema, initialSchemaName, onSuccess, mode, methodId }: SchemaCreatePageProps) {
   // Debug logging for props
   console.log('🔍 SchemaCreatePage Props:', {
@@ -109,7 +138,8 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
   );
   const [showRawFields, setShowRawFields] = useState(false);
   const [formErrors, setFormErrors] = useState<string | null>(null);
-  const [isInEditMode, setIsInEditMode] = useState(mode === 'edit' || mode === 'create');
+  const [isInEditMode, setIsInEditMode] = useState(mode === 'create');
+  const [showOperations, setShowOperations] = useState(false);
   const isEditing = schemaObj && (schemaObj.id || schemaObj.schemaId); // True if we have an existing schema
   const isCreating = mode === 'create';
   const isReadOnly = mode === 'preview' && !isInEditMode;
@@ -693,7 +723,7 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
   return (
     <div className="h-screen w-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50/30 overflow-hidden">
       {/* Header Section - Modern Design */}
-      <div className="px-6 py-4 border-b border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm">
+      <div className="px-6 py-2 border-b border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-6">
             <div className="flex items-center gap-2 text-sm text-slate-600">
@@ -712,43 +742,20 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
                 <span className="text-slate-900 font-medium">{namespace['namespace-name']}</span>
               </div>
             )}
-            {isReadOnly && (
+            {isReadOnly && !isInEditMode && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 rounded-lg">
                 <Eye size={14} className="text-blue-600" />
                 <span className="text-xs font-semibold text-blue-700">Preview Mode</span>
               </div>
             )}
+            {isInEditMode && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/50 rounded-lg">
+                <Edit size={14} className="text-green-600" />
+                <span className="text-xs font-semibold text-green-700">Edit Mode</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center space-x-3">
-            {isReadOnly && (
-              <button
-                onClick={() => setIsInEditMode(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-              >
-                <Edit size={16} />
-                Edit Schema
-              </button>
-            )}
-            {isInEditMode && !isCreating && (
-              <button
-                onClick={() => {
-                  setIsInEditMode(false);
-                  if (initialSchema) {
-                    const schemaDefinition = initialSchema.schema || initialSchema;
-                    setFields(schemaToFields(schemaDefinition));
-                    setJsonSchema(JSON.stringify(schemaDefinition, null, 2));
-                    if (initialSchema.schemaName) {
-                      setSchemaName(initialSchema.schemaName);
-                    }
-                  }
-                  setSaveMessage('');
-                }}
-                className="flex items-center gap-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-              >
-                <X size={16} />
-                Cancel Edit
-              </button>
-            )}
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <FileText size={16} className="text-slate-600" />
@@ -778,62 +785,158 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
       {isEditing && (
         <div className="px-6 py-4 bg-gradient-to-br from-slate-50/50 to-white border-b border-slate-200/60">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg">
-                <Database size={18} className="text-indigo-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg text-slate-800">Database Operations</h3>
-                <p className="text-sm text-slate-500">Manage your schema data</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-3">
+            {/* Operations Buttons - Left aligned */}
+            <div className="flex items-center gap-2">
               {/* Create Data Button */}
               <button
                 onClick={() => setActiveTab('createData')}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                className="group relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 hover:text-blue-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
               >
-                <PlusCircle size={16} />
-                Create Data
+                <div className="p-1 bg-blue-100 rounded-md group-hover:bg-blue-200 transition-colors duration-200">
+                  <PlusCircle size={12} className="text-blue-600" />
+                </div>
+                <span>Create</span>
               </button>
 
               {/* Update Data Button */}
               <button
                 onClick={() => setActiveTab('updateData')}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                className="group relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:border-orange-300 hover:bg-orange-50 text-gray-700 hover:text-orange-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
               >
-                <RefreshCw size={16} />
-                Update Data
+                <div className="p-1 bg-orange-100 rounded-md group-hover:bg-orange-200 transition-colors duration-200">
+                  <RefreshCw size={12} className="text-orange-600" />
+                </div>
+                <span>Update</span>
               </button>
 
               {/* Read Data Button */}
               <button
                 onClick={() => setActiveTab('readData')}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                className="group relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:border-purple-300 hover:bg-purple-50 text-gray-700 hover:text-purple-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
               >
-                <Eye size={16} />
-                Read Data
+                <div className="p-1 bg-purple-100 rounded-md group-hover:bg-purple-200 transition-colors duration-200">
+                  <Eye size={12} className="text-purple-600" />
+                </div>
+                <span>Read</span>
               </button>
 
               {/* Delete Data Button */}
               <button
                 onClick={() => setActiveTab('deleteData')}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                className="group relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-700 hover:text-red-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
               >
-                <Trash2 size={16} />
-                Delete Data
+                <div className="p-1 bg-red-100 rounded-md group-hover:bg-red-200 transition-colors duration-200">
+                  <Trash2 size={12} className="text-red-600" />
+                </div>
+                <span>Delete</span>
               </button>
+            </div>
+            
+            {/* Right side buttons - Schema actions */}
+            <div className="flex items-center gap-2">
+              {/* Action buttons container with slide-in animation */}
+              {isInEditMode && (
+                <div 
+                  className="flex items-center gap-2"
+                  style={{ animation: 'slideInFromLeft 0.4s ease-out' }}
+                >
+                  {/* Validate Button */}
+                  <button
+                    className="group relative flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-200 hover:border-amber-300 hover:bg-amber-50 text-gray-700 hover:text-amber-700 rounded-md text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                    onClick={handleValidate}
+                  >
+                    <div className="p-0.5 bg-amber-100 rounded-sm group-hover:bg-amber-200 transition-colors duration-200">
+                      <CheckCircle size={10} className="text-amber-600" />
+                    </div>
+                    <span>Validate</span>
+                  </button>
+                  
+                  {/* Update Schema Button */}
+                  <button
+                    className="group relative flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-200 hover:border-green-300 hover:bg-green-50 text-gray-700 hover:text-green-700 rounded-md text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSaving}
+                    onClick={handleSave}
+                  >
+                    <div className="p-0.5 bg-green-100 rounded-sm group-hover:bg-green-200 transition-colors duration-200">
+                      <Save size={10} className="text-green-600" />
+                    </div>
+                    <span>{isEditing ? (isSaving ? 'Updating...' : 'Update Schema') : (isSaving ? 'Creating...' : 'Create Schema')}</span>
+                  </button>
+                  
+                  {/* Delete Schema Button - Only show when editing existing schema */}
+                  {isEditing && schemaObj && (schemaObj.id || schemaObj.schemaId) && (
+                    <button
+                      className="group relative flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-700 hover:text-red-700 rounded-md text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                      onClick={async () => {
+                        if (!window.confirm('Are you sure you want to delete this schema?')) return;
+                        const schemaId = schemaObj.id || schemaObj.schemaId;
+                        try {
+                          const res = await fetch(`${API_BASE_URL}/unified/schema/${schemaId}`, {
+                            method: 'DELETE',
+                          });
+                          if (!res.ok) throw new Error('Failed to delete schema');
+                          setSaveMessage('Schema deleted successfully!');
+                          if (onSuccess) onSuccess();
+                        } catch (err: any) {
+                          setSaveMessage('Failed to delete schema.');
+                        }
+                      }}
+                      type="button"
+                    >
+                      <div className="p-0.5 bg-red-100 rounded-sm group-hover:bg-red-200 transition-colors duration-200">
+                        <Trash2 size={10} className="text-red-600" />
+                      </div>
+                      <span>Delete Schema</span>
+                    </button>
+                  )}
+                  
+                  {/* Cancel Button */}
+                  <button
+                    className="group relative flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 hover:text-gray-800 rounded-md text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                    onClick={() => {
+                      setIsInEditMode(false);
+                      if (initialSchema) {
+                        const schemaDefinition = initialSchema.schema || initialSchema;
+                        setFields(schemaToFields(schemaDefinition));
+                        setJsonSchema(JSON.stringify(schemaDefinition, null, 2));
+                        if (initialSchema.schemaName) {
+                          setSchemaName(initialSchema.schemaName);
+                        }
+                      }
+                      setSaveMessage('');
+                    }}
+                  >
+                    <div className="p-0.5 bg-gray-100 rounded-sm group-hover:bg-gray-200 transition-colors duration-200">
+                      <X size={10} className="text-gray-600" />
+                    </div>
+                    <span>Cancel</span>
+                  </button>
+                </div>
+              )}
+              {/* Edit Schema Button */}
+              {isReadOnly && (
+                <button
+                  onClick={() => setIsInEditMode(true)}
+                  className="group relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:border-green-300 hover:bg-green-50 text-gray-700 hover:text-green-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  <div className="p-1 bg-green-100 rounded-md group-hover:bg-green-200 transition-colors duration-200">
+                    <Edit size={12} className="text-green-600" />
+                  </div>
+                  <span>Edit Schema</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
 
+
       {/* Schema Editor Section */}
       {activeTab === 'edit' || !activeTab ? (
-        <div className="flex-1 grid grid-cols-2 gap-6 min-h-0 w-full px-6 py-4">
+         <div className="flex-1 grid grid-cols-2 gap-6 min-h-0 w-full px-6 py-4 schema-scrollbar">
         {/* Modern Form Editor */}
-        <div className={`flex flex-col min-h-0 bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 ${isReadOnly ? 'opacity-75' : ''}`}>
-          <div className="flex items-center justify-between p-4 border-b border-slate-200/60 bg-gradient-to-r from-slate-50 to-white">
+        <div className={`flex flex-col min-h-0 max-h-[65vh] bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 ${isReadOnly ? 'opacity-75' : ''}`}>
+          <div className="flex items-center justify-between p-2 border-b border-slate-200/60 bg-gradient-to-r from-slate-50 to-white">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg">
                 <Layers size={18} className="text-purple-600" />
@@ -848,7 +951,7 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
               <span className="text-xs font-semibold text-emerald-700">{fields.length} fields</span>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-br from-slate-50/50 to-white">
+           <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-br from-slate-50/50 to-white schema-scrollbar">
             <NestedFieldsEditor 
               fields={fields} 
               onChange={isReadOnly ? () => {} : setFields} 
@@ -860,8 +963,8 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
         </div>
 
         {/* Modern JSON Schema Editor */}
-        <div className="flex flex-col min-h-0 bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
-          <div className="flex items-center justify-between p-4 border-b border-slate-200/60 bg-gradient-to-r from-slate-50 to-white">
+        <div className="flex flex-col min-h-0 max-h-[65vh] bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
+          <div className="flex items-center justify-between p-2 border-b border-slate-200/60 bg-gradient-to-r from-slate-50 to-white">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-r from-blue-100 to-cyan-100 rounded-lg">
                 <Code2 size={18} className="text-blue-600" />
@@ -951,26 +1054,73 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
 
           {/* Modern JSON Schema Content */}
           <div className="flex-1 flex flex-col min-h-0">
-            <div className="p-3 border-b border-slate-200/60 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
-              <div className="text-sm text-slate-600 flex items-center gap-2">
-                <Code2 size={14} className="text-blue-500" />
-                OpenAPI 3.0+ spec: Use <code className="px-1.5 py-0.5 bg-blue-100 rounded text-xs font-mono">["string", "null"]</code> for nullable fields, and <code className="px-1.5 py-0.5 bg-blue-100 rounded text-xs font-mono">required: ["field1", ...]</code> for required fields.
-              </div>
-            </div>
-            {resolvedView ? (
-              <textarea
-                className="flex-1 border-0 p-4 font-mono text-sm bg-gradient-to-br from-slate-50 to-white focus:outline-none focus:ring-0 resize-none overflow-y-auto leading-relaxed"
-                value={resolvedSchema ? JSON.stringify(resolvedSchema, null, 2) : (resolveError ? `// ${resolveError}` : (isResolving ? '// Resolving...' : '// No resolved schema yet'))}
-                readOnly
-              />
-            ) : (
-              <textarea
-                className={`flex-1 border-0 p-4 font-mono text-sm focus:outline-none focus:ring-0 resize-none overflow-y-auto leading-relaxed transition-all duration-200 ${isReadOnly ? 'bg-slate-50 cursor-not-allowed text-slate-500' : 'bg-gradient-to-br from-slate-50 to-white'}`}
-                value={jsonSchema}
-                onChange={handleJsonChange}
-                readOnly={isReadOnly}
-              />
-            )}
+              {resolvedView ? (
+                <div className="flex-1 relative">
+                  <textarea
+                    className="absolute inset-0 w-full h-full border-0 p-4 font-mono text-sm bg-transparent text-transparent focus:outline-none focus:ring-0 resize-none overflow-y-auto leading-relaxed schema-scrollbar selection:bg-blue-600/30 caret-slate-100 z-10"
+                    value={resolvedSchema ? JSON.stringify(resolvedSchema, null, 2) : (resolveError ? `// ${resolveError}` : (isResolving ? '// Resolving...' : '// No resolved schema yet'))}
+                    readOnly
+                    onScroll={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      const pre = target.nextElementSibling as HTMLElement;
+                      if (pre) {
+                        pre.scrollTop = target.scrollTop;
+                        pre.scrollLeft = target.scrollLeft;
+                      }
+                    }}
+                    style={{
+                      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                      fontSize: '14px',
+                      lineHeight: '1.5',
+                      tabSize: 2
+                    }}
+                  />
+                  <pre className="absolute inset-0 p-4 font-mono text-sm bg-slate-900 text-slate-100 overflow-hidden leading-relaxed schema-scrollbar pointer-events-none" style={{
+                    fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                    fontSize: '14px',
+                    lineHeight: '1.5',
+                    tabSize: 2
+                  }}>
+                    <code dangerouslySetInnerHTML={{
+                      __html: highlightJSON(resolvedSchema ? JSON.stringify(resolvedSchema, null, 2) : (resolveError ? `// ${resolveError}` : (isResolving ? '// Resolving...' : '// No resolved schema yet')))
+                    }} />
+                  </pre>
+                </div>
+              ) : (
+                <div className="flex-1 relative">
+                  <textarea
+                    className={`absolute inset-0 w-full h-full border-0 p-4 font-mono text-sm bg-transparent text-transparent focus:outline-none focus:ring-0 resize-none overflow-y-auto leading-relaxed transition-all duration-200 schema-scrollbar selection:bg-blue-600/30 caret-slate-100 z-10 ${isReadOnly ? 'cursor-not-allowed' : 'cursor-text'}`}
+                    value={jsonSchema}
+                    onChange={handleJsonChange}
+                    readOnly={isReadOnly}
+                    onScroll={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      const pre = target.nextElementSibling as HTMLElement;
+                      if (pre) {
+                        pre.scrollTop = target.scrollTop;
+                        pre.scrollLeft = target.scrollLeft;
+                      }
+                    }}
+                    style={{
+                      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                      fontSize: '14px',
+                      lineHeight: '1.5',
+                      tabSize: 2
+                    }}
+                    placeholder="Enter your JSON schema here..."
+                  />
+                  <pre className="absolute inset-0 p-4 font-mono text-sm bg-slate-900 text-slate-100 overflow-hidden leading-relaxed schema-scrollbar pointer-events-none" style={{
+                    fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                    fontSize: '14px',
+                    lineHeight: '1.5',
+                    tabSize: 2
+                  }}>
+                    <code dangerouslySetInnerHTML={{
+                      __html: highlightJSON(jsonSchema)
+                    }} />
+                  </pre>
+                </div>
+              )}
             {jsonError && (
               <div className="p-3 border-t border-red-200/60 bg-gradient-to-r from-red-50 to-pink-50">
                 <div className="flex items-center gap-2 text-sm text-red-600">
@@ -982,69 +1132,6 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
           </div>
         </div>
         
-        {/* Modern Sticky Action Buttons */}
-        {!isReadOnly && (
-        <div className="flex flex-col md:flex-row justify-end md:gap-3 gap-3 mt-4 bg-white/90 backdrop-blur-sm pt-4 pb-4 border-t border-slate-200/60 px-6 shadow-lg">
-          {isInEditMode && !isCreating && (
-            <button
-              className="flex items-center gap-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium w-full md:w-auto transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-              onClick={() => {
-                setIsInEditMode(false);
-                if (initialSchema) {
-                  const schemaDefinition = initialSchema.schema || initialSchema;
-                  setFields(schemaToFields(schemaDefinition));
-                  setJsonSchema(JSON.stringify(schemaDefinition, null, 2));
-                  if (initialSchema.schemaName) {
-                    setSchemaName(initialSchema.schemaName);
-                  }
-                }
-                setSaveMessage('');
-              }}
-            >
-              <X size={16} />
-              Cancel
-            </button>
-          )}
-          <button
-            className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium w-full md:w-auto transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-            onClick={handleValidate}
-          >
-            <CheckCircle size={16} />
-            Validate
-          </button>
-          <button
-            className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium w-full md:w-auto transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            disabled={isSaving}
-            onClick={handleSave}
-          >
-            <Save size={16} />
-            {isEditing ? (isSaving ? 'Updating...' : 'Update Schema') : (isSaving ? 'Creating...' : 'Create Schema')}
-          </button>
-          {isEditing && schemaObj && (schemaObj.id || schemaObj.schemaId) && (
-            <button
-              className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium w-full md:w-auto transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-              onClick={async () => {
-                if (!window.confirm('Are you sure you want to delete this schema?')) return;
-                const schemaId = schemaObj.id || schemaObj.schemaId;
-                try {
-                  const res = await fetch(`${API_BASE_URL}/unified/schema/${schemaId}`, {
-                    method: 'DELETE',
-                  });
-                  if (!res.ok) throw new Error('Failed to delete schema');
-                  setSaveMessage('Schema deleted successfully!');
-                  if (onSuccess) onSuccess();
-                } catch (err: any) {
-                  setSaveMessage('Failed to delete schema.');
-                }
-              }}
-              type="button"
-            >
-              <Trash2 size={16} />
-              Delete Schema
-            </button>
-          )}
-        </div>
-        )}
         {validationResult && (
           <div className="mx-6 mt-4 p-4 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200/50 rounded-xl shadow-sm">
             <div className="flex items-center gap-2 mb-3">
