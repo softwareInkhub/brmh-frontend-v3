@@ -6,6 +6,7 @@ import { useDrop } from 'react-dnd';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import { useNamespaceContext } from './NamespaceContext';
+import { useAIAgent } from './AIAgentContext';
 
 // Dynamically import AIAgentWorkspace to prevent SSR issues
 const AIAgentWorkspace = dynamic(() => import('../namespace/components/AIAgentWorkspace'), {
@@ -30,6 +31,7 @@ interface GlobalAIAgentButtonProps {
 
 const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = true, onOpen, onClose }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { setIsOpen: setContextIsOpen } = useAIAgent();
   const [droppedNamespace, setDroppedNamespace] = useState<any>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -108,11 +110,13 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
       });
     }
     setIsOpen(true);
+    setContextIsOpen(true);
     onOpen?.();
   };
 
   const handleCloseAIAgent = () => {
     setIsOpen(false);
+    setContextIsOpen(false);
     setDroppedNamespace(null);
     onClose?.();
   };

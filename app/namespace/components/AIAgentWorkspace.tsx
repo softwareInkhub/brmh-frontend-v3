@@ -88,6 +88,15 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
   
   // State for multiple dropped namespaces
   const [droppedNamespaces, setDroppedNamespaces] = useState<any[]>([]);
+  
+  // State for collapsible generated code
+  const [showGeneratedCode, setShowGeneratedCode] = useState(false);
+  
+  // State for resizable workspace
+  const [workspaceWidth, setWorkspaceWidth] = useState(800);
+  const [isResizing, setIsResizing] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragStartWidth, setDragStartWidth] = useState(0);
   console.log('AIAgentWorkspace rendered with props:', { namespace, onClose });
   // Force rebuild to ensure latest changes are applied
   
@@ -95,6 +104,37 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
   useEffect(() => {
     console.log('Namespace changed:', namespace);
   }, [namespace]);
+
+  // Resize handlers
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    setDragStartX(e.clientX);
+    setDragStartWidth(workspaceWidth);
+  };
+
+  const handleResizeMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+    const deltaX = e.clientX - dragStartX;
+    const newWidth = Math.max(400, Math.min(1200, dragStartWidth - deltaX));
+    setWorkspaceWidth(newWidth);
+  };
+
+  const handleResizeEnd = () => {
+    setIsResizing(false);
+  };
+
+  // Add event listeners for resize
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      return () => {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+      };
+    }
+  }, [isResizing, dragStartX, dragStartWidth]);
   // 1. Change activeTab state to use 'lambda' instead of 'api'
   const [activeTab, setActiveTab] = useState<'chat' | 'console' | 'lambda' | 'schema' | 'api' | 'files' | 'deployment'>('chat');
   const [messages, setMessages] = useState<Message[]>([
@@ -117,6 +157,32 @@ What would you like to work on today?`,
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Namespace autocomplete state
+  const [showNamespaceSuggestions, setShowNamespaceSuggestions] = useState(false);
+  const [namespaceSuggestions, setNamespaceSuggestions] = useState<any[]>([]);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
+  const [atSymbolPosition, setAtSymbolPosition] = useState(-1);
+  
+  // Fetch namespaces for autocomplete
+  const [availableNamespaces, setAvailableNamespaces] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const fetchNamespaces = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/unified/namespaces`);
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableNamespaces(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch namespaces for autocomplete:', error);
+      }
+    };
+    
+    fetchNamespaces();
+  }, []);
+  
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>(() => [
     {
       id: '1',
@@ -560,57 +626,62 @@ What would you like to work on today?`,
     collect: (monitor) => ({ isOver: monitor.isOver() }),
   });
 
-  // React-DnD drop functionality for schemas in the dedicated schema drop zone
-  const [{ isOver: isSchemaDropOver }, schemaDropRef] = useDrop({
-    accept: 'SCHEMA',
-    drop: (item: { type: string; data: any }) => {
-      if (item.type === 'SCHEMA') {
-        const schema = { ...item.data, source: 'workspace' };
-        setDroppedSchemas(prev => [...prev, schema]);
-        setConsoleOutput(prev => [...prev, `📋 Added schema context: ${schema.schemaName || schema.name || 'Unknown Schema'}`]);
-        addMessage({
-          role: 'user',
-          content: `Added schema context from namespace: ${schema.schemaName || schema.name || 'Unknown Schema'}`
-        });
-      }
-    },
-    collect: (monitor) => ({ isOver: monitor.isOver() })
-  });
 
-  // React-DnD drop functionality for namespaces to add to context
-  const [{ isOver: isNamespaceDropOver }, namespaceDropRef] = useDrop({
-    accept: 'namespace',
+  // React-DnD drop functionality for namespaces and schemas to add to context
+  const [{ isNamespaceDropOver, isSchemaDropOver }, namespaceDropRef] = useDrop({
+    accept: ['namespace', 'SCHEMA'],
     drop: (item: any) => {
       try {
-        const droppedNs = item.namespace || item.data || item;
-        if (droppedNs && (droppedNs['namespace-id'] || droppedNs.id)) {
-          // Check if namespace is already in the list
-          const isAlreadyAdded = droppedNamespaces.some(ns => 
-            (ns['namespace-id'] || ns.id) === (droppedNs['namespace-id'] || droppedNs.id)
-          );
-          
-          if (!isAlreadyAdded) {
-            setDroppedNamespaces(prev => [...prev, droppedNs]);
-            setConsoleOutput(prev => [...prev, `📁 Added namespace to context: ${droppedNs['namespace-name'] || droppedNs.name || droppedNs.id}`]);
-            addMessage({ 
-              role: 'assistant', 
-              content: `Added namespace "${droppedNs['namespace-name'] || droppedNs.name}" to context. You now have ${droppedNamespaces.length + 1} namespace(s) in context.` 
-            });
+        console.log('Drop item received:', item);
+        
+        // Handle namespace drops - check for namespace properties
+        if (item.namespace || item['namespace-id'] || item['namespace-name']) {
+          const droppedNs = item.namespace || item;
+          if (droppedNs && (droppedNs['namespace-id'] || droppedNs.id)) {
+            // Check if namespace is already in the list
+            const isAlreadyAdded = droppedNamespaces.some(ns => 
+              (ns['namespace-id'] || ns.id) === (droppedNs['namespace-id'] || droppedNs.id)
+            );
+            
+            if (!isAlreadyAdded) {
+              setDroppedNamespaces(prev => [...prev, droppedNs]);
+              setConsoleOutput(prev => [...prev, `📁 Added namespace to context: ${droppedNs['namespace-name'] || droppedNs.name || droppedNs.id}`]);
+              addMessage({ 
+                role: 'assistant', 
+                content: `Added namespace "${droppedNs['namespace-name'] || droppedNs.name}" to context. You now have ${droppedNamespaces.length + 1} namespace(s) in context.` 
+              });
+            } else {
+              setConsoleOutput(prev => [...prev, `⚠️ Namespace "${droppedNs['namespace-name'] || droppedNs.name}" is already in context`]);
+              addMessage({ 
+                role: 'assistant', 
+                content: `Namespace "${droppedNs['namespace-name'] || droppedNs.name}" is already in context.` 
+              });
+            }
           } else {
-            setConsoleOutput(prev => [...prev, `⚠️ Namespace "${droppedNs['namespace-name'] || droppedNs.name}" is already in context`]);
-            addMessage({ 
-              role: 'assistant', 
-              content: `Namespace "${droppedNs['namespace-name'] || droppedNs.name}" is already in context.` 
-            });
+            setConsoleOutput(prev => [...prev, '⚠️ Dropped item is not a valid namespace']);
           }
+        }
+        // Handle schema drops
+        else if (item.type === 'SCHEMA' || item.schemaName || item.name) {
+          const schema = { ...item.data || item, source: 'workspace' };
+          setDroppedSchemas(prev => [...prev, schema]);
+          setConsoleOutput(prev => [...prev, `📋 Added schema context: ${schema.schemaName || schema.name || 'Unknown Schema'}`]);
+          addMessage({
+            role: 'user',
+            content: `Added schema context from namespace: ${schema.schemaName || schema.name || 'Unknown Schema'}`
+          });
         } else {
-          setConsoleOutput(prev => [...prev, '⚠️ Dropped item is not a valid namespace']);
+          setConsoleOutput(prev => [...prev, `⚠️ Unknown drop item type: ${JSON.stringify(item)}`]);
         }
       } catch (e: any) {
-        setConsoleOutput(prev => [...prev, `❌ Error adding namespace: ${e?.message || 'Unknown error'}`]);
+        setConsoleOutput(prev => [...prev, `❌ Error adding item: ${e?.message || 'Unknown error'}`]);
       }
     },
-    collect: (monitor) => ({ isOver: monitor.isOver() })
+    collect: (monitor) => ({ 
+      isOver: monitor.isOver(),
+      isNamespaceDropOver: monitor.getItemType() === 'namespace' && monitor.isOver(),
+      isSchemaDropOver: monitor.getItemType() === 'SCHEMA' && monitor.isOver()
+    })
   });
 
 
@@ -2120,6 +2191,81 @@ What would you like to work on today?`,
     }
   };
 
+  // Handle namespace autocomplete
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setInputMessage(value);
+    
+    // Check for @ symbol
+    const cursorPosition = e.target.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      // Check if there's a space or newline before @ (meaning it's a new mention)
+      const charBeforeAt = lastAtIndex > 0 ? textBeforeCursor[lastAtIndex - 1] : ' ';
+      if (charBeforeAt === ' ' || charBeforeAt === '\n' || lastAtIndex === 0) {
+        const query = textBeforeCursor.substring(lastAtIndex + 1);
+        
+        // Filter namespaces based on query
+        const filtered = availableNamespaces.filter(ns => 
+          ns['namespace-name']?.toLowerCase().includes(query.toLowerCase())
+        );
+        
+        setNamespaceSuggestions(filtered);
+        setShowNamespaceSuggestions(filtered.length > 0);
+        setAtSymbolPosition(lastAtIndex);
+        setSelectedSuggestionIndex(0);
+      } else {
+        setShowNamespaceSuggestions(false);
+      }
+    } else {
+      setShowNamespaceSuggestions(false);
+    }
+  };
+
+  // Handle keyboard navigation for suggestions
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showNamespaceSuggestions) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev < namespaceSuggestions.length - 1 ? prev + 1 : 0
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : namespaceSuggestions.length - 1
+        );
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        selectNamespace(namespaceSuggestions[selectedSuggestionIndex]);
+      } else if (e.key === 'Escape') {
+        setShowNamespaceSuggestions(false);
+      }
+    }
+  };
+
+  // Select a namespace from suggestions
+  const selectNamespace = (namespace: any) => {
+    if (!namespace) return;
+    
+    // Remove the @ symbol and query from input
+    const beforeAt = inputMessage.substring(0, atSymbolPosition);
+    const afterQuery = inputMessage.substring(atSymbolPosition + 1 + 
+      inputMessage.substring(atSymbolPosition + 1).split(' ')[0].length
+    );
+    
+    const newMessage = `${beforeAt}${afterQuery}`;
+    setInputMessage(newMessage);
+    setShowNamespaceSuggestions(false);
+    
+    // Add the namespace to context as a chip
+    if (!droppedNamespaces.find(ns => ns['namespace-id'] === namespace['namespace-id'])) {
+      setDroppedNamespaces(prev => [...prev, namespace]);
+    }
+  };
+
   const renderFileTree = (files: ProjectFile[], level = 0) => (
     <div className="space-y-1">
       {files.map(file => (
@@ -3307,7 +3453,24 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
   }
 
   return (
-    <div className="fixed top-0 right-0 h-full w-[800px] flex flex-col bg-white shadow-2xl border-l border-gray-200 z-50 transform transition-transform duration-300 ease-in-out">
+    <div 
+      ref={namespaceDropRef as any}
+      className={`fixed top-0 right-0 h-full flex flex-col bg-white shadow-2xl border-l border-gray-200 z-50 transform transition-transform duration-300 ease-in-out ${
+        isNamespaceDropOver ? 'bg-blue-50 border-2 border-blue-400' : 
+        isSchemaDropOver ? 'bg-purple-50 border-2 border-purple-400' : ''
+      } ${isResizing ? '' : 'transition-all duration-200'}`}
+      style={{ 
+        width: `${workspaceWidth}px` 
+      }}
+    >
+      {/* Resize Handle */}
+      <div 
+        className={`absolute left-0 top-0 h-full w-1 cursor-ew-resize hover:bg-blue-400 transition-colors z-10 ${isResizing ? 'bg-blue-500' : 'bg-transparent hover:bg-blue-300'}`}
+        onMouseDown={handleResizeStart}
+        title="Drag to resize workspace width"
+      >
+        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-2 h-8 bg-blue-400 rounded-r opacity-0 hover:opacity-100 transition-opacity"></div>
+      </div>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
         <div className="flex items-center gap-3">
@@ -3322,7 +3485,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                   <div className="flex items-center gap-2">
                     <span className="text-blue-600 font-medium">Working with:</span>
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                      {1 + droppedNamespaces.length} Namespace(s)
+                      {(localNamespace ? 1 : 0) + droppedNamespaces.length} Namespace(s)
                     </span>
                   </div>
                   {localNamespace && (
@@ -3434,57 +3597,60 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         </button>
       </div>
 
-      {/* Tab Content */}
-      <div className="flex-1 overflow-auto p-4 bg-[#f8f9fb]">
-        {activeTab === 'lambda' && (
-          <div className="h-full overflow-y-auto">
-            <div className="mb-4">
-              <h3 className="font-medium text-lg mb-2">Lambda Function Generation</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Use the chat below to describe the Lambda function you want to generate. 
-                Make sure to select a schema first, then describe your Lambda handler requirements.
-              </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-800 mb-2">Instructions:</h4>
-                <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• First, ask the AI to generate or select a schema</li>
-                  <li>• Then describe your Lambda function requirements in the chat</li>
-                  <li>• The AI will generate the Lambda code based on your description</li>
-                  <li>• Generated code will appear in the Files tab</li>
-                </ul>
+      {/* Generated Code Dropdown */}
+      {generatedLambdaCode && (
+        <div className="border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between p-3 border-b border-gray-100">
+            <h3 className="font-medium text-gray-900">Generated Code</h3>
+            <button
+              onClick={() => setShowGeneratedCode(!showGeneratedCode)}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              {showGeneratedCode ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          {showGeneratedCode && (
+            <div className="p-4 bg-gray-50 max-h-64 overflow-y-auto">
+              <div className="mb-4">
+                <h4 className="font-medium text-sm mb-2">Lambda Code:</h4>
+                <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
+                  {generatedLambdaCode}
+                </pre>
               </div>
             </div>
-            
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium">Generated Lambda Code</h4>
-                {generatedLambdaCode && (
-                  <button
-                    onClick={saveLambdaToNamespace}
-                    disabled={isSavingLambda}
-                    className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSavingLambda ? 'Saving...' : 'Save Lambda'}
-                  </button>
-                )}
-              </div>
-              <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto" style={{ minHeight: 120 }}>
-                {generatedLambdaCode || '// Lambda code will appear here after generation'}
-              </pre>
+          )}
+        </div>
+      )}
+
+      {/* Chat Messages Area - Full Height */}
+      <div className="flex-1 overflow-auto p-4 bg-[#f8f9fb]">
+        {activeTab === 'lambda' && (
+          <div className="mb-4">
+            <h3 className="font-medium text-lg mb-2">Lambda Function Generation</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Use the chat below to describe the Lambda function you want to generate. 
+              Make sure to select a schema first, then describe your Lambda handler requirements.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-medium text-blue-800 mb-2">Instructions:</h4>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• First, ask the AI to generate or select a schema</li>
+                <li>• Then describe your Lambda function requirements in the chat</li>
+                <li>• The AI will generate the Lambda code based on your description</li>
+                <li>• Generated code will appear in the dropdown above</li>
+              </ul>
             </div>
           </div>
         )}
         {activeTab === 'api' && (
           <div className="h-full overflow-y-auto">
-            <div className="mb-4">
-              <h3 className="font-medium text-lg mb-2">API Method Creation & Management</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Create reusable API methods from API Gateway URLs with OpenAPI specifications. 
-                Generate methods that can be overridden with different URLs and saved to your namespace.
-                <br />
-                <span className="text-blue-600 font-medium">💡 Tip:</span> Use deployed Lambda endpoints or any API Gateway URL to create methods!
-              </p>
-            </div>
+            <h3 className="font-medium text-lg mb-2">API Method Creation & Management</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Create reusable API methods from API Gateway URLs with OpenAPI specifications. 
+              Generate methods that can be overridden with different URLs and saved to your namespace.
+              <br />
+              <span className="text-blue-600 font-medium">💡 Tip:</span> Use deployed Lambda endpoints or any API Gateway URL to create methods!
+            </p>
             
             {/* API Method Creation Agent */}
             <APIMethodCreationAgent 
@@ -4282,20 +4448,21 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
       </div>
 
       {/* Chat Area */}
-      <div 
-        ref={sidebarSchemaDropRef as any}
-        className={`flex-1 overflow-y-auto p-4 space-y-4 bg-white transition-colors ${
-          isSidebarSchemaDropOver ? 'bg-purple-50 border-2 border-dashed border-purple-300' : ''
-        }`}
-      >
-        {isSidebarSchemaDropOver && (
+      {activeTab === 'chat' && (
+        <div 
+          ref={sidebarSchemaDropRef as any}
+          className={`flex-1 overflow-y-auto p-4 space-y-4 bg-white transition-colors ${
+            isSidebarSchemaDropOver ? 'bg-purple-50 border-2 border-dashed border-purple-300' : ''
+          }`}
+        >
+        {activeTab === 'chat' && isSidebarSchemaDropOver && (
           <div className="text-center py-8 text-purple-600 font-medium">
             Drop schema here to add context
           </div>
         )}
         
         {/* Namespace Generation Mode Hint */}
-        {!namespace && messages.length === 0 && !isSidebarSchemaDropOver && (
+        {activeTab === 'chat' && !namespace && messages.length === 0 && !isSidebarSchemaDropOver && (
           <div className="text-center py-8">
             <div className="max-w-md mx-auto bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
               <div className="flex items-center justify-center mb-4">
@@ -4324,7 +4491,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           </div>
         )}
         
-        {messages.map((message) => (
+        {activeTab === 'chat' && messages.map((message) => (
           <div
             key={message.id}
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -4365,10 +4532,11 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           </div>
         ))}
         <div ref={messagesEndRef} />
-      </div>
+        </div>
+      )}
 
       {/* File Upload and Context Area */}
-      {(uploadedFiles.length > 0 || droppedSchemas.length > 0) && (
+      {activeTab === 'chat' && (uploadedFiles.length > 0 || droppedSchemas.length > 0) && (
         <div className="border-t border-gray-200 p-4 bg-gray-50">
           <div className="space-y-3">
             {/* Uploaded Files */}
@@ -4440,47 +4608,33 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         </div>
       )}
 
-      {/* Namespace Context Drop Target */}
-      <div
-        ref={namespaceDropRef as any}
-        className={`mb-2 p-3 text-sm border-2 border-dashed rounded-lg transition-colors ${
-          isNamespaceDropOver 
-            ? 'bg-blue-50 border-blue-400 text-blue-700' 
-            : 'border-blue-300 text-gray-600'
-        }`}
-        title="Drop namespaces here to add to context"
-      >
-        <div className="font-medium mb-2">
-          {isNamespaceDropOver ? 'Drop namespace here' : 'Drop namespaces here to add to context'}
-        </div>
-        
-        {(localNamespace || droppedNamespaces.length > 0) && (
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-gray-700">Current Context:</div>
-            {localNamespace && (
-              <div className="text-xs text-gray-600 flex items-center justify-between">
-                <span>• {localNamespace['namespace-name']} (current)</span>
+
+
+      {/* Chat Input */}
+      <div className="border-t border-gray-200 p-4 bg-white relative">
+        {/* Selected Namespace Chips */}
+        {droppedNamespaces.length > 0 && (
+          <div className="mb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-wrap gap-2">
+                {droppedNamespaces.map((ns, index) => (
+                  <div
+                    key={ns['namespace-id'] || index}
+                    className="inline-flex items-center gap-1.5 bg-blue-100/80 text-blue-700 px-2 py-1 rounded-full text-xs font-medium border border-blue-200"
+                  >
+                    <span>@{ns['namespace-name']}</span>
+                    <button
+                      onClick={() => {
+                        setDroppedNamespaces(prev => prev.filter((_, i) => i !== index));
+                      }}
+                      className="ml-1 hover:bg-blue-200 rounded-full p-0.5 transition-colors"
+                      title="Remove namespace"
+                    >
+                      <X className="w-3 h-3 text-blue-600" />
+                    </button>
+                  </div>
+                ))}
               </div>
-            )}
-            {droppedNamespaces.map((ns, index) => (
-              <div key={ns['namespace-id'] || ns.id || index} className="text-xs text-gray-600 flex items-center justify-between">
-                <span>• {ns['namespace-name'] || ns.name || 'Unknown Namespace'}</span>
-                <button
-                  onClick={() => {
-                    setDroppedNamespaces(prev => prev.filter((_, i) => i !== index));
-                    addMessage({ 
-                      role: 'assistant', 
-                      content: `Removed namespace "${ns['namespace-name'] || ns.name}" from context.` 
-                    });
-                  }}
-                  className="text-red-500 hover:text-red-700 ml-2"
-                  title="Remove this namespace"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-            {droppedNamespaces.length > 0 && (
               <button
                 onClick={() => {
                   setDroppedNamespaces([]);
@@ -4489,40 +4643,55 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                     content: 'Cleared all dropped namespaces from context.' 
                   });
                 }}
-                className="text-xs text-red-600 hover:text-red-800 mt-2"
+                className="text-xs text-red-600 hover:text-red-800"
               >
                 Clear all
               </button>
-            )}
+            </div>
           </div>
         )}
-      </div>
-
-      {/* Schema Drop Zone */}
-      <div
-        ref={schemaDropRef as any}
-        className={`mb-2 p-3 text-sm text-gray-600 border-2 border-dashed rounded-lg transition-colors ${
-          isSchemaDropOver ? 'bg-purple-50 border-purple-400 text-purple-700' : 'border-purple-300'
-        }`}
-        title="Drop schemas from namespace sidebar here for context"
-      >
-        {isSchemaDropOver ? 'Drop schema here for context' : 'Drop schemas from namespace here'}
-      </div>
-
-
-      {/* Chat Input */}
-      <div className="border-t border-gray-200 p-4 bg-white">
+        
         <div className="flex gap-2">
-          <textarea
-            ref={inputRef}
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={namespace ? "Type your message... (Upload files or drag schemas for context)" : "Type your message... (Try: 'Create a namespace for...' to generate a new project)"}
-            className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            rows={1}
-            disabled={isLoading}
-          />
+          <div className="flex-1 relative">
+            <textarea
+              ref={inputRef}
+              value={inputMessage}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyDown}
+              placeholder={namespace ? "Type your message... (Upload files or drag schemas for context)" : "Type your message... (Try: 'Create a namespace for...' to generate a new project)"}
+              className="w-full resize-none border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={1}
+              disabled={isLoading}
+            />
+            
+            {/* Namespace Suggestions Dropdown */}
+            {showNamespaceSuggestions && namespaceSuggestions.length > 0 && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
+                {namespaceSuggestions.map((ns, index) => (
+                  <div
+                    key={ns['namespace-id']}
+                    className={`px-3 py-2 cursor-pointer flex items-center gap-2 ${
+                      index === selectedSuggestionIndex 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'hover:bg-gray-100'
+                    }`}
+                    onClick={() => selectNamespace(ns)}
+                  >
+                    <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
+                      <Database className="w-3 h-3 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{ns['namespace-name']}</div>
+                      {ns['namespace-url'] && (
+                        <div className="text-xs text-gray-500 truncate">{ns['namespace-url']}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex flex-col gap-1">
             <button
               onClick={handleSendMessage}

@@ -9,6 +9,7 @@ import SchemaPreviewModal from '../Modals/SchemaPreviewModal';
 import CreateDataModal from '../Modals/CreateDataModal';
 import NamespaceModal from '../Modals/NamespaceModal';
 import { useSidePanel } from "@/app/components/SidePanelContext";
+import { useAIAgent } from "@/app/components/AIAgentContext";
 import { toast } from 'react-hot-toast';
 
 // --- Types ---
@@ -296,6 +297,26 @@ export interface UnifiedNamespaceProps {
 
 const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigger, onModalClose, fetchNamespaceDetails, namespaceDetailsMap, setNamespaceDetailsMap, refreshData, onViewAccount, onViewMethod, onViewSchema, onOpenNamespaceTab }) => {
   const { isCollapsed } = useSidePanel();
+  const { panelWidth, isOpen: aiAgentIsOpen } = useAIAgent();
+  
+  // State for responsive behavior
+  const [shouldHideActionButtons, setShouldHideActionButtons] = useState(false);
+  
+  // Calculate available width for namespace cards
+  useEffect(() => {
+    const calculateAvailableWidth = () => {
+      const availableWidth = aiAgentIsOpen 
+        ? window.innerWidth - panelWidth - (isCollapsed ? 80 : 336) 
+        : window.innerWidth - (isCollapsed ? 80 : 336);
+      setShouldHideActionButtons(availableWidth < 1200);
+    };
+    
+    calculateAvailableWidth();
+    window.addEventListener('resize', calculateAvailableWidth);
+    
+    return () => window.removeEventListener('resize', calculateAvailableWidth);
+  }, [aiAgentIsOpen, panelWidth, isCollapsed]);
+  
   // --- State ---
   const [namespaces, setNamespaces] = useState<UnifiedNamespace[]>([]);
   const [schemas, setSchemas] = useState<UnifiedSchema[]>([]);
@@ -1133,7 +1154,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                       : expandedNamespaceId === ns["namespace-id"] 
                         ? 'ring-2 ring-green-500 border-green-300' 
                         : 'hover:border-gray-300'
-                  }`}
+                  } ${shouldHideActionButtons ? 'p-3' : 'p-4'}`}
                   onClick={() => handleNamespaceClick(ns)}
                   onMouseEnter={() => {
                     if (!namespaceDetailsMap[ns["namespace-id"]]) {
@@ -1166,13 +1187,13 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                   
                   {/* Name */}
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-medium text-gray-900 truncate">{ns["namespace-name"]}</h4>
+                    <h4 className={`font-medium text-gray-900 truncate ${shouldHideActionButtons ? 'text-xs' : 'text-sm'}`}>{ns["namespace-name"]}</h4>
                     {viewMode === 'list' && (
                       <div className="mt-1 flex items-center gap-3 min-w-0">
                         {ns["namespace-url"] && (
-                          <span className="text-xs text-gray-500 truncate max-w-[280px]">{ns["namespace-url"]}</span>
+                          <span className={`text-gray-500 truncate ${shouldHideActionButtons ? 'text-[10px] max-w-[200px]' : 'text-xs max-w-[280px]'}`}>{ns["namespace-url"]}</span>
                         )}
-                        {Array.isArray(ns.tags) && ns.tags.length > 0 && (
+                        {Array.isArray(ns.tags) && ns.tags.length > 0 && !shouldHideActionButtons && (
                           <div className="hidden md:flex flex-wrap gap-1">
                             {ns.tags.slice(0, 3).map((tag: string) => (
                               <span key={`${ns["namespace-id"]}-${tag}`} className="px-2 py-0.5 bg-gray-50 text-gray-700 text-[11px] rounded-full border border-gray-200">
@@ -1186,35 +1207,39 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                             )}
                           </div>
                         )}
-                        <div className="hidden md:flex items-center gap-2 ml-auto">
-                          <span className="px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200 text-[11px] text-gray-700">
-                            Accounts {namespaceDetailsMap[ns["namespace-id"]]?.accounts?.length ?? '—'}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200 text-[11px] text-gray-700">
-                            Methods {namespaceDetailsMap[ns["namespace-id"]]?.methods?.length ?? '—'}
-                          </span>
-                        </div>
+                        {!shouldHideActionButtons && (
+                          <div className="hidden md:flex items-center gap-2 ml-auto">
+                            <span className="px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200 text-[11px] text-gray-700">
+                              Accounts {namespaceDetailsMap[ns["namespace-id"]]?.accounts?.length ?? '—'}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200 text-[11px] text-gray-700">
+                              Methods {namespaceDetailsMap[ns["namespace-id"]]?.methods?.length ?? '—'}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={e => { e.stopPropagation(); setEditingNamespace(ns); setShowNamespaceModal(true); }}
-                      className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                      title="Edit"
-                    >
-                      <Edit size={14} />
-                    </button>
-                    <button
-                      onClick={e => { e.stopPropagation(); handleDelete('namespace', ns["namespace-id"]); }}
-                      className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                  {/* Action Buttons - Hidden when space is limited */}
+                  {!shouldHideActionButtons && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={e => { e.stopPropagation(); setEditingNamespace(ns); setShowNamespaceModal(true); }}
+                        className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit size={14} />
+                      </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); handleDelete('namespace', ns["namespace-id"]); }}
+                        className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </React.Fragment>
             );
