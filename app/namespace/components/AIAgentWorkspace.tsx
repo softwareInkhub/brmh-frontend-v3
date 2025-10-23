@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, File, Folder, Play, Database, Code, X, Maximize2, Minimize2, Upload, FileText, Image, Archive } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Bot, Send, File, Folder, Play, Database, Code, X, Upload, FileText, Image, Archive } from 'lucide-react';
 import { useDrop } from 'react-dnd';
+import { useNamespaceContext } from '../../components/NamespaceContext';
+import APIMethodCreationAgent from './APIMethodCreationAgent';
 
 interface Message {
   id: string;
@@ -18,6 +21,7 @@ interface UploadedFile {
   size: number;
   content?: string;
   url?: string;
+  original?: File;
 }
 
 interface ProjectFile {
@@ -42,8 +46,50 @@ interface WorkspaceState {
   lastGenerated?: string;
 }
 
+// Helper function to get error suggestions based on error type
+const getErrorSuggestions = (errorType: string): string => {
+  switch (errorType) {
+    case 'invalid_request':
+      return `**Suggestions:**
+• Check if the AI service API key is properly configured
+• Verify the request format is correct
+• Try again in a few moments (rate limiting)
+• Contact support if the issue persists`;
+    case 'authentication_error':
+      return `**Suggestions:**
+• Verify the AI service API key is valid and active
+• Check if the API key has the necessary permissions
+• Ensure the API key hasn't expired`;
+    case 'rate_limit_error':
+      return `**Suggestions:**
+• Wait a few moments before trying again
+• Consider upgrading your API plan if you need higher limits
+• Try breaking down large requests into smaller ones`;
+    case 'server_error':
+      return `**Suggestions:**
+• The AI service may be temporarily unavailable
+• Try again in a few minutes
+• Check the service status page for updates`;
+    default:
+      return `**Suggestions:**
+• Try again in a few moments
+• Check your internet connection
+• Contact support if the issue persists`;
+  }
+};
+
 const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose }) => {
+  const { currentNamespace, setCurrentNamespace } = useNamespaceContext();
+  // When context switches via drop, reflect it locally so effects use new namespace
+  const [localNamespace, setLocalNamespace] = useState<any>(namespace || currentNamespace);
+  useEffect(() => {
+    setLocalNamespace(namespace || currentNamespace);
+  }, [namespace, currentNamespace]);
+  
+  // State for multiple dropped namespaces
+  const [droppedNamespaces, setDroppedNamespaces] = useState<any[]>([]);
   console.log('AIAgentWorkspace rendered with props:', { namespace, onClose });
+  // Force rebuild to ensure latest changes are applied
   
   // Add useEffect to log namespace changes
   useEffect(() => {
@@ -56,12 +102,14 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
       id: '1',
       role: 'assistant',
       content: `Hello! I'm your AI development assistant. I can help you:
-\n• Design and generate API schemas\n• Write and test code\n• Create database models\n• Set up authentication\n• Run tests and debug issues\n• Manage your project structure
+\n• **Create complete namespaces** from scratch (try: "Create a namespace for an e-commerce platform")
+• Design and generate API schemas\n• Write and test code\n• Create database models\n• Set up authentication\n• Run tests and debug issues\n• Manage your project structure
 
 💡 **Pro Tips:**
 • Upload files using the upload button or drag & drop
 • Drag schemas from the sidebar directly into this chat area for context
 • Drag schemas from the Schema tab for additional context
+• ${namespace ? 'You\'re working with a specific namespace - ask questions about it or generate BRD/HLD/LLD documents!' : 'You\'re in general context - perfect for creating new namespaces or generating documents for any project!'}
 
 What would you like to work on today?`,
       timestamp: new Date()
@@ -95,6 +143,46 @@ What would you like to work on today?`,
   const [selectedFile, setSelectedFile] = useState<ProjectFile | null>(null);
   const [fileContent, setFileContent] = useState('');
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
+  const [pendingSchemaSelection, setPendingSchemaSelection] = useState<{
+    prompt: string;
+    candidates: Array<{ id?: string; name?: string; schemaName?: string; namespaceId?: string; schema?: any }>;
+  } | null>(null);
+
+  // Helper: list schemas from backend, trying multiple endpoints for compatibility
+  const listSchemas = async (nsId?: string | null): Promise<any[]> => {
+    if (!nsId) return [];
+    const endpoints: string[] = [
+      `${API_BASE_URL}/unified/schema?namespaceId=${encodeURIComponent(nsId)}`,
+      `${API_BASE_URL}/unified/schemas?namespaceId=${encodeURIComponent(nsId)}`,
+      `${API_BASE_URL}/unified/schema/list?namespaceId=${encodeURIComponent(nsId)}`
+    ];
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) return data;
+          if (Array.isArray((data || {}).items)) return (data as any).items;
+        }
+      } catch {}
+    }
+    return [];
+  };
+
+  // Helper: get schemas from ALL namespaces in context
+  const getAllSchemasFromContext = async (): Promise<{namespace: any, schemas: any[]}[]> => {
+    const allNamespaces = [localNamespace, ...droppedNamespaces].filter(Boolean);
+    const results = await Promise.all(
+      allNamespaces.map(async (ns) => {
+        const schemas = await listSchemas(ns['namespace-id'] || ns.id);
+        return {
+          namespace: ns,
+          schemas: schemas
+        };
+      })
+    );
+    return results;
+  };
   const [schemas, setSchemas] = useState<any[]>([]);
   const [rawSchemas, setRawSchemas] = useState<{ id: string; content: string }[]>([]);
   const [showRawSchema, setShowRawSchema] = useState<{ [key: number]: boolean }>({});
@@ -171,10 +259,8 @@ What would you like to work on today?`,
   
   // File upload and drag-drop state
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [dragDropSchemas, setDragDropSchemas] = useState<any[]>([]);
-  const [isDraggingSchema, setIsDraggingSchema] = useState(false);
   const [droppedSchemas, setDroppedSchemas] = useState<any[]>([]);
   // Lambda tab UI additions
   // 1. Add state for lambdaPrompt and generatedLambdaCode
@@ -184,18 +270,6 @@ What would you like to work on today?`,
   const [lambdaPrompt, setLambdaPrompt] = useState('');
   const [generatedLambdaCode, setGeneratedLambdaCode] = useState('');
   
-  // API Generation state
-  const [generatedApiCode, setGeneratedApiCode] = useState('');
-  const [apiDocumentation, setApiDocumentation] = useState('');
-  const [isStreamingApi, setIsStreamingApi] = useState(false);
-  const [apiForm, setApiForm] = useState({
-    apiName: '',
-    baseUrl: '',
-    description: '',
-    version: '1.0.0',
-    authentication: 'none',
-    rateLimit: 1000,
-  });
   
   // Web Scraping state
   const [selectedService, setSelectedService] = useState('');
@@ -227,11 +301,71 @@ What would you like to work on today?`,
     console.log('[Lambda Debug] generatedLambdaCode updated:', generatedLambdaCode);
     console.log('[Lambda Debug] generatedLambdaCode length:', generatedLambdaCode.length);
   }, [generatedLambdaCode]);
+
+  // Debug: Track activeTab changes
+  useEffect(() => {
+    console.log('[Tab Debug] activeTab changed to:', activeTab);
+  }, [activeTab]);
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Use centralized constant so it always matches env
   const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+  const router = useRouter();
+
+  // Simple intent detection for namespace generation in general context
+  const isNamespaceGenerationIntent = (message: string) => {
+    const lower = message.toLowerCase();
+    const actionWords = ['create', 'generate', 'build', 'make', 'new'];
+    const targetWords = ['namespace', 'project', 'system', 'app', 'application'];
+    const keywords = [
+      'create namespace', 'generate namespace', 'build namespace', 'make namespace', 'new namespace',
+      'create project', 'generate project', 'build project', 'make project', 'new project'
+    ];
+    if (keywords.some(k => lower.includes(k))) return true;
+    return actionWords.some(a => lower.includes(a)) && targetWords.some(t => lower.includes(t));
+  };
+
+  async function generateNamespaceSmart(userMessage: string) {
+    try {
+      setConsoleOutput(prev => [...prev, '🧠 Smart namespace generation starting...']);
+      const form = new FormData();
+      form.append('prompt', userMessage);
+      // Optional: add BRD/HLD/LLD from future UI fields; for now leave blank
+
+      // Attach uploaded files when original is available; fallback to content for text
+      for (const f of uploadedFiles) {
+        if (f.original) {
+          form.append('files', f.original, f.name);
+        } else if (f.content && (f.type.startsWith('text/') || f.type === 'application/json' || f.type === 'text/markdown')) {
+          const blob = new Blob([f.content], { type: f.type || 'text/plain' });
+          form.append('files', new File([blob], f.name, { type: f.type || 'text/plain' }));
+        }
+      }
+
+      const resp = await fetch(`${API_BASE_URL}/ai-agent/generate-namespace-smart`, {
+        method: 'POST',
+        body: form
+      });
+
+      const data = await resp.json();
+      if (!resp.ok || !data?.success) {
+        throw new Error(data?.error || 'Failed to generate namespace');
+      }
+
+      setConsoleOutput(prev => [...prev, `✅ Namespace created: ${data.namespaceId}`]);
+      addMessage({ role: 'assistant', content: `✅ Created namespace: ${data.namespaceId}`, timestamp: new Date() });
+      // Navigate to namespace page
+      try {
+        router.push('/namespace');
+      } catch {}
+    } catch (err: any) {
+      console.error('Smart generation error:', err);
+      setConsoleOutput(prev => [...prev, `❌ Smart generation failed: ${err?.message || 'Unknown error'}`]);
+      addMessage({ role: 'assistant', content: `❌ Smart generation failed: ${err?.message || 'Unknown error'}`, timestamp: new Date() });
+    }
+  }
 
   // File upload and drag-drop functions
   const handleFileUpload = async (files: FileList | File[]) => {
@@ -239,6 +373,7 @@ What would you like to work on today?`,
     
     setIsUploading(true);
     const newFiles: UploadedFile[] = [];
+    const schemaFiles: any[] = [];
     
     try {
       for (const file of Array.from(files)) {
@@ -249,6 +384,21 @@ What would you like to work on today?`,
           // Read file content based on type
           if (file.type.startsWith('text/') || file.type === 'application/json' || file.type === 'application/javascript') {
             content = await file.text();
+            
+            // Check if this is a schema file
+            if (file.name.endsWith('.json') || content.includes('"properties"') || content.includes('"type"')) {
+              try {
+                const schemaData = JSON.parse(content);
+                schemaFiles.push({
+                  name: file.name.replace('.json', ''),
+                  type: 'JSON',
+                  content: schemaData,
+                  originalFile: file.name
+                });
+              } catch (e) {
+                console.warn('Could not parse as schema:', file.name);
+              }
+            }
           } else if (file.type.startsWith('image/')) {
             // For images, create a data URL
             const reader = new FileReader();
@@ -279,9 +429,20 @@ What would you like to work on today?`,
       if (newFiles.length > 0) {
         addMessage({
           role: 'user',
-          content: `Uploaded ${newFiles.length} file(s): ${newFiles.map(f => f.name).join(', ')}`,
+          content: `Uploaded ${newFiles.length} file(s): ${newFiles.map(f => f.name).join(', ')}${schemaFiles.length > 0 ? `\n\n📋 Detected ${schemaFiles.length} schema file(s): ${schemaFiles.map(s => s.name).join(', ')}` : ''}`,
           files: newFiles
         });
+        
+        // If schemas were detected, offer to generate Lambda function
+        if (schemaFiles.length > 0) {
+          setTimeout(() => {
+            addMessage({
+              role: 'assistant',
+              content: `🎯 I detected ${schemaFiles.length} schema file(s) in your upload!\n\n**Available Actions:**\n• Type "generate lambda function" to create a Lambda using these schemas\n• Type "analyze schemas" to see detailed schema information\n• Type "combine schemas" to merge multiple schemas\n\n**Detected Schemas:**\n${schemaFiles.map((s, i) => `${i + 1}. **${s.name}** (${s.type})`).join('\n')}`,
+              timestamp: new Date()
+            });
+          }, 1000);
+        }
       }
     } catch (error) {
       console.error('Error in file upload:', error);
@@ -290,86 +451,57 @@ What would you like to work on today?`,
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(true);
-  };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Only set drag over to false if we're leaving the actual drop zone
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-      setIsDragOver(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-    setIsDraggingSchema(false);
-    
-    try {
-      const files = e.dataTransfer.files;
-      if (files && files.length > 0) {
-        handleFileUpload(files);
-      }
-      
-      // Also check for schema data
-      const schemaData = e.dataTransfer.getData('application/json');
-      if (schemaData) {
-        try {
-          // Handle case where data might already be an object
-          let schema;
-          if (typeof schemaData === 'string') {
-            schema = JSON.parse(schemaData);
-          } else if (typeof schemaData === 'object') {
-            schema = schemaData;
-          } else {
-            console.warn('Invalid schema data type:', typeof schemaData);
-            return;
-          }
-          
-          const schemaWithSource = { ...schema, source: 'workspace' };
-          setDroppedSchemas(prev => [...prev, schemaWithSource]);
-          
-          // Add message about dropped schema
-          addMessage({
-            role: 'user',
-            content: `Added schema context from workspace: ${schema.schemaName || schema.name || 'Unknown Schema'}`
+  // Recursively collect files when a directory is dropped (webkit)
+  const collectFilesFromItems = async (items: DataTransferItemList): Promise<File[]> => {
+    const collected: File[] = [];
+    const readEntry = (entry: any, pathPrefix = ''): Promise<void> => {
+      return new Promise((resolve) => {
+        if (!entry) return resolve();
+        if (entry.isFile) {
+          entry.file((file: File) => {
+            // Preserve folder structure in path within name (optional)
+            const namedFile = new File([file], pathPrefix ? `${pathPrefix}/${file.name}` : file.name, { type: file.type, lastModified: file.lastModified });
+            collected.push(namedFile);
+            resolve();
           });
-        } catch (parseError) {
-          console.error('Error parsing schema data:', parseError);
-          console.error('Schema data received:', schemaData);
+        } else if (entry.isDirectory) {
+          const reader = entry.createReader();
+          reader.readEntries(async (entries: any[]) => {
+            for (const child of entries) {
+              await readEntry(child, pathPrefix ? `${pathPrefix}/${entry.name}` : entry.name);
+            }
+            resolve();
+          });
+        } else {
+          resolve();
+        }
+      });
+    };
+
+    const pending: Promise<void>[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (it.kind === 'file') {
+        const entry = (it as any).webkitGetAsEntry ? (it as any).webkitGetAsEntry() : null;
+        if (entry) {
+          pending.push(readEntry(entry));
+        } else {
+          const f = it.getAsFile();
+          if (f) collected.push(f);
         }
       }
-    } catch (error) {
-      console.error('Error handling drop:', error);
     }
+    await Promise.all(pending);
+    return collected;
   };
+
+
 
   const removeUploadedFile = (fileId: string) => {
     setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
   };
 
-  // Schema drag-drop functions
-  const handleSchemaDragStart = (e: React.DragEvent, schema: any) => {
-    e.stopPropagation();
-    try {
-      e.dataTransfer.setData('application/json', JSON.stringify(schema));
-      e.dataTransfer.effectAllowed = 'copy';
-      setIsDraggingSchema(true);
-    } catch (error) {
-      console.error('Error starting schema drag:', error);
-    }
-  };
-
-  const handleSchemaDragEnd = (e: React.DragEvent) => {
-    e.stopPropagation();
-    setIsDraggingSchema(false);
-  };
 
   const handleSchemaDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -378,28 +510,32 @@ What would you like to work on today?`,
       const schemaData = e.dataTransfer.getData('application/json');
       if (schemaData) {
         try {
-          // Handle case where data might already be an object
-          let schema;
+          let schema: any;
           if (typeof schemaData === 'string') {
-            schema = JSON.parse(schemaData);
-          } else if (typeof schemaData === 'object') {
+            const trimmed = schemaData.trim();
+            if (trimmed && trimmed !== '[object Object]') {
+              try {
+                schema = JSON.parse(trimmed);
+              } catch {
+                // Not valid JSON string; ignore
+                schema = null;
+              }
+            }
+          } else if (typeof (schemaData as any) === 'object') {
             schema = schemaData;
-          } else {
-            console.warn('Invalid schema data type:', typeof schemaData);
-            return;
           }
+          
+          if (!schema || typeof schema !== 'object') return;
           
           const schemaWithSource = { ...schema, source: 'workspace' };
           setDroppedSchemas(prev => [...prev, schemaWithSource]);
           
-          // Add message about dropped schema
           addMessage({
             role: 'user',
             content: `Added schema context from workspace: ${schema.schemaName || schema.name || 'Unknown Schema'}`
           });
         } catch (parseError) {
           console.error('Error parsing schema data:', parseError);
-          console.error('Schema data received:', schemaData);
         }
       }
     } catch (error) {
@@ -412,31 +548,100 @@ What would you like to work on today?`,
   };
 
   // React-DnD drop functionality for schemas from sidebar
-  const [{ isOver: isSchemaDropOver }, schemaDropRef] = useDrop({
+  const [{ isOver: isSidebarSchemaDropOver }, sidebarSchemaDropRef] = useDrop({
     accept: 'SCHEMA',
     drop: (item: { type: string; data: any }) => {
       if (item.type === 'SCHEMA') {
         const schema = { ...item.data, source: 'sidebar' };
         setDroppedSchemas(prev => [...prev, schema]);
-        
-        // Add message about dropped schema
+        addMessage({ role: 'user', content: `Added schema context from sidebar: ${schema.schemaName || schema.name || 'Unknown Schema'}` });
+      }
+    },
+    collect: (monitor) => ({ isOver: monitor.isOver() }),
+  });
+
+  // React-DnD drop functionality for schemas in the dedicated schema drop zone
+  const [{ isOver: isSchemaDropOver }, schemaDropRef] = useDrop({
+    accept: 'SCHEMA',
+    drop: (item: { type: string; data: any }) => {
+      if (item.type === 'SCHEMA') {
+        const schema = { ...item.data, source: 'workspace' };
+        setDroppedSchemas(prev => [...prev, schema]);
+        setConsoleOutput(prev => [...prev, `📋 Added schema context: ${schema.schemaName || schema.name || 'Unknown Schema'}`]);
         addMessage({
           role: 'user',
-          content: `Added schema context from sidebar: ${schema.schemaName || schema.name || 'Unknown Schema'}`
+          content: `Added schema context from namespace: ${schema.schemaName || schema.name || 'Unknown Schema'}`
         });
       }
     },
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-    }),
+    collect: (monitor) => ({ isOver: monitor.isOver() })
   });
+
+  // React-DnD drop functionality for namespaces to add to context
+  const [{ isOver: isNamespaceDropOver }, namespaceDropRef] = useDrop({
+    accept: 'namespace',
+    drop: (item: any) => {
+      try {
+        const droppedNs = item.namespace || item.data || item;
+        if (droppedNs && (droppedNs['namespace-id'] || droppedNs.id)) {
+          // Check if namespace is already in the list
+          const isAlreadyAdded = droppedNamespaces.some(ns => 
+            (ns['namespace-id'] || ns.id) === (droppedNs['namespace-id'] || droppedNs.id)
+          );
+          
+          if (!isAlreadyAdded) {
+            setDroppedNamespaces(prev => [...prev, droppedNs]);
+            setConsoleOutput(prev => [...prev, `📁 Added namespace to context: ${droppedNs['namespace-name'] || droppedNs.name || droppedNs.id}`]);
+            addMessage({ 
+              role: 'assistant', 
+              content: `Added namespace "${droppedNs['namespace-name'] || droppedNs.name}" to context. You now have ${droppedNamespaces.length + 1} namespace(s) in context.` 
+            });
+          } else {
+            setConsoleOutput(prev => [...prev, `⚠️ Namespace "${droppedNs['namespace-name'] || droppedNs.name}" is already in context`]);
+            addMessage({ 
+              role: 'assistant', 
+              content: `Namespace "${droppedNs['namespace-name'] || droppedNs.name}" is already in context.` 
+            });
+          }
+        } else {
+          setConsoleOutput(prev => [...prev, '⚠️ Dropped item is not a valid namespace']);
+        }
+      } catch (e: any) {
+        setConsoleOutput(prev => [...prev, `❌ Error adding namespace: ${e?.message || 'Unknown error'}`]);
+      }
+    },
+    collect: (monitor) => ({ isOver: monitor.isOver() })
+  });
+
+
+  // Function to get namespace resources and context
+  const getNamespaceContext = async (namespaceId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/unified/schema?namespaceId=${namespaceId}`);
+      if (!response.ok) throw new Error('Failed to fetch namespace schemas');
+      const schemas = await response.json();
+      
+      // Get namespace details
+      const namespaceResponse = await fetch(`${API_BASE_URL}/unified/namespace/${namespaceId}`);
+      const namespaceDetails = namespaceResponse.ok ? await namespaceResponse.json() : null;
+      
+      return {
+        schemas: schemas || [],
+        namespace: namespaceDetails,
+        totalSchemas: schemas?.length || 0
+      };
+    } catch (error) {
+      console.error('Error fetching namespace context:', error);
+      return { schemas: [], namespace: null, totalSchemas: 0 };
+    }
+  };
 
   // Load available schemas for drag-drop functionality
   const loadAvailableSchemas = async () => {
-    if (!namespace?.['namespace-id']) return;
+    if (!localNamespace?.['namespace-id']) return;
     
     try {
-      const response = await fetch(`/unified/schema?namespaceId=${namespace['namespace-id']}`);
+      const response = await fetch(`${API_BASE_URL}/unified/schema?namespaceId=${localNamespace?.['namespace-id'] || ''}`);
       if (response.ok) {
         const schemas = await response.json();
         setDragDropSchemas(schemas);
@@ -511,7 +716,7 @@ What would you like to work on today?`,
   };
 
   const handleScrapeAndSave = async () => {
-    if (!selectedService || !namespace?.['namespace-id']) return;
+    if (!selectedService || !localNamespace?.['namespace-id']) return;
     
     const serviceToScrape = selectedService === 'custom-url' ? customUrl : selectedService;
     if (selectedService === 'custom-url' && !customUrl) {
@@ -528,7 +733,7 @@ What would you like to work on today?`,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           serviceName: serviceToScrape,
-          namespaceId: namespace['namespace-id'],
+          namespaceId: localNamespace?.['namespace-id'] || '',
           options: scrapeOptions
         })
       });
@@ -607,7 +812,7 @@ What would you like to work on today?`,
 
   // Load file tree and workspace state when namespace changes
   useEffect(() => {
-    if (namespace?.['namespace-id']) {
+    if (localNamespace?.['namespace-id']) {
       refreshFileTree();
       loadWorkspaceState();
       loadAvailableSchemas(); // Load schemas for drag-drop functionality
@@ -622,11 +827,11 @@ What would you like to work on today?`,
         }
       }, 1000);
     }
-  }, [namespace?.['namespace-id'], workspaceState]);
+  }, [localNamespace?.['namespace-id'], workspaceState]);
 
   // Initialize session and load history when component mounts
   useEffect(() => {
-    if (namespace?.['namespace-id']) {
+    if (localNamespace?.['namespace-id']) {
       const newSessionId = `${userId}-ai-agent-workspace-${Date.now()}`;
       setSessionId(newSessionId);
       
@@ -635,18 +840,18 @@ What would you like to work on today?`,
         loadChatHistory();
       }, 100);
     }
-  }, [namespace?.['namespace-id'], userId]);
+  }, [localNamespace?.['namespace-id'], userId]);
 
   useEffect(() => {
-    if (namespace?.['namespace-id'] && sessionId) {
+    if (localNamespace?.['namespace-id'] && sessionId) {
       // Clear generated schemas for this session/namespace on mount/refresh
       fetch(`${process.env.NEXT_PUBLIC_API_BACKEND_URL}/ai-agent/clear-generated-schemas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, namespaceId: namespace['namespace-id'] })
+        body: JSON.stringify({ sessionId, namespaceId: localNamespace?.['namespace-id'] || '' })
       });
     }
-  }, [namespace?.['namespace-id'], sessionId]);
+  }, [localNamespace?.['namespace-id'], sessionId]);
 
 
 
@@ -654,13 +859,13 @@ What would you like to work on today?`,
 
   // Memory service functions
   const loadWorkspaceState = async () => {
-    if (!sessionId || !namespace?.['namespace-id']) return;
+    if (!sessionId || !localNamespace?.['namespace-id']) return;
     
     try {
       const response = await fetch(`${API_BASE_URL}/ai-agent/get-workspace-state`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, namespaceId: namespace['namespace-id'] })
+        body: JSON.stringify({ sessionId, namespaceId: localNamespace?.['namespace-id'] || '' })
       });
       
       if (response.ok) {
@@ -677,7 +882,7 @@ What would you like to work on today?`,
   };
 
   const saveWorkspaceState = async () => {
-    if (!sessionId || !namespace?.['namespace-id']) return;
+    if (!sessionId || !localNamespace?.['namespace-id']) return;
     
     const currentState: WorkspaceState = {
       files: [], // No longer tracking generated files
@@ -693,7 +898,7 @@ What would you like to work on today?`,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          namespaceId: namespace['namespace-id'],
+          namespaceId: localNamespace?.['namespace-id'] || '',
           workspaceState: currentState
         })
       });
@@ -767,7 +972,392 @@ What would you like to work on today?`,
       id: getNowId(),
       timestamp: new Date()
     };
-    setMessages(prev => [...prev, newMessage]);
+    console.log('[Frontend] 📝 Adding message:', newMessage);
+    setMessages(prev => {
+      const updated = [...prev, newMessage];
+      console.log('[Frontend] 📋 Messages updated:', { oldCount: prev.length, newCount: updated.length });
+      return updated;
+    });
+  };
+
+  // Test function to debug chat UI
+  const testChatUI = () => {
+    console.log('[Frontend] 🧪 Testing chat UI...');
+    addMessage({
+      role: 'assistant',
+      content: 'This is a test message to verify the chat UI is working!'
+    });
+  };
+
+  // Function to handle Lambda generation using the dedicated endpoint
+  const handleLambdaGeneration = async (message: string, selectedSchema: any = null) => {
+    try {
+      setConsoleOutput(prev => [...prev, `🔄 Generating Lambda function...`]);
+      
+      const response = await fetch(`${API_BASE_URL}/ai-agent/lambda-codegen`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: message,
+          originalMessage: message,
+          namespace: localNamespace?.['namespace-id'],
+          allNamespaces: [localNamespace, ...droppedNamespaces].filter(Boolean),
+          selectedSchema: selectedSchema,
+          functionName: (lambdaForm.functionName && lambdaForm.functionName.trim()) 
+            ? lambdaForm.functionName.trim() 
+            : (selectedSchema ? `${selectedSchema.schemaName || selectedSchema.name}Handler` : 'GeneratedHandler'),
+          runtime: 'nodejs18.x',
+          handler: 'index.handler',
+          memory: 256,
+          timeout: 30,
+          environment: null
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        // Fallback for non-streaming responses
+        try {
+          const text = await response.text();
+          try {
+            const data = JSON.parse(text);
+            if (data?.code) {
+              setGeneratedLambdaCode(data.code);
+              setActiveTab('lambda');
+              return;
+            }
+          } catch {}
+          // Try to extract code fences
+          const match = text.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
+          if (match && match[1]) {
+            setGeneratedLambdaCode(match[1]);
+            setActiveTab('lambda');
+            return;
+          }
+          throw new Error('No response body reader available');
+        } catch (e) {
+          throw new Error('No response body reader available');
+        }
+      }
+
+      let generatedCode = '';
+      let functionName = (lambdaForm.functionName && lambdaForm.functionName.trim()) 
+        ? lambdaForm.functionName.trim() 
+        : (selectedSchema ? `${selectedSchema.schemaName || selectedSchema.name}Handler` : 'GeneratedHandler');
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataContent = line.slice(6);
+            
+            if (dataContent.trim() === '[DONE]' || dataContent.trim().includes('[DONE]')) {
+              break;
+            }
+
+            try {
+              const data = JSON.parse(dataContent);
+              // Handle lambda streaming payloads
+              if (data.route === 'lambda') {
+                setActiveTab('lambda');
+                if (data.type === 'lambda_code_chunk' && data.content) {
+                  generatedCode += data.content;
+                  continue;
+                }
+                if ((data.type === 'lambda_code_complete' || data.type === 'lambda_code') && data.code) {
+                  generatedCode += data.code; // final code payload
+                  continue;
+                }
+              }
+              // Fallback: accumulate generic content field
+              if (data.content) {
+                generatedCode += data.content;
+              }
+            } catch (e) {
+              console.log('Failed to parse streaming data:', e);
+            }
+          }
+        }
+      }
+
+      if (generatedCode) {
+        // Set the generated Lambda code in the Lambda tab's code box
+        setGeneratedLambdaCode(generatedCode);
+        
+        // Also generate Lambda function structure and add to project files
+        generateLambdaFileStructure(generatedCode, functionName, 'nodejs18.x');
+        
+        // Switch to Lambda tab to show the generated code
+        setActiveTab('lambda');
+        
+        // Add success message to chat
+        addMessage({
+          role: 'assistant',
+          content: `✅ Generated Lambda function: **${functionName}**\n\nCheck the Lambda tab to see the generated code!`,
+          timestamp: new Date()
+        });
+        
+        setConsoleOutput(prev => [...prev, `✅ Lambda function generated: ${functionName}`]);
+      } else {
+        throw new Error('No Lambda code was generated');
+      }
+    } catch (error) {
+      console.error('Error in schema Lambda generation:', error);
+      setConsoleOutput(prev => [...prev, `❌ Error generating Lambda: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+      
+      addMessage({
+        role: 'assistant',
+        content: `❌ Failed to generate Lambda function: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  };
+
+  // Function to handle document generation (BRD/HLD/LLD)
+  const handleDocumentGeneration = async (message: string) => {
+    try {
+      setConsoleOutput(prev => [...prev, `📄 Generating documents from namespace context...`]);
+      
+      // Parse document types from message
+      const lowerMessage = message.toLowerCase();
+      const documentTypes = [];
+      
+      if (lowerMessage.includes('brd') || 
+          lowerMessage.includes('business requirements') || 
+          lowerMessage.includes('business requirement') ||
+          lowerMessage.includes('requirements document') ||
+          lowerMessage.includes('requirements doc')) {
+        documentTypes.push('brd');
+      }
+      if (lowerMessage.includes('hld') || 
+          lowerMessage.includes('high level design') ||
+          lowerMessage.includes('high-level design') ||
+          lowerMessage.includes('high level') ||
+          lowerMessage.includes('system design') ||
+          lowerMessage.includes('architecture')) {
+        documentTypes.push('hld');
+      }
+      if (lowerMessage.includes('lld') || 
+          lowerMessage.includes('low level design') ||
+          lowerMessage.includes('low-level design') ||
+          lowerMessage.includes('low level') ||
+          lowerMessage.includes('detailed design') ||
+          lowerMessage.includes('technical design')) {
+        documentTypes.push('lld');
+      }
+      
+      // If no specific types mentioned, generate all
+      if (documentTypes.length === 0) {
+        documentTypes.push('brd', 'hld', 'lld');
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/ai-agent/generate-documents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          namespaceId: namespace?.['namespace-id'],
+          documentTypes: documentTypes,
+          format: 'json'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.documents) {
+        setConsoleOutput(prev => [...prev, `✅ Generated ${Object.keys(result.documents).length} documents`]);
+        
+        // Create downloadable files for each document
+        const documentFiles = [];
+        for (const [docType, docContent] of Object.entries(result.documents)) {
+          const fileName = `${namespace?.['namespace-name'] || 'namespace'}_${docType.toUpperCase()}.json`;
+          const fileContent = JSON.stringify(docContent, null, 2);
+          
+          documentFiles.push({
+            name: fileName,
+            content: fileContent,
+            type: 'application/json',
+            size: fileContent.length
+          });
+        }
+        
+        // Add files to uploaded files for download
+        setUploadedFiles(prev => [...prev, ...documentFiles]);
+        
+        // Create download links and show in chat
+        const downloadLinks = documentFiles.map(file => 
+          `[📄 Download ${file.name}](#download:${file.name})`
+        ).join('\n');
+        
+        addMessage({
+          role: 'assistant',
+          content: `📋 **Generated Documents for ${namespace?.['namespace-name']}:**\n\n${downloadLinks}\n\n**Available Documents:**\n${Object.keys(result.documents).map(doc => `• **${doc.toUpperCase()}** - ${result.documents[doc].type || 'Document'}`).join('\n')}\n\n💡 **Tip:** Click the download links above to save the documents to your computer.`,
+          timestamp: new Date()
+        });
+        
+        setConsoleOutput(prev => [...prev, `📄 Documents ready for download: ${Object.keys(result.documents).join(', ')}`]);
+      } else {
+        throw new Error(result.error || 'Failed to generate documents');
+      }
+    } catch (error) {
+      console.error('Error in document generation:', error);
+      setConsoleOutput(prev => [...prev, `❌ Error generating documents: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+      
+      addMessage({
+        role: 'assistant',
+        content: `❌ Failed to generate documents: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  };
+
+  // Function to handle document generation from prompt (creates namespace first)
+  const handleDocumentGenerationFromPrompt = async (message: string) => {
+    try {
+      setConsoleOutput(prev => [...prev, `📄 Creating namespace and generating documents from: ${message}`]);
+      
+      // Parse document types from message
+      const lowerMessage = message.toLowerCase();
+      const documentTypes = [];
+      
+      if (lowerMessage.includes('brd') || 
+          lowerMessage.includes('business requirements') || 
+          lowerMessage.includes('business requirement') ||
+          lowerMessage.includes('requirements document') ||
+          lowerMessage.includes('requirements doc')) {
+        documentTypes.push('brd');
+      }
+      if (lowerMessage.includes('hld') || 
+          lowerMessage.includes('high level design') ||
+          lowerMessage.includes('high-level design') ||
+          lowerMessage.includes('high level') ||
+          lowerMessage.includes('system design') ||
+          lowerMessage.includes('architecture')) {
+        documentTypes.push('hld');
+      }
+      if (lowerMessage.includes('lld') || 
+          lowerMessage.includes('low level design') ||
+          lowerMessage.includes('low-level design') ||
+          lowerMessage.includes('low level') ||
+          lowerMessage.includes('detailed design') ||
+          lowerMessage.includes('technical design')) {
+        documentTypes.push('lld');
+      }
+      
+      // If no specific types mentioned, generate all
+      if (documentTypes.length === 0) {
+        documentTypes.push('brd', 'hld', 'lld');
+      }
+      
+      // First, create a namespace from the prompt
+      addMessage({
+        role: 'assistant',
+        content: `🚀 I'll create a namespace for your project and then generate the requested documents. This may take a moment...`,
+        timestamp: new Date()
+      });
+      
+      const namespaceResponse = await fetch(`${API_BASE_URL}/ai-agent/generate-namespace-smart`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: message,
+          brd: '',
+          hld: '',
+          lld: ''
+        })
+      });
+
+      if (!namespaceResponse.ok) {
+        throw new Error(`Failed to create namespace: ${namespaceResponse.status}`);
+      }
+
+      const namespaceResult = await namespaceResponse.json();
+      
+      if (!namespaceResult.success || !namespaceResult.namespaceId) {
+        throw new Error(namespaceResult.error || 'Failed to create namespace');
+      }
+      
+      setConsoleOutput(prev => [...prev, `✅ Created namespace: ${namespaceResult.namespaceId}`]);
+      
+      // Now generate documents from the created namespace
+      const documentResponse = await fetch(`${API_BASE_URL}/ai-agent/generate-documents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          namespaceId: namespaceResult.namespaceId,
+          documentTypes: documentTypes,
+          format: 'json'
+        })
+      });
+
+      if (!documentResponse.ok) {
+        throw new Error(`Failed to generate documents: ${documentResponse.status}`);
+      }
+
+      const documentResult = await documentResponse.json();
+      
+      if (documentResult.success && documentResult.documents) {
+        setConsoleOutput(prev => [...prev, `✅ Generated ${Object.keys(documentResult.documents).length} documents`]);
+        
+        // Create downloadable files for each document
+        const documentFiles = [];
+        for (const [docType, docContent] of Object.entries(documentResult.documents)) {
+          const fileName = `project_${docType.toUpperCase()}.json`;
+          const fileContent = JSON.stringify(docContent, null, 2);
+          
+          documentFiles.push({
+            name: fileName,
+            content: fileContent,
+            type: 'application/json',
+            size: fileContent.length
+          });
+        }
+        
+        // Add files to uploaded files for download
+        setUploadedFiles(prev => [...prev, ...documentFiles]);
+        
+        // Create download links and show in chat
+        const downloadLinks = documentFiles.map(file => 
+          `[📄 Download ${file.name}](#download:${file.name})`
+        ).join('\n');
+        
+        addMessage({
+          role: 'assistant',
+          content: `📋 **Generated Documents for your project:**\n\n${downloadLinks}\n\n**Available Documents:**\n${Object.keys(documentResult.documents).map(doc => `• **${doc.toUpperCase()}** - ${documentResult.documents[doc].type || 'Document'}`).join('\n')}\n\n💡 **Tip:** Click the download links above to save the documents to your computer.\n\n🎯 **Namespace Created:** You can view and manage the generated namespace [here](/namespace/${namespaceResult.namespaceId}).`,
+          timestamp: new Date()
+        });
+        
+        setConsoleOutput(prev => [...prev, `📄 Documents ready for download: ${Object.keys(documentResult.documents).join(', ')}`]);
+      } else {
+        throw new Error(documentResult.error || 'Failed to generate documents');
+      }
+    } catch (error) {
+      console.error('Error in document generation from prompt:', error);
+      setConsoleOutput(prev => [...prev, `❌ Error generating documents: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+      
+      addMessage({
+        role: 'assistant',
+        content: `❌ Failed to generate documents: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
   };
 
   const handleSendMessage = async () => {
@@ -775,9 +1365,33 @@ What would you like to work on today?`,
 
     const userMessage = inputMessage.trim();
     setInputMessage('');
+
+    // Handle pending schema selection by name or natural language
+    if (pendingSchemaSelection) {
+      const reply = userMessage.trim().toLowerCase();
+      const candidates = pendingSchemaSelection.candidates;
+      const match = candidates.find(c => {
+        const n1 = (c.schemaName || c.name || '').toLowerCase();
+        // support phrasing like "use X", "select X", "schema X"
+        return n1 && (reply === n1 || reply.includes(n1) || /use\s+/.test(reply) || /select\s+/.test(reply));
+      });
+      if (match) {
+        setPendingSchemaSelection(null);
+        const chosenName = match.schemaName || match.name || 'Selected Schema';
+        setConsoleOutput(prev => [...prev, `✅ Selected schema: ${chosenName}`]);
+        addMessage({ role: 'assistant', content: `Using schema: ${chosenName}` });
+        const schemaObj = match.schema || match;
+        await handleLambdaGeneration(pendingSchemaSelection.prompt, schemaObj);
+        return;
+      }
+      addMessage({ role: 'assistant', content: 'I did not recognize that schema name. Please reply with the exact schema name as shown in the list (e.g., "Use Users").' });
+      return;
+    }
     
     // Debug: Log the message being processed
-    console.log('[Frontend] Processing message:', userMessage);
+    console.log('[Frontend] 🎯 Processing message:', userMessage);
+    console.log('[Frontend] 🔍 Current messages count:', messages.length);
+    console.log('[Frontend] 🏠 Current namespace:', localNamespace?.['namespace-id']);
     
     // Add user message to chat
     addMessage({
@@ -787,6 +1401,166 @@ What would you like to work on today?`,
 
     // Add console output for message processing
     setConsoleOutput(prev => [...prev, `👤 User message: ${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}`]);
+    
+    // If no namespace context and intent is namespace generation, call smart endpoint
+    if (!localNamespace?.['namespace-id'] && isNamespaceGenerationIntent(userMessage)) {
+      await generateNamespaceSmart(userMessage);
+      return;
+    }
+
+    // If user explicitly asks to generate a lambda, call dedicated endpoint directly
+    const lowerUM = userMessage.toLowerCase();
+    const lambdaIntent =
+      /generate\s+lambda/.test(lowerUM) ||
+      /generate\s+a\s+lambda/.test(lowerUM) ||
+      /create\s+lambda/.test(lowerUM) ||
+      /lambda\s+(function|handler)/.test(lowerUM) ||
+      /make\s+.*lambda/.test(lowerUM);
+    if (lambdaIntent) {
+      // If a schema was dropped, use that; else prompt user with available schemas
+      const dropped = droppedSchemas && droppedSchemas.length > 0 ? droppedSchemas[0] : null;
+      if (dropped) {
+        await handleLambdaGeneration(userMessage, dropped);
+        return;
+      }
+
+      // Fetch available schemas from ALL namespaces in context
+      try {
+        const allNamespaces = [localNamespace, ...droppedNamespaces].filter(Boolean);
+        if (allNamespaces.length === 0) {
+          addMessage({ role: 'assistant', content: 'No namespaces in context. Please open the AI Agent within a namespace or drag and drop namespaces to add them to context.' });
+          return;
+        }
+
+        const allSchemasData = await getAllSchemasFromContext();
+        const allSchemas = allSchemasData.flatMap(data => 
+          data.schemas.map(schema => ({
+            ...schema,
+            namespaceName: data.namespace['namespace-name'] || data.namespace.name,
+            namespaceId: data.namespace['namespace-id'] || data.namespace.id
+          }))
+        );
+
+        if (allSchemas.length > 0) {
+          // Group schemas by namespace for better display
+          let response = `Available schemas from all namespaces in context:\n\n`;
+          allSchemasData.forEach((data, index) => {
+            if (data.schemas.length > 0) {
+              response += `**${data.namespace['namespace-name'] || data.namespace.name}** (${data.schemas.length} schema${data.schemas.length > 1 ? 's' : ''}):\n`;
+              data.schemas.forEach((s: any) => {
+                response += `• ${s.schemaName || s.name}\n`;
+              });
+              response += `\n`;
+            }
+          });
+          response += `Reply with: "Use <SchemaName>" or just the schema name.`;
+
+          addMessage({ role: 'assistant', content: response });
+          setConsoleOutput(prev => [...prev, `📋 Listed ${allSchemas.length} schema(s) from ${allNamespaces.length} namespace(s)`]);
+          setPendingSchemaSelection({ prompt: userMessage, candidates: allSchemas });
+          return;
+        } else {
+          addMessage({ role: 'assistant', content: 'No schemas available in any of the namespaces in context. Please create schemas first or upload them, then ask again.' });
+          return;
+        }
+      } catch (e: any) {
+        setConsoleOutput(prev => [...prev, `❌ Failed to list schemas: ${e?.message || 'Unknown error'}`]);
+        addMessage({ role: 'assistant', content: 'I could not fetch schemas. Please try again.' });
+        return;
+      }
+    }
+
+    // Check for document generation intent (BRD/HLD/LLD)
+    const documentIntent = 
+      /generate\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /create\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /make\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /give\s+me\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /can\s+you\s+(give|provide|create|generate)\s+.*?(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /i\s+need\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /i\s+want\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /show\s+me\s+(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM) ||
+      /documentation/.test(lowerUM) ||
+      /document/.test(lowerUM) ||
+      /specification/.test(lowerUM) ||
+      /requirements/.test(lowerUM) ||
+      /design\s+document/.test(lowerUM) ||
+      // More flexible patterns for common phrases
+      /(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)\s+(for|of|about)/.test(lowerUM) ||
+      /(give|provide|create|generate|make|show|need|want)\s+.*?(brd|hld|lld|business\s+requirements|high\s+level\s+design|low\s+level\s+design)/.test(lowerUM);
+
+    // Check for namespace context questions
+    const namespaceContextIntent = 
+      /what.*namespace/.test(lowerUM) ||
+      /tell.*namespace/.test(lowerUM) ||
+      /show.*namespace/.test(lowerUM) ||
+      /list.*namespace/.test(lowerUM) ||
+      /namespace.*resources/.test(lowerUM) ||
+      /namespace.*context/.test(lowerUM) ||
+      /namespace.*schemas/.test(lowerUM) ||
+      /what.*schemas/.test(lowerUM) ||
+      /list.*schemas/.test(lowerUM) ||
+      /show.*schemas/.test(lowerUM);
+    
+    // Debug logging for document intent detection
+    console.log('[Frontend] 🔍 Intent detection:', {
+      message: userMessage,
+      lowerMessage: lowerUM,
+      documentIntent: documentIntent,
+      namespaceContextIntent: namespaceContextIntent,
+      namespace: namespace?.['namespace-id']
+    });
+    
+    if (documentIntent) {
+      console.log('[Frontend] 🎯 Document generation intent detected!');
+      setConsoleOutput(prev => [...prev, `🎯 Document generation intent detected: ${userMessage}`]);
+      
+      if (namespace?.['namespace-id']) {
+        // Generate documents from existing namespace
+        console.log('[Frontend] 📄 Generating documents from existing namespace');
+        await handleDocumentGeneration(userMessage);
+        return;
+      } else {
+        // Generate documents by creating a namespace first
+        console.log('[Frontend] 📄 Generating documents by creating namespace first');
+        await handleDocumentGenerationFromPrompt(userMessage);
+        return;
+      }
+    }
+
+    // Note: Namespace context questions are now handled by the backend LLM
+    // with full context including allNamespaces, schemas, methods, webhooks, etc.
+
+    // Check if user wants to generate Lambda with uploaded schemas
+    const hasUploadedSchemas = uploadedFiles.some(file => 
+      file.name.endsWith('.json') && file.content && 
+      (file.content.includes('"properties"') || file.content.includes('"type"'))
+    );
+    
+    if (hasUploadedSchemas && (userMessage.toLowerCase().includes('generate lambda') || userMessage.toLowerCase().includes('lambda function'))) {
+      // Extract schema data from uploaded files
+      const schemas = uploadedFiles
+        .filter(file => file.name.endsWith('.json') && file.content)
+        .map(file => {
+          try {
+            const schemaData = JSON.parse(file.content);
+            return {
+              name: file.name.replace('.json', ''),
+              type: 'JSON',
+              content: schemaData,
+              originalFile: file.name
+            };
+          } catch (e) {
+            return null;
+          }
+        })
+        .filter(Boolean);
+      
+      if (schemas.length > 0) {
+        await handleLambdaGeneration(userMessage, schemas[0]); // Use first schema for now
+        return;
+      }
+    }
     
     // Check if this might be a schema-related request
     const lowerMessage = userMessage.toLowerCase();
@@ -834,957 +1608,345 @@ What would you like to work on today?`,
     let actions: any[] = [];
     let lastAssistantMessageId: string | null = null;
 
-      // Robust intent detection for Lambda generation
-  const lowerMessage = userMessage.toLowerCase();
-  
-  // Explicit action keywords that indicate user wants to generate/create something
-  const explicitActionKeywords = [
-    'generate', 'create', 'build', 'write', 'make', 'develop', 'code', 'program',
-    'implement', 'set up', 'configure', 'deploy', 'launch', 'start'
-  ];
-  
-  // Lambda-related keywords
-  const lambdaKeywords = [
-    'lambda', 'function', 'handler', 'aws lambda', 'serverless', 
-    'lambda function', 'aws function', 'serverless function'
-  ];
-  
-  // Schema-related keywords
-  const schemaKeywords = [
-    'schema', 'json schema', 'data model', 'structure', 'format', 'validation',
-    'type definition', 'interface', 'model'
-  ];
-  
-  // API-related keywords
-  const apiKeywords = [
-    'api', 'endpoint', 'route', 'rest', 'http', 'get', 'post', 'put', 'delete',
-    'api endpoint', 'rest api', 'http endpoint', 'webhook', 'microservice'
-  ];
-  
-  // Check for explicit generation intent
-  const hasExplicitAction = explicitActionKeywords.some(action => lowerMessage.includes(action));
-  const hasLambdaKeyword = lambdaKeywords.some(keyword => lowerMessage.includes(keyword));
-  const hasSchemaKeyword = schemaKeywords.some(keyword => lowerMessage.includes(keyword));
-  const hasApiKeyword = apiKeywords.some(keyword => lowerMessage.includes(keyword));
-  
-  // More sophisticated intent detection
-  // Prioritize lambda requests over schema requests when both keywords are present
-  // Also detect lambda generation requests that mention schema context
-  const isLambdaRequest = hasExplicitAction && hasLambdaKeyword;
-  
-  // Check for lambda generation requests that mention schema (common pattern)
-  const hasLambdaContext = hasLambdaKeyword || (hasExplicitAction && (lowerMessage.includes('handler') || lowerMessage.includes('function')));
-  const mentionsSchemaContext = lowerMessage.includes('from this schema') || lowerMessage.includes('using this schema') || lowerMessage.includes('with this schema') || lowerMessage.includes('based on this schema');
-  const isLambdaWithSchemaContext = hasLambdaContext && mentionsSchemaContext;
-  
-  // API generation requests
-  const isApiRequest = hasExplicitAction && hasApiKeyword && !hasLambdaKeyword && !isLambdaWithSchemaContext;
-  
-  // Schema requests should not include lambda or api generation patterns
-  const isSchemaRequest = hasExplicitAction && hasSchemaKeyword && !hasLambdaKeyword && !hasApiKeyword && !isLambdaWithSchemaContext;
-  
-  // Debug the intermediate values
-  console.log('[Intent Debug] Intermediate values:');
-  console.log('[Intent Debug] isLambdaRequest:', isLambdaRequest, '(hasExplicitAction:', hasExplicitAction, '&& hasLambdaKeyword:', hasLambdaKeyword, ')');
-  console.log('[Intent Debug] hasLambdaContext:', hasLambdaContext, '(hasLambdaKeyword:', hasLambdaKeyword, '|| (hasExplicitAction && handler/function))');
-  console.log('[Intent Debug] mentionsSchemaContext:', mentionsSchemaContext, '(from/using/with/based on this schema)');
-  console.log('[Intent Debug] isLambdaWithSchemaContext:', isLambdaWithSchemaContext, '(hasLambdaContext && mentionsSchemaContext)');
-  console.log('[Intent Debug] isSchemaRequest:', isSchemaRequest, '(hasExplicitAction && hasSchemaKeyword && !hasLambdaKeyword && !isLambdaWithSchemaContext)');
-  
-  // Additional context checks to avoid false positives
-  const isQuestion = lowerMessage.includes('?') || lowerMessage.includes('what') || lowerMessage.includes('how') || lowerMessage.includes('why');
-  const isCasualMention = lowerMessage.includes('about') || lowerMessage.includes('regarding') || lowerMessage.includes('concerning');
-  const isExplanatory = lowerMessage.includes('explain') || lowerMessage.includes('describe') || lowerMessage.includes('tell me');
-  
-  // Final intent determination
-  const shouldGenerateLambda = (isLambdaRequest || isLambdaWithSchemaContext) && !isQuestion && !isCasualMention && !isExplanatory;
-  const shouldGenerateApi = isApiRequest && !isQuestion && !isCasualMention && !isExplanatory;
-  const shouldGenerateSchema = isSchemaRequest && !isQuestion && !isCasualMention && !isExplanatory;
-    
-    console.log('[Intent Debug] Message:', userMessage);
-    console.log('[Intent Debug] Has explicit action:', hasExplicitAction);
-    console.log('[Intent Debug] Has lambda keyword:', hasLambdaKeyword);
-    console.log('[Intent Debug] Has schema keyword:', hasSchemaKeyword);
-    console.log('[Intent Debug] Is lambda request:', isLambdaRequest);
-    console.log('[Intent Debug] Is schema request:', isSchemaRequest);
-    console.log('[Intent Debug] Is question:', isQuestion);
-    console.log('[Intent Debug] Is casual mention:', isCasualMention);
-    console.log('[Intent Debug] Is explanatory:', isExplanatory);
-    console.log('[Intent Debug] Should generate lambda:', shouldGenerateLambda);
-    console.log('[Intent Debug] Should generate schema:', shouldGenerateSchema);
-    console.log('[Intent Debug] Processing as regular chat:', !shouldGenerateLambda && !shouldGenerateSchema);
-    
-    // Add more detailed logging
-    console.log('[Intent Debug] === DETAILED ANALYSIS ===');
-    console.log('[Intent Debug] Original message:', userMessage);
-    console.log('[Intent Debug] Lower message:', lowerMessage);
-    console.log('[Intent Debug] Explicit action keywords found:', explicitActionKeywords.filter(action => lowerMessage.includes(action)));
-    console.log('[Intent Debug] Lambda keywords found:', lambdaKeywords.filter(keyword => lowerMessage.includes(keyword)));
-    console.log('[Intent Debug] Schema keywords found:', schemaKeywords.filter(keyword => lowerMessage.includes(keyword)));
-    console.log('[Intent Debug] === END ANALYSIS ===');
-    
-    // Handle Lambda generation only when explicitly requested
-    if (shouldGenerateLambda) {
-      console.log('[Frontend] !!! ENTERING LAMBDA GENERATION BLOCK !!!');
-      console.log('[Frontend] Detected Lambda generation request - sending to lambda generation endpoint');
-      console.log('[Frontend] shouldGenerateLambda:', shouldGenerateLambda);
-      console.log('[Frontend] shouldGenerateSchema:', shouldGenerateSchema);
-      console.log('[Frontend] isLambdaRequest:', isLambdaRequest);
-      console.log('[Frontend] isLambdaWithSchemaContext:', isLambdaWithSchemaContext);
-      setConsoleOutput(prev => [...prev, `🚀 Starting Lambda generation from chat request`]);
-      
-      // Automatically switch to Lambda tab
-      setActiveTab('lambda');
-      
-      try {
-        setGeneratedLambdaCode('');
-        setConsoleOutput(prev => [...prev, `📝 Processing Lambda request: ${userMessage}`]);
-        setConsoleOutput(prev => [...prev, `📋 Using automatic schema detection from workspace`]);
-        
-        // Prepare context from uploaded files and dropped schemas
-        const fileContext = uploadedFiles.length > 0 ? 
-          `\n\nUploaded Files Context:\n${uploadedFiles.map(file => 
-            `File: ${file.name} (${file.type})\nContent:\n${file.content?.substring(0, 1000)}${file.content && file.content.length > 1000 ? '...' : ''}`
-          ).join('\n\n')}` : '';
-        
-        const schemaContext = droppedSchemas.length > 0 ? 
-          `\n\nDropped Schema Context:\n${droppedSchemas.map(schema => 
-            `Schema: ${schema.schemaName || schema.name || 'Unknown'}\nContent:\n${JSON.stringify(schema, null, 2)}`
-          ).join('\n\n')}` : '';
-        
-        const enhancedMessage = userMessage + fileContext + schemaContext;
-        
-        const requestBody = {
-          message: enhancedMessage,
-          originalMessage: userMessage, // Send original message for intent detection
-          functionName: lambdaForm.functionName || 'handler',
-          runtime: lambdaForm.runtime || 'nodejs18.x',
-          handler: lambdaForm.handler || 'index.handler',
-          memory: lambdaForm.memory || 128,
-          timeout: lambdaForm.timeout || 3,
-          environment: lambdaForm.environment || ''
-        };
-        
-        console.log('[Lambda Debug] Making backend request to:', `${API_BASE_URL}/ai-agent/lambda-codegen`);
-        console.log('[Lambda Debug] Request body:', requestBody);
-        
-        const response = await fetch(`${API_BASE_URL}/ai-agent/lambda-codegen`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        });
+    console.log('[Frontend] Processing message:', userMessage);
 
-        console.log('[Lambda Debug] Response status:', response.status);
-        console.log('[Lambda Debug] Response ok:', response.ok);
-        
-        if (response.ok) {
-          setConsoleOutput(prev => [...prev, `✅ Connected to backend, starting Lambda generation...`]);
-          const reader = response.body?.getReader();
-          if (reader) {
-            let generatedCode = '';
-            let chatMessage = '';
-            let chunkCount = 0;
-            let isCodeSection = false;
-            
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              
-              const chunk = new TextDecoder().decode(value);
-              const lines = chunk.split('\n');
-              
-              for (const line of lines) {
-                console.log('[Lambda Debug] Processing line:', line);
-                if (line.startsWith('data: ')) {
-                  const data = line.slice(6);
-                  console.log('[Lambda Debug] Data:', data);
-                  if (data === '[DONE]') {
-                    // Generation complete
-                    setConsoleOutput(prev => [...prev, `🎉 Lambda generation completed!`]);
-                    setConsoleOutput(prev => [...prev, `📊 Total chunks received: ${chunkCount}`]);
-                    setConsoleOutput(prev => [...prev, `📏 Code length: ${generatedCode.length} characters`]);
-                    
-                    if (generatedCode.trim()) {
-                      setConsoleOutput(prev => [...prev, `📁 Creating file structure...`]);
-                      generateLambdaFileStructure(generatedCode, lambdaForm.functionName || 'handler', lambdaForm.runtime || 'nodejs18.x');
-                      setConsoleOutput(prev => [...prev, `✅ Files created successfully!`]);
-                    }
-                    
-                    // Add success message about code generation
-                    addMessage({
-                      role: 'assistant',
-                      content: `✅ Lambda function code generated successfully! 
-
-📝 **Code Location:** The generated code is now available in the "Generated Lambda Code" box in the Lambda tab.
-
-📁 **Files:** The code has also been saved to the Files tab.
-
-🚀 **Next Steps:** You can now configure deployment settings in the Deployment tab to deploy your function.`
-                    });
-                    break;
-                  } else if (data !== '') {
-                    try {
-                      const parsed = JSON.parse(data);
-                      console.log('[Lambda Debug] Parsed JSON:', parsed);
-                      if (parsed.content) {
-                        chunkCount++;
-                        
-                        // For Lambda generation, ALL content from the backend is code
-                        // The backend is instructed to output ONLY code, no explanations
-                        const content = parsed.content;
-                        
-                        // Debug: Log the content to see what we're receiving
-                        console.log('[Lambda Debug] Received content:', content);
-                        console.log('[Lambda Debug] Content length:', content.length);
-                        
-                        // Since this is Lambda generation, all content is code
-                        console.log('[Lambda Debug] Adding to generatedCode (Lambda generation)');
-                        generatedCode += content;
-                        setGeneratedLambdaCode(generatedCode);
-                        
-                        // Update console every 10 chunks
-                        if (chunkCount % 10 === 0) {
-                          setConsoleOutput(prev => [...prev, `📦 Received chunk ${chunkCount}, code length: ${generatedCode.length} chars`]);
-                        }
-                      } else if (parsed.error) {
-                        console.error('Lambda generation error:', parsed.error);
-                        setGeneratedLambdaCode('Error: ' + parsed.error);
-                        setConsoleOutput(prev => [...prev, `❌ Error: ${parsed.error}`]);
-                        
-                        addMessage({
-                          role: 'assistant',
-                          content: `❌ Error generating Lambda function: ${parsed.error}`
-                        });
-                      }
-                    } catch (e) {
-                      // Ignore parsing errors
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } else {
-          console.error('Failed to generate Lambda code:', response.status);
-          setConsoleOutput(prev => [...prev, `❌ Failed to connect to backend: ${response.status}`]);
-          
-          addMessage({
-            role: 'assistant',
-            content: `❌ Failed to generate Lambda function. Please try again.`
-          });
-        }
-      } catch (error) {
-        console.error('Error generating Lambda code:', error);
-        setConsoleOutput(prev => [...prev, `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`]);
-        
-        addMessage({
-          role: 'assistant',
-          content: `❌ Error generating Lambda function: ${error instanceof Error ? error.message : 'Unknown error'}`
-        });
-      }
-      return;
-    } else if (shouldGenerateApi) {
-      // Handle API generation when explicitly requested
-      console.log('[Frontend] !!! ENTERING API GENERATION BLOCK !!!');
-      console.log('[Frontend] Detected API generation request - sending to API generation endpoint');
-      setConsoleOutput(prev => [...prev, `🚀 Starting API generation from chat request`]);
-      
-      // Automatically switch to API tab
-      setActiveTab('api');
-      
-      try {
-        setGeneratedApiCode('');
-        setApiDocumentation('');
-        setConsoleOutput(prev => [...prev, `📝 Processing API request: ${userMessage}`]);
-        setConsoleOutput(prev => [...prev, `📋 Using automatic schema detection from workspace`]);
-        
-        // Prepare context from uploaded files and dropped schemas
-        const fileContext = uploadedFiles.length > 0 ? 
-          `\n\nUploaded Files Context:\n${uploadedFiles.map(file => 
-            `File: ${file.name} (${file.type})\nContent:\n${file.content?.substring(0, 1000)}${file.content && file.content.length > 1000 ? '...' : ''}`
-          ).join('\n\n')}` : '';
-        
-        const schemaContext = droppedSchemas.length > 0 ? 
-          `\n\nDropped Schema Context:\n${droppedSchemas.map(schema => 
-            `Schema: ${schema.schemaName || schema.name || 'Unknown'}\nContent:\n${JSON.stringify(schema, null, 2)}`
-          ).join('\n\n')}` : '';
-        
-        const enhancedMessage = userMessage + fileContext + schemaContext;
-        
-        const requestBody = {
-          message: enhancedMessage,
-          originalMessage: userMessage,
-          namespace: namespace ? { id: namespace['namespace-id'] } : null,
-          action: 'api-generation',
-          history: messages.map(m => ({ role: m.role, content: m.content })),
-          userId,
-          schema: null,
-        };
-        
-        console.log('[API Debug] Making backend request to:', `${API_BASE_URL}/ai-agent/stream`);
-        console.log('[API Debug] Request body:', requestBody);
-        
-        const response = await fetch(`${API_BASE_URL}/ai-agent/stream`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        });
-
-        if (response.ok) {
-          setConsoleOutput(prev => [...prev, `✅ Connected to backend, starting API generation...`]);
-          const reader = response.body?.getReader();
-          if (reader) {
-            let apiCode = '';
-            let documentation = '';
-            let chunkCount = 0;
-            let isCodeSection = false;
-            
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              
-              const chunk = new TextDecoder().decode(value);
-              const lines = chunk.split('\n');
-              
-              for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                  const data = line.slice(6);
-                  if (data === '[DONE]') {
-                    // Generation complete
-                    setConsoleOutput(prev => [...prev, `🎉 API generation completed!`]);
-                    setConsoleOutput(prev => [...prev, `📊 Total chunks received: ${chunkCount}`]);
-                    
-                    addMessage({
-                      role: 'assistant',
-                      content: `✅ API code and documentation generated successfully! 
-
-📝 **Code Location:** The generated API code is now available in the "Generated API Code" box in the API tab.
-
-📚 **Documentation:** API documentation is available in the "API Documentation" box.
-
-🚀 **Next Steps:** You can now review the generated code and documentation, and deploy your API.`
-                    });
-                    break;
-                  } else if (data !== '') {
-                    try {
-                      const parsed = JSON.parse(data);
-                      if (parsed.content) {
-                        chunkCount++;
-                        const content = parsed.content;
-                        
-                        // Check if this is code or documentation based on content
-                        if (content.includes('```') || content.includes('function') || content.includes('const') || content.includes('export')) {
-                          apiCode += content;
-                          setGeneratedApiCode(apiCode);
-                        } else {
-                          documentation += content;
-                          setApiDocumentation(documentation);
-                        }
-                        
-                        // Update console every 10 chunks
-                        if (chunkCount % 10 === 0) {
-                          setConsoleOutput(prev => [...prev, `📦 Received chunk ${chunkCount}, code length: ${apiCode.length} chars, docs length: ${documentation.length} chars`]);
-                        }
-                      } else if (parsed.error) {
-                        console.error('API generation error:', parsed.error);
-                        setGeneratedApiCode('Error: ' + parsed.error);
-                        setConsoleOutput(prev => [...prev, `❌ Error: ${parsed.error}`]);
-                        
-                        addMessage({
-                          role: 'assistant',
-                          content: `❌ Error generating API: ${parsed.error}`
-                        });
-                      }
-                    } catch (e) {
-                      // Ignore parsing errors
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } else {
-          console.error('Failed to generate API code:', response.status);
-          setConsoleOutput(prev => [...prev, `❌ Failed to connect to backend: ${response.status}`]);
-          
-          addMessage({
-            role: 'assistant',
-            content: `❌ Failed to generate API. Please try again.`
-          });
-        }
-      } catch (error) {
-        console.error('Error generating API code:', error);
-        setConsoleOutput(prev => [...prev, `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`]);
-        
-        addMessage({
-          role: 'assistant',
-          content: `❌ Error generating API: ${error instanceof Error ? error.message : 'Unknown error'}`
-        });
-      }
-      return;
-    } else if (shouldGenerateSchema) {
-      // Handle Schema generation when explicitly requested
-      console.log('[Frontend] !!! ENTERING SCHEMA GENERATION BLOCK !!!');
-      console.log('[Frontend] Detected Schema generation request - sending to schema generation endpoint');
-      console.log('[Frontend] shouldGenerateLambda:', shouldGenerateLambda);
-      console.log('[Frontend] shouldGenerateSchema:', shouldGenerateSchema);
-      console.log('[Frontend] isLambdaRequest:', isLambdaRequest);
-      console.log('[Frontend] isLambdaWithSchemaContext:', isLambdaWithSchemaContext);
-      
-      // Double-check: if lambda context is detected, don't generate schema
-      if (isLambdaWithSchemaContext || isLambdaRequest) {
-        console.log('[Frontend] SAFEGUARD: Lambda context detected, skipping schema generation');
-        addMessage({
-          role: 'assistant',
-          content: `I detected that you want to generate a Lambda function! Since you have a schema dropped as context, I'll help you create a Lambda handler that uses that schema. Please use the Lambda tab or ask me to 'generate a lambda handler' to create Lambda functions.`
-        });
-        return;
-      }
-      
-      setConsoleOutput(prev => [...prev, `🚀 Starting Schema generation from chat request`]);
-      
-      // Automatically switch to Schema tab
-      setActiveTab('schema');
-      
-      // Use the existing schema generation logic
-      try {
-        setIsStreamingSchema(true);
-        setLiveSchema('');
-        
-        const response = await fetch(`${API_BASE_URL}/ai-agent/stream`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: userMessage,
-            namespace: namespace ? { id: namespace['namespace-id'] } : null,
-            action: null,
-            history: messages.map(m => ({ role: m.role, content: m.content })),
-            userId,
-            schema: null,
-          })
-        });
-
-        if (response.ok) {
-          const reader = response.body?.getReader();
-          if (reader) {
-            let schemaContent = '';
-            
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              
-              const chunk = new TextDecoder().decode(value);
-              const lines = chunk.split('\n');
-              
-              for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                  const data = line.slice(6);
-                  if (data === '[DONE]') {
-                    setIsStreamingSchema(false);
-                    break;
-                  } else if (data !== '') {
-                    try {
-                      const parsed = JSON.parse(data);
-                      if (parsed.content) {
-                        schemaContent += parsed.content;
-                        setLiveSchema(schemaContent);
-                      }
-                    } catch (e) {
-                      console.error('[Schema Generation] Error parsing data:', e);
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('[Schema Generation] Error:', error);
-        setIsStreamingSchema(false);
-        addMessage({
-          role: 'assistant',
-          content: `Sorry, I encountered an error while generating the schema: ${error.message}`
-        });
-      }
-      return;
-    }
-
-    // Always pass the existing schema if we have one, regardless of the request type
-    let schemaToEdit = currentSchema;
-    if (!schemaToEdit && schemas.length > 0) {
-      // Always use the existing schema for any schema-related request
-      schemaToEdit = schemas[0].schema;
-      console.log('[Frontend] Using existing schema for request:', schemaToEdit);
-      // Check if this is an edit command for visual feedback
-      const editKeywords = ['edit', 'modify', 'update', 'change', 'add', 'remove', 'delete', 'rename'];
-      const isEditCommand = editKeywords.some(keyword => lowerMessage.includes(keyword));
-      if (isEditCommand) {
-        setIsEditingSchema(true);
-        setConsoleOutput(prev => [...prev, `🔄 Editing schema: ${userMessage}`]);
-      }
-    }
-    
-    // Add console output for schema generation start
-    if (schemaToEdit) {
-      setConsoleOutput(prev => [...prev, `📝 Schema editing request: ${userMessage}`]);
-      setConsoleOutput(prev => [...prev, `📋 Using existing schema as base`]);
-    } else {
-      setConsoleOutput(prev => [...prev, `🆕 Schema generation request: ${userMessage}`]);
-      setConsoleOutput(prev => [...prev, `✨ Creating new schema from scratch`]);
-    }
-    
-    console.log('[Frontend] Sending request to backend:', {
-      message: userMessage,
-      hasExistingSchema: !!schemaToEdit,
-      schemaToEdit: schemaToEdit ? 'Schema exists' : 'No schema'
-    });
-    
-    console.log('[Frontend] Sending regular chat request to backend (no generation intent detected)');
-    console.log('[Frontend] This should NOT happen for lambda requests!');
-    setConsoleOutput(prev => [...prev, `🌐 Connecting to AI agent backend...`]);
-    
-        // Prepare context from uploaded files and dropped schemas for regular chat
-        const fileContext = uploadedFiles.length > 0 ? 
-          `\n\nUploaded Files Context:\n${uploadedFiles.map(file => 
-            `File: ${file.name} (${file.type})\nContent:\n${file.content?.substring(0, 1000)}${file.content && file.content.length > 1000 ? '...' : ''}`
-          ).join('\n\n')}` : '';
-        
-        const schemaContext = droppedSchemas.length > 0 ? 
-          `\n\nDropped Schema Context:\n${droppedSchemas.map(schema => 
-            `Schema: ${schema.schemaName || schema.name || 'Unknown'}\nContent:\n${JSON.stringify(schema, null, 2)}`
-          ).join('\n\n')}` : '';
-        
-        const enhancedMessage = userMessage + fileContext + schemaContext;
-        
-        const response = await fetch(`${API_BASE_URL}/ai-agent/stream`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: enhancedMessage,
-            namespace: namespace ? { id: namespace['namespace-id'] } : null,
-            action: null,
-            history: messages.map(m => ({ role: m.role, content: m.content })),
-            userId,
-            schema: schemaToEdit,
-          })
-        });
-    
-    if (!response.ok) {
-      setConsoleOutput(prev => [...prev, `❌ Failed to connect to backend: ${response.status}`]);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    setConsoleOutput(prev => [...prev, `✅ Connected to backend, starting AI processing...`]);
-    
-    const reader = response.body?.getReader();
-    if (!reader) {
-      setConsoleOutput(prev => [...prev, `❌ No response body received`]);
-      throw new Error('No response body');
-    }
-    
-    let chunkCount = 0;
-    let schemaChunkCount = 0;
-    
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      setConsoleOutput(prev => [...prev, `💬 Processing message: ${userMessage}`]);
         
-        chunkCount++;
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split('\n');
+        const requestBody = {
+        message: userMessage,
+        namespace: localNamespace?.['namespace-id'] || null, // Pass null for general context to enable namespace generation
+        allNamespaces: [localNamespace, ...droppedNamespaces].filter(Boolean), // Pass all namespaces in context
+        history: messages.slice(-10), // Send last 10 messages for context
+        schema: currentSchema || (schemas.length > 0 ? schemas[0].schema : null),
+        uploadedSchemas: droppedSchemas // Pass dropped schemas for lambda generation
+      };
+      
+      console.log('[Frontend Debug] 🚀 Making backend request to:', `${API_BASE_URL}/ai-agent/stream`);
+      console.log('[Frontend Debug] 📤 Request body:', requestBody);
+      console.log('[Frontend Debug] 🌐 API_BASE_URL:', API_BASE_URL);
+      console.log('[Frontend Debug] 📁 allNamespaces being sent:', requestBody.allNamespaces?.length || 0, 'namespaces');
         
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              console.log('[Frontend] Received streaming data:', data);
-              
-              // Handle actions regardless of route
-              if (data.type === 'actions' && data.actions) {
-                console.log('[Frontend] Received actions:', data.actions);
-                actions = data.actions;
-                setConsoleOutput(prev => [...prev, `📋 Received ${data.actions.length} action(s) from AI agent`]);
-              }
-              
-              if (data.route === 'schema') {
-                // Live update the schema preview in the Schema tab
-                if (data.type === 'chat') {
-                  setLiveSchema(prev => prev + data.content);
-                  setIsStreamingSchema(true);
-                  schemaChunkCount++;
-                  
-                  // Add console output to show schema generation progress
-                  if (schemaChunkCount === 1) {
-                    setConsoleOutput(prev => [...prev, `🔄 AI agent started generating schema...`]);
-                  }
-                  
-                  // Update progress every 5 chunks
-                  if (schemaChunkCount % 5 === 0) {
-                    setConsoleOutput(prev => [...prev, `📝 Schema generation in progress... (chunk ${schemaChunkCount})`]);
-                  }
-                }
-              } else if (data.route === 'chat') {
-                // Live update the assistant's message in the chat UI
-                if (data.type === 'chat') {
-                  assistantMessage += data.content;
-                  // If this is the first chunk, add a new assistant message
-                  if (!lastAssistantMessageId) {
-                    lastAssistantMessageId = getNowId();
-                    setMessages(prev => [
-                      ...prev,
-                      {
-                        id: lastAssistantMessageId || getNowId(),
-                        role: 'assistant',
-                        content: assistantMessage,
-                        timestamp: new Date()
+        const response = await fetch(`${API_BASE_URL}/ai-agent/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+
+      console.log('[Frontend Debug] 📥 Response status:', response.status);
+      console.log('[Frontend Debug] ✅ Response ok:', response.ok);
+      console.log('[Frontend Debug] 📋 Response headers:', Object.fromEntries(response.headers.entries()));
+
+        if (response.ok) {
+        setConsoleOutput(prev => [...prev, `✅ Connected to backend, starting streaming...`]);
+          const reader = response.body?.getReader();
+          if (reader) {
+            let chunkCount = 0;
+            
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                chunkCount++;
+                const chunk = new TextDecoder().decode(value);
+                const lines = chunk.split('\n');
+                
+                for (const line of lines) {
+                  if (line.startsWith('data: ')) {
+                    const dataContent = line.slice(6);
+                    
+                    console.log('[Frontend Debug] Processing data line:', { line, dataContent });
+                    
+                    // Handle [DONE] signal - not JSON (trim whitespace and check for variations)
+                    const trimmedContent = dataContent.trim();
+                    if (trimmedContent === '[DONE]' || trimmedContent.includes('[DONE]')) {
+                      console.log('[Frontend Debug] ✅ Received [DONE] signal - streaming complete');
+                      break;
+                    }
+                    
+                    try {
+                      const data = JSON.parse(dataContent);
+                      console.log('[Frontend Debug] 🔍 PARSED DATA:', {
+                        route: data.route,
+                        type: data.type,
+                        content: data.content?.substring(0, 100),
+                        fullData: data
+                      });
+                      
+                  // Handle actions (can come from any route)
+                  if (data.actions) {
+                        console.log('[Frontend] 📋 Received actions:', {
+                          route: data.route,
+                          type: data.type,
+                          actionCount: data.actions.length,
+                          actions: data.actions
+                        });
+                        actions = data.actions;
+                        setConsoleOutput(prev => [...prev, `📋 Received ${data.actions.length} action(s) from AI agent (route: ${data.route})`]);
                       }
-                    ]);
-                  } else {
-                    // Update the last assistant message
-                    setMessages(prev => prev.map(m =>
-                      m.id === lastAssistantMessageId
-                        ? { ...m, content: assistantMessage }
-                        : m
-                    ));
-                  }
-                }
+                      
+                      if (data.route === 'schema') {
+                    // Handle schema-specific messages - stream JSON schema content live
+                    console.log('[Frontend Debug] ⚠️ SCHEMA ROUTE MESSAGE:', data);
+                    console.log('[Frontend Debug] ⚠️ Type:', data.type, 'Content:', data.content?.substring(0, 200));
+                        if (data.type === 'live_schema') {
+                      // Stream JSON schema content progressively in the live box
+                      console.log('[Frontend Debug] ✅ Adding to live schema box:', data.content?.substring(0, 100));
+                      if (data.content) {
+                        setLiveSchema(prev => prev + data.content);
+                            setIsStreamingSchema(true);
+                        setConsoleOutput(prev => [...prev, `🔄 Live schema streaming...`]);
+                          }
+                        } else if (data.type === 'live_schema_complete') {
+                          // Handle final live schema update and close the live generation window
+                      console.log('[Frontend Debug] ✅ Schema generation completed');
+                          setIsStreamingSchema(false);
+                          setConsoleOutput(prev => [...prev, `✅ Live schema generation completed`]);
+                        } else {
+                      console.log('[Frontend Debug] ⚠️ UNEXPECTED MESSAGE TYPE IN SCHEMA ROUTE:', data.type, data.content?.substring(0, 100));
+                        }
+                      } else if (data.route === 'lambda') {
+                        // Handle Lambda code generation responses
+                        console.log('[Frontend Debug] ✅ LAMBDA ROUTE MESSAGE:', {
+                          type: data.type,
+                          schemaName: data.schemaName,
+                          hasCode: !!data.code,
+                          codeLength: data.code?.length || 0
+                        });
+
+                        // Streamed chunk updates
+                        if (data.type === 'lambda_code_chunk' && data.content) {
+                          console.log('[Frontend Debug] ✅ Processing lambda_code_chunk:', data.content);
+                          console.log('[Frontend Debug] ✅ Switching to lambda tab');
+                          setActiveTab('lambda');
+                          setGeneratedLambdaCode(prev => {
+                            const newCode = (prev || '') + data.content;
+                            console.log('[Frontend Debug] ✅ Updated generatedLambdaCode length:', newCode.length);
+                            console.log('[Frontend Debug] ✅ Current generatedLambdaCode:', newCode.substring(0, 100) + '...');
+                            return newCode;
+                          });
+                          continue; // Continue processing more chunks instead of returning
+                        }
+
+                        // Final completion payload with full code
+                        if (data.type === 'lambda_code_complete' && data.code) {
+                          console.log('[Frontend Debug] ✅ Processing lambda_code_complete:', data.code.length, 'chars');
+                          setActiveTab('lambda');
+                          setGeneratedLambdaCode(data.code);
+                          try {
+                            generateLambdaFileStructure(data.code, (data.schemaName || 'Generated') + 'Handler', 'nodejs18.x');
+                          } catch (e) {
+                            console.warn('Failed to generate lambda file structure:', e);
+                          }
+                          continue; // Continue processing instead of returning
+                        }
+
+                        // Backward-compatible single-shot payload
+                        if (data.type === 'lambda_code' && data.code) {
+                          setActiveTab('lambda');
+                          setGeneratedLambdaCode(data.code);
+                          try {
+                            generateLambdaFileStructure(data.code, data.schemaName + 'Handler', 'nodejs18.x');
+                          } catch (e) {
+                            console.warn('Failed to generate lambda file structure:', e);
+                          }
+                          const successMessage = {
+                            id: getNowId(),
+                            role: 'assistant',
+                            content: `✅ Generated Lambda function${data.schemaName ? ` for schema: **${data.schemaName}**` : ''}.\n\nCheck the Lambda tab to see the generated code!`,
+                            timestamp: new Date()
+                          };
+                          setMessages(prev => [...prev, successMessage]);
+                          setConsoleOutput(prev => [...prev, `✅ Lambda function generated${data.schemaName ? ` for schema: ${data.schemaName}` : ''}`]);
+                          continue; // Continue processing instead of returning
+                        }
+                      } else if (data.route === 'chat') {
+                        // Handle chat route messages - could be chat content or actions
+                        console.log('[Frontend Debug] ✅ CHAT ROUTE MESSAGE:', {
+                          type: data.type,
+                          content: data.content?.substring(0, 100),
+                          hasContent: !!data.content,
+                          contentLength: data.content?.length || 0,
+                          hasActions: !!data.actions
+                        });
+                        
+                        // Handle namespace generation completion
+                        if (data.type === 'namespace_generated') {
+                          console.log('[Frontend Debug] ✅ Namespace generated:', data.namespaceId);
+                          
+                          // Add the success message to chat
+                          const successMessage = {
+                            id: getNowId(),
+                            role: 'assistant',
+                            content: data.content,
+                            timestamp: new Date()
+                          };
+                          setMessages(prev => [...prev, successMessage]);
+                          
+                          // Show success notification
+                          setConsoleOutput(prev => [...prev, `✅ Complete namespace generated: ${data.namespaceData.namespace['namespace-name']}`]);
+                          
+                          // Optionally redirect to the new namespace or show a success modal
+                          // You can add navigation logic here if needed
+                          
+                          continue;
+                        }
+                        
+                        if (data.type === 'chat' && data.content) {
+                          // This is actual chat content to display
+                          console.log('[Frontend Debug] 📝 ADDING TO ASSISTANT MESSAGE:', {
+                            currentLength: assistantMessage.length,
+                            newContent: data.content,
+                            newLength: data.content.length
+                          });
+                          
+                          assistantMessage += data.content;
+                          
+                          // If this is the first chunk, add a new assistant message
+                          if (!lastAssistantMessageId) {
+                            lastAssistantMessageId = getNowId();
+                            console.log('[Frontend Debug] 🆕 CREATING NEW ASSISTANT MESSAGE:', {
+                              id: lastAssistantMessageId,
+                              content: assistantMessage,
+                              messageCount: messages.length + 1
+                            });
+                            
+                            setMessages(prev => {
+                              const newMessages = [
+                                ...prev,
+                                {
+                                  id: lastAssistantMessageId || getNowId(),
+                                  role: 'assistant',
+                                  content: assistantMessage,
+                                  timestamp: new Date()
+                                }
+                              ];
+                              console.log('[Frontend Debug] 📋 UPDATED MESSAGES ARRAY:', {
+                                oldLength: prev.length,
+                                newLength: newMessages.length,
+                                lastMessage: newMessages[newMessages.length - 1]
+                              });
+                              return newMessages;
+                            });
+                          } else {
+                            // Update the existing assistant message
+                            console.log('[Frontend Debug] 🔄 UPDATING EXISTING MESSAGE:', {
+                              messageId: lastAssistantMessageId,
+                              newContent: assistantMessage
+                            });
+                            
+                            setMessages(prev => {
+                              const updatedMessages = prev.map(msg => 
+                                msg.id === lastAssistantMessageId 
+                                  ? { ...msg, content: assistantMessage }
+                                  : msg
+                              );
+                              console.log('[Frontend Debug] 📋 UPDATED MESSAGES ARRAY:', {
+                                messageCount: updatedMessages.length,
+                                updatedMessage: updatedMessages.find(m => m.id === lastAssistantMessageId)
+                              });
+                              return updatedMessages;
+                            });
+                          }
+                        } else if (data.type === 'actions') {
+                          // This is an actions message with route 'chat' - not an error, just actions
+                          console.log('[Frontend Debug] ✅ CHAT ROUTE ACTIONS:', {
+                            actionCount: data.actions?.length || 0,
+                            actions: data.actions
+                          });
+                        } else {
+                          // This might be an unexpected message type
+                          console.log('[Frontend Debug] ⚠️ UNEXPECTED CHAT ROUTE MESSAGE TYPE:', {
+                            type: data.type,
+                            hasContent: !!data.content,
+                            hasActions: !!data.actions,
+                            data: data
+                          });
+                        }
+                      }
+                    } catch (e) {
+                      console.log('[Frontend Debug] Failed to parse streaming data:', {
+                        error: e.message,
+                        dataContent: dataContent,
+                        line: line
+                      });
+                    }
               }
-            } catch (e) {}
+            }
           }
         }
-      }
-    } finally {
-      reader.releaseLock();
-      // Reset editing state if no actions were processed
-      if (actions.length === 0) {
-        setIsEditingSchema(false);
-      }
+      } else {
+        const errorText = await response.text();
+        console.error('[Frontend Debug] Backend error:', errorText);
+        setConsoleOutput(prev => [...prev, `❌ Backend error: ${response.status} - ${errorText}`]);
+        }
+      } catch (error) {
+      console.error('[Frontend Debug] Error:', error);
+      setConsoleOutput(prev => [...prev, `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`]);
     }
-    // Process actions after streaming is complete
-    console.log('[Frontend] Processing actions:', actions);
-    setConsoleOutput(prev => [...prev, `🔍 Processing AI agent actions...`]);
-    
-    if (actions && Array.isArray(actions)) {
+
+    // Process any actions received
+    if (actions && actions.length > 0) {
       for (const action of actions) {
         console.log('[Frontend] Processing action:', action);
-        setConsoleOutput(prev => [...prev, `⚙️ Processing action: ${action.type}`]);
         
-        if (action.status === 'complete' && action.data) {
-          switch (action.type) {
-            case 'generate_schema': {
-              console.log('[Frontend] Processing generate_schema action:', action.data);
-              console.log('[Frontend] WARNING: Received generate_schema action when schema should be edited!');
-              
-              setConsoleOutput(prev => [...prev, `🎯 Processing schema generation action`]);
-              
-              // Replace existing schema or create new one (maintain only one schema)
+        if (action.type === 'generate_schema' && action.status === 'complete') {
+          const schemaData = action.data;
+          if (schemaData) {
               const newSchema = {
-                id: Date.now().toString(),
-                name: action.data.name || 'Generated Schema',
-                schema: action.data,
-                namespaceId: namespace?.['namespace-id'] || '',
-                timestamp: action.data.timestamp || new Date()
-              };
-              
-              console.log('[Frontend] Setting schema (replacing existing):', newSchema);
-              setSchemas([newSchema]); // Replace all schemas with just this one
-              setRawSchemas([{ id: newSchema.id, content: JSON.stringify(action.data, null, 2) }]); // Replace all raw schemas
-              setActiveTab('schema');
-              
-              setConsoleOutput(prev => [...prev, `✅ Schema generated successfully!`]);
-              setConsoleOutput(prev => [...prev, `📋 Schema name: ${newSchema.name}`]);
-              setConsoleOutput(prev => [...prev, `🆔 Schema ID: ${newSchema.id}`]);
-              setConsoleOutput(prev => [...prev, `📏 Schema size: ${JSON.stringify(action.data).length} characters`]);
-              
-              setLiveSchema('');
-              setIsStreamingSchema(false);
-              break;
-            }
-            case 'edit_schema': {
-              console.log('[Frontend] Processing edit_schema action:', action.data);
-              setConsoleOutput(prev => [...prev, `🎯 Processing schema editing action`]);
-              
-              // Update the existing schema with the edited version
-              if (schemas.length > 0) {
-                const updatedSchema = {
-                  ...schemas[0], // Use the first (and only) schema
-                  schema: action.data,
-                  edited: true,
-                  lastEdited: new Date()
-                };
-                setSchemas([updatedSchema]); // Keep only one schema
-                // Update the raw schema content
-                const updatedRawSchema = {
-                  ...rawSchemas[0], // Use the first (and only) raw schema
-                  content: JSON.stringify(action.data, null, 2)
-                };
-                setRawSchemas([updatedRawSchema]); // Keep only one raw schema
-                setActiveTab('schema');
-                
-                setConsoleOutput(prev => [...prev, `✅ Schema edited successfully!`]);
-                setConsoleOutput(prev => [...prev, `📋 Updated schema: ${updatedSchema.name}`]);
-                setConsoleOutput(prev => [...prev, `📏 New schema size: ${JSON.stringify(action.data).length} characters`]);
-                
-                setLiveSchema('');
-                setIsStreamingSchema(false);
-                setIsEditingSchema(false);
-              }
-              break;
-            }
-            case 'generate_api': {
-              // Parse OpenAPI spec and extract endpoints
-              const openApi = action.data;
-              console.log('🔍 Received generate_api action with data:', openApi);
-              const endpoints = [];
-              if (openApi && openApi.paths) {
-                for (const path in openApi.paths) {
-                  for (const method in openApi.paths[path]) {
-                    const endpoint = {
-                      path,
-                      method: method.toUpperCase(),
-                      summary: openApi.paths[path][method].summary || '',
-                      description: openApi.paths[path][method].description || '',
-                      operation: openApi.paths[path][method]
-                    };
-                    endpoints.push(endpoint);
-                    console.log('📡 Extracted endpoint from generate_api:', endpoint);
-                  }
-                }
-              }
-              const newApi = {
-                id: Date.now().toString(),
-                name: openApi.info?.title || 'Generated API',
-                openApi, // store the full spec for Swagger UI etc.
-                endpoints,
-                timestamp: new Date()
-              };
-              setApiEndpoints((prev: any[]) => [...prev, newApi]);
-              setActiveTab('api');
-              setConsoleOutput((prev: string[]) => [...prev, '✅ API generated successfully']);
-              break;
-            }
-            case 'generate_code': {
-              // Trigger backend code generation and update Files tab
-              setConsoleOutput((prev: string[]) => [...prev, '🚀 Generating backend code...']);
-              // Call backend codegen endpoint
-              fetch(`${API_BASE_URL}/code-generation/generate-backend`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  namespaceId: namespace['namespace-id'],
-                  schemas: schemas.map(s => s.schema),
-                  apis: apiEndpoints,
-                  projectType: 'nodejs',
-                  namespaceName: namespace['namespace-name'] || 'Project'
-                })
-              })
-                .then(res => res.json())
-                .then(data => {
-                  if (data.success) {
-                    setConsoleOutput(prev => [...prev, `✅ Generated ${data.files.length} files successfully!`]);
-                    refreshFileTree();
-                    setActiveTab('files');
-                  } else {
-                    setConsoleOutput(prev => [...prev, `❌ Code generation failed: ${data.error}`]);
-                  }
-                })
-                .catch(err => {
-                  setConsoleOutput(prev => [...prev, `❌ Error generating code: ${err.message}`]);
-                });
-              break;
-            }
-            case 'test':
-              setConsoleOutput((prev: string[]) => [...prev, '✅ API testing completed']);
-              if (action.data) {
-                setConsoleOutput((prev: string[]) => [...prev, ...action.data.map((r: any) => `- ${r.endpoint}: ${r.status}`)]);
-              }
-              setActiveTab('console');
-              break;
-            case 'save':
-              setConsoleOutput((prev: string[]) => [...prev, '✅ Items saved to namespace']);
-              if (action.data) {
-                setConsoleOutput((prev: string[]) => [...prev, ...action.data.map((item: any) => `- ${item.type}: ${item.name} (${item.status})`)]);
-              }
-              setActiveTab('console');
-              break;
-            default:
-              setConsoleOutput((prev: string[]) => [...prev, `ℹ️ Action: ${action.type}`]);
-              break;
-          }
-        } else if (action.status === 'error') {
-          setConsoleOutput((prev: string[]) => [...prev, `❌ Error in ${action.type}: ${action.error}`]);
-          setActiveTab('console');
-        }
-      }
-    }
-    // Fallback: Try to extract schema from the assistant's message if no actions were processed
-    if ((!actions || actions.length === 0) && assistantMessage) {
-      console.log('[Frontend] No actions received, trying to extract schema from message');
-      try {
-        // Look for JSON code blocks in the assistant's message
-        const jsonMatch = assistantMessage.match(/```json\s*([\s\S]*?)\s*```/i) || 
-                         assistantMessage.match(/```\s*([\s\S]*?)\s*```/i) ||
-                         assistantMessage.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const jsonStr = jsonMatch[1] || jsonMatch[0];
-          const schemaData = JSON.parse(jsonStr);
-          // Check if this looks like a schema (has properties or type)
-          if (schemaData && (schemaData.properties || schemaData.type)) {
-            console.log('[Frontend] Extracted schema from message:', schemaData);
-            const newSchema = {
-              id: Date.now().toString(),
-              name: 'Generated Schema',
+              id: getNowId(),
+              schemaName: `Generated Schema ${schemas.length + 1}`,
               schema: schemaData,
-              namespaceId: namespace?.['namespace-id'] || '',
+              content: schemaData,
+              saved: false,
               timestamp: new Date()
             };
-            setSchemas((prev) => [...prev, newSchema]);
-            setRawSchemas((prev) => [...prev, { id: newSchema.id, content: JSON.stringify(schemaData, null, 2) }]);
-            setActiveTab('schema');
-            setConsoleOutput((prev) => [...prev, '✅ Schema extracted from message successfully']);
-            setLiveSchema('');
+            setSchemas(prev => [...prev, newSchema]);
+            setSchemaNames(prev => ({ ...prev, [newSchema.id]: newSchema.schemaName }));
+              setLiveSchema('');
+              setIsStreamingSchema(false);
+            setConsoleOutput(prev => [...prev, `✅ Schema generated and added to Schema tab`]);
           }
-        }
-      } catch (e) {
-        console.log('[Frontend] Failed to extract schema from message:', e);
-      }
-    }
-  };
-
-  const processStreamedContent = async (content: string, originalMessage: string) => {
-    // Check if this is a schema generation request
-    if (originalMessage.toLowerCase().includes('schema') || content.includes('"$schema"') || content.includes('"type": "object"')) {
-      try {
-        // Try to parse as JSON schema
-        const schemaData = JSON.parse(content);
-        const newSchema = {
-          id: Date.now().toString(),
-          name: 'Generated Schema',
-          schema: schemaData,
-          timestamp: new Date()
-        };
-        setSchemas(prev => [...prev, newSchema]);
-        setRawSchemas(prev => [...prev, { id: newSchema.id, content: JSON.stringify(schemaData, null, 2) }]);
-        setActiveTab('schema');
-        setConsoleOutput(prev => [...prev, '✅ Schema generated successfully']);
-        return;
-      } catch (e) {
-        // Not valid JSON, continue with other processing
-      }
-    }
-
-    // Check if this is an API generation request
-    if (originalMessage.toLowerCase().includes('api') || content.includes('endpoints') || content.includes('method') || content.includes('openapi')) {
-      try {
-        const apiData = JSON.parse(content);
-        
-        // Check if this is an OpenAPI spec (has paths object)
-        if (apiData.paths && typeof apiData.paths === 'object') {
-          console.log('🔍 Parsing OpenAPI spec:', apiData);
-          // Parse OpenAPI spec and extract endpoints
-          const endpoints = [];
-          for (const path in apiData.paths) {
-            for (const method in apiData.paths[path]) {
-              const endpoint = {
-                path,
-                method: method.toUpperCase(),
-                summary: apiData.paths[path][method].summary || '',
-                description: apiData.paths[path][method].description || '',
-                operation: apiData.paths[path][method]
-              };
-              endpoints.push(endpoint);
-              console.log('📡 Extracted endpoint:', endpoint);
-            }
+        } else if (action.type === 'edit_schema' && action.status === 'complete') {
+          const schemaData = action.data;
+          if (schemaData) {
+            // Update the existing schema
+            setSchemas(prev => prev.map(schema => 
+              schema.id === currentSchema?.id 
+                ? { ...schema, schema: schemaData, content: schemaData, saved: false }
+                : schema
+            ));
+                setLiveSchema('');
+                setIsStreamingSchema(false);
+            setConsoleOutput(prev => [...prev, `✅ Schema edited and updated in Schema tab`]);
           }
-          const newApi = {
-            id: Date.now().toString(),
-            name: apiData.info?.title || 'Generated API',
-            openApi: apiData, // store the full spec for Swagger UI etc.
-            endpoints,
-            timestamp: new Date()
-          };
-          setApiEndpoints(prev => [...prev, newApi]);
-          setActiveTab('api');
-          setConsoleOutput(prev => [...prev, '✅ API generated successfully']);
-          return;
-        } else if (apiData.endpoints || Array.isArray(apiData)) {
-          // Handle direct endpoints array format
-          const endpoints = Array.isArray(apiData) ? apiData : apiData.endpoints;
-          const newApi = {
-            id: Date.now().toString(),
-            name: 'Generated API',
-            endpoints,
-            timestamp: new Date()
-          };
-          setApiEndpoints(prev => [...prev, newApi]);
-          setActiveTab('api');
-          setConsoleOutput(prev => [...prev, '✅ API generated successfully']);
-          return;
-        }
-      } catch (e) {
-        // Not valid JSON, continue with other processing
-      }
-    }
-
-    // Extract file operations from streamed content
-    const fileMatch = content.match(/file:\s*(.+)/i);
-    const codeMatch = content.match(/```[\s\S]*?```/g);
-    
-    if (fileMatch || codeMatch) {
-      // Extract file path and content
-      let filePath = '';
-      let fileContent = '';
-      
-      if (fileMatch) {
-        filePath = fileMatch[1].trim();
-      }
-      
-      if (codeMatch) {
-        fileContent = codeMatch[0].replace(/```[\w]*\n?/g, '').trim();
-      }
-      
-      // Create file in workspace
-      if (filePath && fileContent && namespace?.['namespace-id']) {
-        try {
-          const fileResponse = await fetch('/unified/file-operations', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              operation: 'create',
-              namespaceId: namespace['namespace-id'],
-              filePath,
-              content: fileContent
-            })
-          });
+        } else if (action.type === 'error' && action.status === 'failed') {
+          // Handle error actions with better user messaging
+          console.log('[Frontend] Processing error action:', action);
           
-          if (fileResponse.ok) {
-            // Update file tree
-            await refreshFileTree();
-            // Switch to files tab to show the new file
-            setActiveTab('files');
-            setConsoleOutput(prev => [...prev, `✅ File ${filePath} created successfully`]);
-          }
-        } catch (error) {
-          const err = error as Error;
-          setConsoleOutput((prev) => [...prev, `❌ Error: ${err.message}`]);
+          let errorMessage = action.message || 'An unknown error occurred';
+          let errorType = action.errorType || 'unknown_error';
+          
+          // Add user-friendly error message to chat
+          const errorChatMessage = {
+            id: getNowId(),
+            role: 'assistant',
+            content: `❌ **Error**: ${errorMessage}\n\n${getErrorSuggestions(errorType)}`,
+            timestamp: new Date()
+          };
+          
+          setMessages(prev => [...prev, errorChatMessage]);
+          setConsoleOutput(prev => [...prev, `❌ Error: ${errorMessage} (Type: ${errorType})`]);
         }
       }
-    }
-
-    // If no specific processing was done, add to console
-    if (content.trim()) {
-      setConsoleOutput(prev => [...prev, `📝 Generated: ${content.substring(0, 100)}...`]);
     }
   };
 
   const refreshFileTree = async () => {
-    if (!namespace?.['namespace-id']) return;
+    if (!localNamespace?.['namespace-id']) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/code-generation/files/${namespace['namespace-id']}`);
+      const response = await fetch(`${API_BASE_URL}/code-generation/files/${localNamespace?.['namespace-id'] || ''}`);
       if (response.ok) {
         const data = await response.json();
         if (data.files) {
@@ -1837,10 +1999,10 @@ What would you like to work on today?`,
   };
 
   const readFileContent = async (filePath: string) => {
-    if (!namespace?.['namespace-id']) return;
+    if (!localNamespace?.['namespace-id']) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/code-generation/files/${namespace['namespace-id']}/${encodeURIComponent(filePath)}`);
+      const response = await fetch(`${API_BASE_URL}/code-generation/files/${localNamespace?.['namespace-id'] || ''}/${encodeURIComponent(filePath)}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -1861,10 +2023,14 @@ What would you like to work on today?`,
         const newSchema = {
           id: Date.now().toString(),
           name: 'Generated Schema',
+          schemaName: 'Generated Schema',
           schema: output,
+          content: output,
+          saved: false,
           timestamp: new Date()
         };
         setSchemas(prev => [...prev, newSchema]);
+        setSchemaNames(prev => ({ ...prev, [newSchema.id]: newSchema.schemaName }));
         setRawSchemas(prev => [...prev, { id: newSchema.id, content: output }]);
         setActiveTab('schema');
         // Removed auto-save to backend for session-only schemas
@@ -1965,10 +2131,10 @@ What would you like to work on today?`,
             style={{ paddingLeft: `${level * 16 + 8}px` }}
             onClick={async () => {
               setSelectedFile(file);
-              if (file.type === 'file' && namespace?.['namespace-id']) {
+              if (file.type === 'file' && localNamespace?.['namespace-id']) {
                 // Load actual file content
                 try {
-                  const response = await fetch(`${API_BASE_URL}/code-generation/files/${namespace['namespace-id']}/${encodeURIComponent(file.path)}`);
+                  const response = await fetch(`${API_BASE_URL}/code-generation/files/${localNamespace?.['namespace-id'] || ''}/${encodeURIComponent(file.path)}`);
                   
                   if (response.ok) {
                     const data = await response.json();
@@ -2052,7 +2218,7 @@ What would you like to work on today?`,
   };
 
   const handleSaveApiToNamespace = async (apiData: any) => {
-    if (!namespace?.['namespace-id'] || !apiData.canSaveToNamespace) {
+    if (!localNamespace?.['namespace-id'] || !apiData.canSaveToNamespace) {
       console.warn('Cannot save API: missing namespace or save not allowed');
       return;
     }
@@ -2063,7 +2229,7 @@ What would you like to work on today?`,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          namespaceId: namespace['namespace-id'],
+          namespaceId: localNamespace?.['namespace-id'] || '',
           apiData: apiData
         })
       });
@@ -2180,7 +2346,7 @@ What would you like to work on today?`,
       setConsoleOutput(prev => [...prev, `📊 Using ${currentSchemas.length} schemas and ${currentApis.length} APIs from workspace`]);
       
       const requestBody = {
-        namespaceId: namespace['namespace-id'],
+        namespaceId: localNamespace?.['namespace-id'] || '',
         schemas: currentSchemas,
         apis: currentApis,
         projectType,
@@ -2625,8 +2791,11 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
     
     for (let i = 0; i < functions.length; i++) {
       const func = functions[i];
+      const nameToDeploy = (lambdaForm.functionName && lambdaForm.functionName.trim())
+        ? lambdaForm.functionName.trim()
+        : func.name;
       
-      setConsoleOutput(prev => [...prev, `📦 Deploying Lambda function: ${func.name}`]);
+      setConsoleOutput(prev => [...prev, `📦 Deploying Lambda function: ${nameToDeploy}`]);
       setConsoleOutput(prev => [...prev, `   Runtime: ${func.runtime}`]);
       setConsoleOutput(prev => [...prev, `   Handler: ${func.handler}`]);
       setConsoleOutput(prev => [...prev, `   Memory: ${func.memory} MB`]);
@@ -2635,7 +2804,7 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
       try {
         // Use mock deployment for now to avoid AWS role issues
         const deployPayload = {
-          functionName: func.name,
+          functionName: nameToDeploy,
           code: func.code,
           runtime: func.runtime,
           handler: func.handler,
@@ -2660,16 +2829,58 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
         
         console.log('Deploy response status:', deployResponse.status);
         
+        let deployResult: any = null;
         if (!deployResponse.ok) {
-          const errorText = await deployResponse.text();
+          // If retryable from backend, try once
+          if (deployResponse.status === 503) {
+            setConsoleOutput(prev => [...prev, '⏳ Transient AWS error (503). Retrying once...']);
+            await new Promise(r => setTimeout(r, 1200));
+            const retryResp = await fetch(`${API_BASE_URL}/lambda/deploy`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(deployPayload)
+            });
+            if (!retryResp.ok) {
+              let errTxt;
+              try { const jd = await retryResp.json(); errTxt = jd.details || jd.error || `HTTP ${retryResp.status}`; } catch { errTxt = await retryResp.text(); }
+              console.error('Deploy retry error:', errTxt);
+              throw new Error(`Deployment failed: ${errTxt}`);
+            }
+            const retryData = await retryResp.json();
+            if (retryData) {
+              deployResult = retryData;
+              console.log('Deploy result:', deployResult);
+              if (deployResult.success) {
+                setConsoleOutput(prev => [...prev, `✅ Successfully deployed: ${func.name}`]);
+                setConsoleOutput(prev => [...prev, `   Function ARN: ${deployResult.functionArn}`]);
+                setConsoleOutput(prev => [...prev, `   Code Size: ${deployResult.codeSize} bytes`]);
+                if (deployResult.apiGatewayUrl) {
+                  setConsoleOutput(prev => [...prev, `✅ API Gateway created automatically!`]);
+                  setConsoleOutput(prev => [...prev, `🌐 API Gateway URL: ${deployResult.apiGatewayUrl}`]);
+                  setConsoleOutput(prev => [...prev, `   Endpoint: ${deployResult.apiGatewayUrl}/${deployResult.functionName || func.name}`]);
+                }
+                // continue to summary below
+                // intentionally fall-through
+              }
+            }
+          }
+          let errorText;
+          try {
+            const errorData = await deployResponse.json();
+            errorText = errorData.details || errorData.error || `HTTP ${deployResponse.status}`;
+          } catch (e) {
+            errorText = await deployResponse.text();
+          }
           console.error('Deploy error response:', errorText);
-          throw new Error(`Deployment failed: ${deployResponse.status} - ${errorText}`);
+          throw new Error(`Deployment failed: ${errorText}`);
         }
         
-        const deployResult = await deployResponse.json();
+        if (!deployResult) {
+          deployResult = await deployResponse.json();
+        }
         console.log('Deploy result:', deployResult);
         
-        if (deployResult.success) {
+          if (deployResult && deployResult.success) {
           setConsoleOutput(prev => [...prev, `✅ Successfully deployed: ${func.name}`]);
           setConsoleOutput(prev => [...prev, `   Function ARN: ${deployResult.functionArn}`]);
           setConsoleOutput(prev => [...prev, `   Code Size: ${deployResult.codeSize} bytes`]);
@@ -2677,14 +2888,14 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
           // API Gateway is now created automatically during deployment
           if (deployResult.apiGatewayUrl) {
             setConsoleOutput(prev => [...prev, `✅ API Gateway created automatically!`]);
-            setConsoleOutput(prev => [...prev, `🌐 API Gateway URL: ${deployResult.apiGatewayUrl}`]);
-            setConsoleOutput(prev => [...prev, `   Endpoint: ${deployResult.apiGatewayUrl}/${func.name}`]);
+              setConsoleOutput(prev => [...prev, `🌐 API Gateway URL: ${deployResult.apiGatewayUrl}`]);
+              setConsoleOutput(prev => [...prev, `   Endpoint: ${deployResult.apiGatewayUrl}/${deployResult.functionName || func.name}`]);
             setConsoleOutput(prev => [...prev, `   API ID: ${deployResult.apiId}`]);
             
             // Store the deployed endpoint for display
             setDeployedEndpoints(prev => [...prev, {
-              functionName: func.name,
-              apiGatewayUrl: `${deployResult.apiGatewayUrl}/${func.name}`,
+              functionName: deployResult.functionName || func.name,
+              apiGatewayUrl: `${deployResult.apiGatewayUrl}/${deployResult.functionName || func.name}`,
               functionArn: deployResult.functionArn,
               deployedAt: new Date()
             }]);
@@ -2692,7 +2903,7 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
             // Add success message to chat
             addMessage({
               role: 'assistant',
-              content: `✅ Lambda function "${func.name}" deployed successfully!\n\n🌐 **API Gateway URL:** ${deployResult.apiGatewayUrl}/${func.name}\n\nYou can now invoke your function via HTTP POST requests to this endpoint.`
+              content: `✅ Lambda function "${deployResult.functionName || func.name}" deployed successfully!\n\n🌐 **API Gateway URL:** ${deployResult.apiGatewayUrl}/${deployResult.functionName || func.name}\n\nYou can now invoke your function via HTTP POST requests to this endpoint.`
             });
           } else if (deployResult.apiGatewayError) {
             setConsoleOutput(prev => [...prev, `❌ API Gateway creation failed: ${deployResult.apiGatewayError}`]);
@@ -2718,7 +2929,7 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
           setConsoleOutput(prev => [...prev, `🧪 Testing deployed function: ${func.name}`]);
           
           const testPayload = {
-            functionName: func.name,
+            functionName: deployResult.functionName || func.name,
             payload: {
               test: true,
               message: 'Hello from AI Agent Workspace!',
@@ -2732,7 +2943,7 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
           // Test via API Gateway (should always be available now)
           let testResponse;
           if (deployResult.apiGatewayUrl) {
-            const apiUrl = `${deployResult.apiGatewayUrl}/${func.name}`;
+              const apiUrl = `${deployResult.apiGatewayUrl}/${deployResult.functionName || func.name}`;
             setConsoleOutput(prev => [...prev, `🧪 Testing via API Gateway: ${apiUrl}`]);
             testResponse = await fetch(apiUrl, {
               method: 'POST',
@@ -2786,22 +2997,14 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
     setConsoleOutput(prev => [...prev, '==================']);
     
     // Collect all API Gateway URLs for the summary
-    const apiGatewayUrls = [];
-    
-    lambdaFunctions.forEach((func, index) => {
-      setConsoleOutput(prev => [...prev, `${index + 1}. ${func.name}:`]);
-      setConsoleOutput(prev => [...prev, `   - Runtime: ${func.runtime}`]);
-      setConsoleOutput(prev => [...prev, `   - Handler: ${func.handler}`]);
-      setConsoleOutput(prev => [...prev, `   - Memory: ${func.memory} MB`]);
-      setConsoleOutput(prev => [...prev, `   - Timeout: ${func.timeout} seconds`]);
-      
-      // Show API Gateway URL if available
-      if (deployResult && deployResult.apiGatewayUrl) {
-        const apiUrl = `${deployResult.apiGatewayUrl}/${func.name}`;
-        setConsoleOutput(prev => [...prev, `   - API Gateway: ${apiUrl}`]);
-        apiGatewayUrls.push({ functionName: func.name, url: apiUrl });
-      }
-    });
+    const apiGatewayUrls: Array<{ functionName: string; url: string }> = [];
+
+    // Include any previously stored successful endpoints
+    if (deployedEndpoints && deployedEndpoints.length > 0) {
+      deployedEndpoints.forEach(ep => {
+        apiGatewayUrls.push({ functionName: ep.functionName, url: ep.apiGatewayUrl });
+      });
+    }
     
     setConsoleOutput(prev => [...prev, '==================']);
     
@@ -3002,6 +3205,26 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
     }
   }
 
+  // Function to download individual files
+  const downloadFile = (fileName: string, content: string, mimeType: string = 'application/json') => {
+    try {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      setConsoleOutput(prev => [...prev, `📥 Downloaded: ${fileName}`]);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      setConsoleOutput(prev => [...prev, `❌ Error downloading ${fileName}: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+    }
+  };
+
   async function saveLambdaToNamespace() {
     if (!generatedLambdaCode || !lambdaForm.functionName) {
       alert('Please generate Lambda code and provide a function name first');
@@ -3093,23 +3316,40 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           </div>
           <div>
             <h2 className="font-semibold text-gray-900">AI Assistant</h2>
-            <p className="text-sm text-gray-500">
-              {namespace ? (
+            <div className="text-sm text-gray-500">
+              {(localNamespace || droppedNamespaces.length > 0) ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-blue-600 font-medium">Working with:</span>
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                      {1 + droppedNamespaces.length} Namespace(s)
+                    </span>
+                  </div>
+                  {localNamespace && (
+                    <div className="text-xs text-gray-600 ml-2">
+                      • {localNamespace['namespace-name']} (current)
+                    </div>
+                  )}
+                  {droppedNamespaces.map((ns, index) => (
+                    <div key={ns['namespace-id'] || ns.id || index} className="text-xs text-gray-600 ml-2">
+                      • {ns['namespace-name'] || ns.name || 'Unknown Namespace'}
+                    </div>
+                  ))}
+                </div>
+              ) : (
                 <span className="flex items-center gap-2">
-                  <span className="text-blue-600 font-medium">Working with: {namespace['namespace-name']}</span>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                    Context Active
+                  <span>General Development</span>
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                    Namespace Generation Mode
                   </span>
                 </span>
-              ) : (
-                'General Development'
               )}
               {sessionId && (
                 <span className="ml-2 text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
                   Memory Active
                 </span>
               )}
-            </p>
+            </div>
           </div>
         </div>
         <button
@@ -3237,36 +3477,24 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         {activeTab === 'api' && (
           <div className="h-full overflow-y-auto">
             <div className="mb-4">
-              <h3 className="font-medium text-lg mb-2">API Generation & Management</h3>
+              <h3 className="font-medium text-lg mb-2">API Method Creation & Management</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Use the chat below to generate and manage APIs. The AI will create API endpoints, routes, and documentation based on your descriptions.
+                Create reusable API methods from API Gateway URLs with OpenAPI specifications. 
+                Generate methods that can be overridden with different URLs and saved to your namespace.
                 <br />
-                <span className="text-blue-600 font-medium">💡 Tip:</span> Drag schemas from the Schema tab to provide context for API generation!
+                <span className="text-blue-600 font-medium">💡 Tip:</span> Use deployed Lambda endpoints or any API Gateway URL to create methods!
               </p>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h4 className="font-medium text-green-800 mb-2">Instructions:</h4>
-                <ul className="text-sm text-green-700 space-y-1">
-                  <li>• Describe the API endpoints you want to create</li>
-                  <li>• Specify HTTP methods (GET, POST, PUT, DELETE)</li>
-                  <li>• Include authentication and validation requirements</li>
-                  <li>• The AI will generate complete API code and documentation</li>
-                </ul>
-              </div>
             </div>
             
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h4 className="font-medium mb-2">Generated API Code</h4>
-              <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto" style={{ minHeight: 120 }}>
-                {generatedApiCode || '// API code will appear here after generation'}
-              </pre>
-            </div>
-            
-            <div className="mt-4 bg-white border border-gray-200 rounded-lg p-4">
-              <h4 className="font-medium mb-2">API Documentation</h4>
-              <div className="bg-gray-100 p-3 rounded text-xs overflow-x-auto" style={{ minHeight: 80 }}>
-                {apiDocumentation || '// API documentation will appear here after generation'}
-              </div>
-            </div>
+            {/* API Method Creation Agent */}
+            <APIMethodCreationAgent 
+              namespace={localNamespace}
+              deployedEndpoints={deployedEndpoints}
+              onMethodCreated={(method) => {
+                console.log('New method created:', method);
+                // Optionally refresh namespace data or show success message
+              }}
+            />
           </div>
         )}
         {activeTab === 'web-scraping' && (
@@ -3633,7 +3861,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                   <span className="text-sm font-medium text-blue-700">Live Schema Generation</span>
                 </div>
                 <pre className="text-sm overflow-x-auto bg-white p-3 rounded border">
-                  {liveSchema || 'Starting schema generation...'}
+                  {liveSchema || 'Waiting for schema...'}
                 </pre>
               </div>
             )}
@@ -3643,13 +3871,9 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             ) : (
               <div className="space-y-4">
                 {schemas.map((schema: any, index: number) => (
-                  <div 
+                  <div
                     key={schema.id} 
-                    className={`border border-gray-200 rounded-lg p-4 ${isEditingSchema && index === 0 ? 'bg-blue-50 border-blue-200' : 'bg-white'} cursor-move hover:shadow-md transition-shadow`}
-                    draggable
-                    onDragStart={(e) => handleSchemaDragStart(e, schema)}
-                    onDragEnd={handleSchemaDragEnd}
-                    title="Drag this schema to the chat area for context"
+                    className={`border border-gray-200 rounded-lg p-4 ${isEditingSchema && index === 0 ? 'bg-blue-50 border-blue-200' : 'bg-white'} hover:shadow-md transition-shadow`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -4059,16 +4283,47 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
 
       {/* Chat Area */}
       <div 
-        ref={schemaDropRef}
+        ref={sidebarSchemaDropRef as any}
         className={`flex-1 overflow-y-auto p-4 space-y-4 bg-white transition-colors ${
-          isSchemaDropOver ? 'bg-purple-50 border-2 border-dashed border-purple-300' : ''
+          isSidebarSchemaDropOver ? 'bg-purple-50 border-2 border-dashed border-purple-300' : ''
         }`}
       >
-        {isSchemaDropOver && (
+        {isSidebarSchemaDropOver && (
           <div className="text-center py-8 text-purple-600 font-medium">
             Drop schema here to add context
           </div>
         )}
+        
+        {/* Namespace Generation Mode Hint */}
+        {!namespace && messages.length === 0 && !isSidebarSchemaDropOver && (
+          <div className="text-center py-8">
+            <div className="max-w-md mx-auto bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="p-3 rounded-full bg-blue-100">
+                  <Bot className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">🚀 Namespace Generation Mode</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Create complete namespaces from scratch! Describe what you want to build and I'll generate:
+              </p>
+              <div className="text-left text-xs text-gray-500 space-y-1">
+                <div>• <strong>Schemas</strong> - Data models and structures</div>
+                <div>• <strong>API Methods</strong> - REST endpoints</div>
+                <div>• <strong>Account Types</strong> - Authentication systems</div>
+                <div>• <strong>Webhooks</strong> - Event integrations</div>
+                <div>• <strong>Lambda Functions</strong> - Serverless logic</div>
+              </div>
+              <div className="mt-4 p-3 bg-white rounded border border-blue-100">
+                <p className="text-xs text-gray-600 font-medium mb-1">Try prompts like:</p>
+                <p className="text-xs text-blue-600">"Create a complete e-commerce system"</p>
+                <p className="text-xs text-blue-600">"Generate a social media platform namespace"</p>
+                <p className="text-xs text-blue-600">"Build a project management tool"</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {messages.map((message) => (
           <div
             key={message.id}
@@ -4081,7 +4336,28 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                   : 'bg-gray-100 text-gray-900'
               }`}
             >
-              <div className="whitespace-pre-wrap">{message.content}</div>
+              <div 
+                className="whitespace-pre-wrap"
+                onClick={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.tagName === 'A' && target.getAttribute('href')?.startsWith('#download:')) {
+                    e.preventDefault();
+                    const fileName = target.getAttribute('href')?.replace('#download:', '');
+                    if (fileName) {
+                      const file = uploadedFiles.find(f => f.name === fileName);
+                      if (file && file.content) {
+                        downloadFile(file.name, file.content, file.type);
+                      }
+                    }
+                  }
+                }}
+                dangerouslySetInnerHTML={{
+                  __html: message.content.replace(
+                    /\[📄 Download ([^\]]+)\]\(#download:([^)]+)\)/g,
+                    '<a href="#download:$2" style="color: #3b82f6; text-decoration: underline; cursor: pointer;">📄 Download $1</a>'
+                  )
+                }}
+              />
               <div className="text-xs opacity-70 mt-1">
                 {message.timestamp.toLocaleTimeString()}
               </div>
@@ -4164,39 +4440,75 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         </div>
       )}
 
-      {/* File Upload Drop Zone */}
+      {/* Namespace Context Drop Target */}
       <div
-        className={`border-t border-gray-200 p-4 bg-white ${
-          isDragOver ? 'bg-blue-50 border-blue-300' : ''
-        } ${isDraggingSchema ? 'bg-purple-50 border-purple-300' : ''}`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
+        ref={namespaceDropRef as any}
+        className={`mb-2 p-3 text-sm border-2 border-dashed rounded-lg transition-colors ${
+          isNamespaceDropOver 
+            ? 'bg-blue-50 border-blue-400 text-blue-700' 
+            : 'border-blue-300 text-gray-600'
+        }`}
+        title="Drop namespaces here to add to context"
       >
-        <div className="flex items-center gap-3">
-          {/* File Upload Button */}
-          <label className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-            isUploading ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-          }`}>
-            <Upload className={`w-4 h-4 ${isUploading ? 'animate-pulse' : ''}`} />
-            <span className="text-sm">{isUploading ? 'Uploading...' : 'Upload Files'}</span>
-            <input
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
-              accept=".txt,.json,.js,.ts,.py,.java,.cpp,.c,.html,.css,.md,.xml,.yaml,.yml,.csv,.pdf,.jpg,.jpeg,.png,.gif"
-            />
-          </label>
-
-          {/* Drag & Drop Indicator */}
-          <div className="flex-1 text-center">
-            <div className={`text-sm ${isDragOver ? 'text-blue-600' : isDraggingSchema ? 'text-purple-600' : isSchemaDropOver ? 'text-purple-600' : 'text-gray-500'}`}>
-              {isDragOver ? 'Drop files here' : isDraggingSchema ? 'Drop schema here for context' : isSchemaDropOver ? 'Drop schema from sidebar here' : 'Drag & drop files here'}
-            </div>
-          </div>
+        <div className="font-medium mb-2">
+          {isNamespaceDropOver ? 'Drop namespace here' : 'Drop namespaces here to add to context'}
         </div>
+        
+        {(localNamespace || droppedNamespaces.length > 0) && (
+          <div className="space-y-1">
+            <div className="text-xs font-medium text-gray-700">Current Context:</div>
+            {localNamespace && (
+              <div className="text-xs text-gray-600 flex items-center justify-between">
+                <span>• {localNamespace['namespace-name']} (current)</span>
+              </div>
+            )}
+            {droppedNamespaces.map((ns, index) => (
+              <div key={ns['namespace-id'] || ns.id || index} className="text-xs text-gray-600 flex items-center justify-between">
+                <span>• {ns['namespace-name'] || ns.name || 'Unknown Namespace'}</span>
+                <button
+                  onClick={() => {
+                    setDroppedNamespaces(prev => prev.filter((_, i) => i !== index));
+                    addMessage({ 
+                      role: 'assistant', 
+                      content: `Removed namespace "${ns['namespace-name'] || ns.name}" from context.` 
+                    });
+                  }}
+                  className="text-red-500 hover:text-red-700 ml-2"
+                  title="Remove this namespace"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {droppedNamespaces.length > 0 && (
+              <button
+                onClick={() => {
+                  setDroppedNamespaces([]);
+                  addMessage({ 
+                    role: 'assistant', 
+                    content: 'Cleared all dropped namespaces from context.' 
+                  });
+                }}
+                className="text-xs text-red-600 hover:text-red-800 mt-2"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Schema Drop Zone */}
+      <div
+        ref={schemaDropRef as any}
+        className={`mb-2 p-3 text-sm text-gray-600 border-2 border-dashed rounded-lg transition-colors ${
+          isSchemaDropOver ? 'bg-purple-50 border-purple-400 text-purple-700' : 'border-purple-300'
+        }`}
+        title="Drop schemas from namespace sidebar here for context"
+      >
+        {isSchemaDropOver ? 'Drop schema here for context' : 'Drop schemas from namespace here'}
+      </div>
+
 
       {/* Chat Input */}
       <div className="border-t border-gray-200 p-4 bg-white">
@@ -4206,18 +4518,27 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Type your message... (Upload files or drag schemas for context)"
+            placeholder={namespace ? "Type your message... (Upload files or drag schemas for context)" : "Type your message... (Try: 'Create a namespace for...' to generate a new project)"}
             className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={1}
             disabled={isLoading}
           />
-          <button
-            onClick={handleSendMessage}
-            disabled={isLoading || !inputMessage.trim()}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send className="w-4 h-4" />
-          </button>
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={handleSendMessage}
+              disabled={isLoading || !inputMessage.trim()}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+            <button
+              onClick={testChatUI}
+              className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
+              title="Test Chat UI"
+            >
+              Test
+            </button>
+          </div>
         </div>
       </div>
 

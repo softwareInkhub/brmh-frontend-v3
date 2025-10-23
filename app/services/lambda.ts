@@ -37,7 +37,7 @@ export async function listFunctions(): Promise<LambdaResponse> {
   });
   
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/lambda/functions`);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/lambda/functions`);
     
     if (!response.ok) {
       const errorData: LambdaError = await response.json();
@@ -80,7 +80,7 @@ export async function createFunction(params: LambdaFunction): Promise<LambdaFunc
   });
 
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/lambda/functions`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/lambda/functions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

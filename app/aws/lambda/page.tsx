@@ -288,7 +288,7 @@
 
     async function loadFunctions() {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/lambda/functions`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/lambda/functions`);
         const data = await response.json();
         
         if (data.error) {
@@ -310,7 +310,7 @@
 
     async function fetchFunctionDetails(functionName: string) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/lambda/functions`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/lambda/functions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
