@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Sidebar from "./projectSidebar";
-import Navbar from "./Navbar";
+// import Navbar from "./Navbar";
 import FooterWithCollapseButton from "./FooterWithCollapseButton";
 import GlobalAIAgentButton from "./GlobalAIAgentButton";
 import { usePathname } from 'next/navigation';
@@ -26,7 +26,7 @@ export default function AppContentClient({ children }: { children: React.ReactNo
       >
         {!hideSidebar && <Sidebar />}
         <div className="flex-1 min-h-screen overflow-auto">
-          {!hideSidebar && <Navbar onMenuClick={() => setIsCollapsed(!isCollapsed)} />}
+          {/* {!hideSidebar && <Navbar onMenuClick={() => setIsCollapsed(!isCollapsed)} />} */}
           <main className="w-full min-h-screen overflow-auto">
             {children}
           </main>

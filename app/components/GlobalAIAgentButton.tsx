@@ -128,7 +128,7 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
       {/* Global Floating AI Agent Button */}
       <div
         ref={dropRef}
-        className={`fixed bottom-6 right-6 z-40 transition-all duration-300 ${
+        className={`fixed bottom-12 right-6 z-40 transition-all duration-300 ${
           isDragOver ? 'scale-110' : 'scale-100'
         }`}
         style={{ 
@@ -203,17 +203,6 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
             Test
           </div>
           
-          {/* Tooltip */}
-          <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-            AI Agent Workspace
-            <div className="text-xs text-gray-300 mt-1">
-              {currentNamespace 
-                ? `Click to open with: ${currentNamespace['namespace-name']}`
-                : 'Drag a namespace here for context'
-              }
-            </div>
-            <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-          </div>
         </button>
       </div>
 

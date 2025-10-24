@@ -264,7 +264,7 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
       }
     } catch (error) {
       console.error('Error saving method:', error);
-      alert(`Error saving method to namespace: ${error.message}`);
+      alert(`Error saving method to namespace: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setSavingMethods(prev => {
         const newSet = new Set(prev);
@@ -559,7 +559,7 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
                       <input
                         type="checkbox"
                         checked={header.required}
-                        onChange={(e) => updateCustomHeader(index, 'required', e.target.checked)}
+                        onChange={(e) => updateCustomHeader(index, 'required', e.target.checked.toString())}
                       />
                       Required
                     </label>

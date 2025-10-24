@@ -136,7 +136,7 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
     }
   }, [isResizing, dragStartX, dragStartWidth]);
   // 1. Change activeTab state to use 'lambda' instead of 'api'
-  const [activeTab, setActiveTab] = useState<'chat' | 'console' | 'lambda' | 'schema' | 'api' | 'files' | 'deployment'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'console' | 'lambda' | 'schema' | 'api' | 'files' | 'deployment' | 'web-scraping'>('chat');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -270,7 +270,7 @@ What would you like to work on today?`,
     schemas: [],
     apis: [],
     projectType: 'nodejs',
-    lastGenerated: null
+    lastGenerated: undefined
   });
   // 2. Add state for Lambda functions and Lambda creation form
   const [lambdaFunctions, setLambdaFunctions] = useState<any[]>([]);
@@ -354,11 +354,11 @@ What would you like to work on today?`,
     followLinks: true
   });
   const [isScraping, setIsScraping] = useState(false);
-  const [scrapedData, setScrapedData] = useState(null);
+  const [scrapedData, setScrapedData] = useState<any>(null);
   const [showAllScrapedData, setShowAllScrapedData] = useState(false);
   
 
-  const [scrapingLog, setScrapingLog] = useState([]);
+  const [scrapingLog, setScrapingLog] = useState<{message: any, type: string, timestamp: string}[]>([]);
   
 
   
@@ -406,7 +406,7 @@ What would you like to work on today?`,
           form.append('files', f.original, f.name);
         } else if (f.content && (f.type.startsWith('text/') || f.type === 'application/json' || f.type === 'text/markdown')) {
           const blob = new Blob([f.content], { type: f.type || 'text/plain' });
-          form.append('files', new File([blob], f.name, { type: f.type || 'text/plain' }));
+          form.append('files', new (File as any)([blob], f.name, { type: f.type || 'text/plain' }));
         }
       }
 
@@ -421,7 +421,7 @@ What would you like to work on today?`,
       }
 
       setConsoleOutput(prev => [...prev, `✅ Namespace created: ${data.namespaceId}`]);
-      addMessage({ role: 'assistant', content: `✅ Created namespace: ${data.namespaceId}`, timestamp: new Date() });
+      addMessage({ role: 'assistant', content: `✅ Created namespace: ${data.namespaceId}` });
       // Navigate to namespace page
       try {
         router.push('/namespace');
@@ -429,7 +429,7 @@ What would you like to work on today?`,
     } catch (err: any) {
       console.error('Smart generation error:', err);
       setConsoleOutput(prev => [...prev, `❌ Smart generation failed: ${err?.message || 'Unknown error'}`]);
-      addMessage({ role: 'assistant', content: `❌ Smart generation failed: ${err?.message || 'Unknown error'}`, timestamp: new Date() });
+      addMessage({ role: 'assistant', content: `❌ Smart generation failed: ${err?.message || 'Unknown error'}` });
     }
   }
 
@@ -504,8 +504,7 @@ What would you like to work on today?`,
           setTimeout(() => {
             addMessage({
               role: 'assistant',
-              content: `🎯 I detected ${schemaFiles.length} schema file(s) in your upload!\n\n**Available Actions:**\n• Type "generate lambda function" to create a Lambda using these schemas\n• Type "analyze schemas" to see detailed schema information\n• Type "combine schemas" to merge multiple schemas\n\n**Detected Schemas:**\n${schemaFiles.map((s, i) => `${i + 1}. **${s.name}** (${s.type})`).join('\n')}`,
-              timestamp: new Date()
+              content: `🎯 I detected ${schemaFiles.length} schema file(s) in your upload!\n\n**Available Actions:**\n• Type "generate lambda function" to create a Lambda using these schemas\n• Type "analyze schemas" to see detailed schema information\n• Type "combine schemas" to merge multiple schemas\n\n**Detected Schemas:**\n${schemaFiles.map((s, i) => `${i + 1}. **${s.name}** (${s.type})`).join('\n')}`
             });
           }, 1000);
         }
@@ -527,7 +526,7 @@ What would you like to work on today?`,
         if (entry.isFile) {
           entry.file((file: File) => {
             // Preserve folder structure in path within name (optional)
-            const namedFile = new File([file], pathPrefix ? `${pathPrefix}/${file.name}` : file.name, { type: file.type, lastModified: file.lastModified });
+            const namedFile = new (File as any)([file], pathPrefix ? `${pathPrefix}/${file.name}` : file.name, { type: file.type, lastModified: file.lastModified });
             collected.push(namedFile);
             resolve();
           });
@@ -740,7 +739,7 @@ What would you like to work on today?`,
     }
   };
 
-  const addScrapingLog = (message, type = 'info') => {
+  const addScrapingLog = (message: any, type = 'info') => {
     setScrapingLog(prev => [...prev, {
       message,
       type,
@@ -780,7 +779,7 @@ What would you like to work on today?`,
         addScrapingLog(`Preview failed: ${error.error}`, 'error');
       }
     } catch (error) {
-      addScrapingLog(`Preview error: ${error.message}`, 'error');
+      addScrapingLog(`Preview error: ${error instanceof Error ? error.message : String(error)}`, 'error');
     } finally {
       setIsScraping(false);
     }
@@ -857,7 +856,7 @@ What would you like to work on today?`,
         addScrapingLog(`Scrape and save failed: ${error.error}`, 'error');
       }
     } catch (error) {
-      addScrapingLog(`Scrape and save error: ${error.message}`, 'error');
+      addScrapingLog(`Scrape and save error: ${error instanceof Error ? error.message : String(error)}`, 'error');
     } finally {
       setIsScraping(false);
     }
@@ -890,7 +889,7 @@ What would you like to work on today?`,
       
       // Add a welcome message with context if workspace state exists
       setTimeout(() => {
-        if (workspaceState && (workspaceState.schemas.length > 0 || workspaceState.apis.length > 0)) {
+        if (workspaceState && workspaceState.schemas && workspaceState.apis && (workspaceState.schemas.length > 0 || workspaceState.apis.length > 0)) {
           addMessage({
             role: 'assistant',
             content: `Welcome back! I can see you have ${workspaceState.schemas.length} schemas and ${workspaceState.apis.length} APIs in your workspace. I'll help you continue building on your previous work.`
@@ -1175,8 +1174,7 @@ What would you like to work on today?`,
         // Add success message to chat
         addMessage({
           role: 'assistant',
-          content: `✅ Generated Lambda function: **${functionName}**\n\nCheck the Lambda tab to see the generated code!`,
-          timestamp: new Date()
+          content: `✅ Generated Lambda function: **${functionName}**\n\nCheck the Lambda tab to see the generated code!`
         });
         
         setConsoleOutput(prev => [...prev, `✅ Lambda function generated: ${functionName}`]);
@@ -1254,7 +1252,7 @@ What would you like to work on today?`,
         setConsoleOutput(prev => [...prev, `✅ Generated ${Object.keys(result.documents).length} documents`]);
         
         // Create downloadable files for each document
-        const documentFiles = [];
+        const documentFiles: Array<{name: string, content: string, type: string, id: string, size: number}> = [];
         for (const [docType, docContent] of Object.entries(result.documents)) {
           const fileName = `${namespace?.['namespace-name'] || 'namespace'}_${docType.toUpperCase()}.json`;
           const fileContent = JSON.stringify(docContent, null, 2);
@@ -1263,6 +1261,7 @@ What would you like to work on today?`,
             name: fileName,
             content: fileContent,
             type: 'application/json',
+            id: getNowId(),
             size: fileContent.length
           });
         }
@@ -1277,8 +1276,7 @@ What would you like to work on today?`,
         
         addMessage({
           role: 'assistant',
-          content: `📋 **Generated Documents for ${namespace?.['namespace-name']}:**\n\n${downloadLinks}\n\n**Available Documents:**\n${Object.keys(result.documents).map(doc => `• **${doc.toUpperCase()}** - ${result.documents[doc].type || 'Document'}`).join('\n')}\n\n💡 **Tip:** Click the download links above to save the documents to your computer.`,
-          timestamp: new Date()
+          content: `📋 **Generated Documents for ${namespace?.['namespace-name']}:**\n\n${downloadLinks}\n\n**Available Documents:**\n${Object.keys(result.documents).map(doc => `• **${doc.toUpperCase()}** - ${result.documents[doc].type || 'Document'}`).join('\n')}\n\n💡 **Tip:** Click the download links above to save the documents to your computer.`
         });
         
         setConsoleOutput(prev => [...prev, `📄 Documents ready for download: ${Object.keys(result.documents).join(', ')}`]);
@@ -1337,8 +1335,7 @@ What would you like to work on today?`,
       // First, create a namespace from the prompt
       addMessage({
         role: 'assistant',
-        content: `🚀 I'll create a namespace for your project and then generate the requested documents. This may take a moment...`,
-        timestamp: new Date()
+        content: `🚀 I'll create a namespace for your project and then generate the requested documents. This may take a moment...`
       });
       
       const namespaceResponse = await fetch(`${API_BASE_URL}/ai-agent/generate-namespace-smart`, {
@@ -1389,7 +1386,7 @@ What would you like to work on today?`,
         setConsoleOutput(prev => [...prev, `✅ Generated ${Object.keys(documentResult.documents).length} documents`]);
         
         // Create downloadable files for each document
-        const documentFiles = [];
+        const documentFiles: Array<{name: string, content: string, type: string, id: string, size: number}> = [];
         for (const [docType, docContent] of Object.entries(documentResult.documents)) {
           const fileName = `project_${docType.toUpperCase()}.json`;
           const fileContent = JSON.stringify(docContent, null, 2);
@@ -1398,6 +1395,7 @@ What would you like to work on today?`,
             name: fileName,
             content: fileContent,
             type: 'application/json',
+            id: getNowId(),
             size: fileContent.length
           });
         }
@@ -1412,8 +1410,7 @@ What would you like to work on today?`,
         
         addMessage({
           role: 'assistant',
-          content: `📋 **Generated Documents for your project:**\n\n${downloadLinks}\n\n**Available Documents:**\n${Object.keys(documentResult.documents).map(doc => `• **${doc.toUpperCase()}** - ${documentResult.documents[doc].type || 'Document'}`).join('\n')}\n\n💡 **Tip:** Click the download links above to save the documents to your computer.\n\n🎯 **Namespace Created:** You can view and manage the generated namespace [here](/namespace/${namespaceResult.namespaceId}).`,
-          timestamp: new Date()
+          content: `📋 **Generated Documents for your project:**\n\n${downloadLinks}\n\n**Available Documents:**\n${Object.keys(documentResult.documents).map(doc => `• **${doc.toUpperCase()}** - ${documentResult.documents[doc].type || 'Document'}`).join('\n')}\n\n💡 **Tip:** Click the download links above to save the documents to your computer.\n\n🎯 **Namespace Created:** You can view and manage the generated namespace [here](/namespace/${namespaceResult.namespaceId}).`
         });
         
         setConsoleOutput(prev => [...prev, `📄 Documents ready for download: ${Object.keys(documentResult.documents).join(', ')}`]);
@@ -1614,7 +1611,7 @@ What would you like to work on today?`,
         .filter(file => file.name.endsWith('.json') && file.content)
         .map(file => {
           try {
-            const schemaData = JSON.parse(file.content);
+            const schemaData = JSON.parse(file.content || '{}');
             return {
               name: file.name.replace('.json', ''),
               type: 'JSON',
@@ -1821,13 +1818,10 @@ What would you like to work on today?`,
                           } catch (e) {
                             console.warn('Failed to generate lambda file structure:', e);
                           }
-                          const successMessage = {
-                            id: getNowId(),
+                          addMessage({
                             role: 'assistant',
-                            content: `✅ Generated Lambda function${data.schemaName ? ` for schema: **${data.schemaName}**` : ''}.\n\nCheck the Lambda tab to see the generated code!`,
-                            timestamp: new Date()
-                          };
-                          setMessages(prev => [...prev, successMessage]);
+                            content: `✅ Generated Lambda function${data.schemaName ? ` for schema: **${data.schemaName}**` : ''}.\n\nCheck the Lambda tab to see the generated code!`
+                          });
                           setConsoleOutput(prev => [...prev, `✅ Lambda function generated${data.schemaName ? ` for schema: ${data.schemaName}` : ''}`]);
                           continue; // Continue processing instead of returning
                         }
@@ -1846,13 +1840,10 @@ What would you like to work on today?`,
                           console.log('[Frontend Debug] ✅ Namespace generated:', data.namespaceId);
                           
                           // Add the success message to chat
-                          const successMessage = {
-                            id: getNowId(),
+                          addMessage({
                             role: 'assistant',
-                            content: data.content,
-                            timestamp: new Date()
-                          };
-                          setMessages(prev => [...prev, successMessage]);
+                            content: data.content
+                          });
                           
                           // Show success notification
                           setConsoleOutput(prev => [...prev, `✅ Complete namespace generated: ${data.namespaceData.namespace['namespace-name']}`]);
@@ -1882,22 +1873,9 @@ What would you like to work on today?`,
                               messageCount: messages.length + 1
                             });
                             
-                            setMessages(prev => {
-                              const newMessages = [
-                                ...prev,
-                                {
-                                  id: lastAssistantMessageId || getNowId(),
-                                  role: 'assistant',
-                                  content: assistantMessage,
-                                  timestamp: new Date()
-                                }
-                              ];
-                              console.log('[Frontend Debug] 📋 UPDATED MESSAGES ARRAY:', {
-                                oldLength: prev.length,
-                                newLength: newMessages.length,
-                                lastMessage: newMessages[newMessages.length - 1]
-                              });
-                              return newMessages;
+                            addMessage({
+                              role: 'assistant',
+                              content: assistantMessage
                             });
                           } else {
                             // Update the existing assistant message
@@ -1937,7 +1915,7 @@ What would you like to work on today?`,
                       }
                     } catch (e) {
                       console.log('[Frontend Debug] Failed to parse streaming data:', {
-                        error: e.message,
+                        error: e instanceof Error ? e.message : String(e),
                         dataContent: dataContent,
                         line: line
                       });
@@ -1999,14 +1977,10 @@ What would you like to work on today?`,
           let errorType = action.errorType || 'unknown_error';
           
           // Add user-friendly error message to chat
-          const errorChatMessage = {
-            id: getNowId(),
+          addMessage({
             role: 'assistant',
-            content: `❌ **Error**: ${errorMessage}\n\n${getErrorSuggestions(errorType)}`,
-            timestamp: new Date()
-          };
-          
-          setMessages(prev => [...prev, errorChatMessage]);
+            content: `❌ **Error**: ${errorMessage}\n\n${getErrorSuggestions(errorType)}`
+          });
           setConsoleOutput(prev => [...prev, `❌ Error: ${errorMessage} (Type: ${errorType})`]);
         }
       }
@@ -2663,8 +2637,7 @@ What would you like to work on today?`,
           'timers': '^0.1.1',
           'tty': '^1.0.1',
           'v8': '^0.1.0',
-          'vm': '^0.1.0',
-          'zlib': '^1.0.5'
+          'vm': '^0.1.0'
         };
         
         // Skip built-in Node.js modules
@@ -2673,7 +2646,7 @@ What would you like to work on today?`,
           'stream', 'buffer', 'events', 'http', 'https', 'net', 'tls',
           'child_process', 'cluster', 'dgram', 'dns', 'domain', 'os',
           'punycode', 'readline', 'repl', 'string_decoder', 'sys',
-          'timers', 'tty', 'v8', 'vm', 'zlib'
+          'timers', 'tty', 'vm', 'zlib'
         ];
         
         if (!builtInModules.includes(packageName)) {
@@ -3702,7 +3675,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                 >
                   Test: Set Custom URL
                 </button>
-              </div>>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Service or URL</label>
@@ -4099,7 +4072,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                                       const schemasResponse = await fetch(`/unified/schema?namespaceId=${namespace?.['namespace-id']}`);
                                       if (schemasResponse.ok) {
                                         const updatedSchemas = await schemasResponse.json();
-                                        setSavedSchemas(updatedSchemas);
+                                        setSchemas(updatedSchemas);
                                         setConsoleOutput(prev => [...prev, `🔄 Updated saved schemas list (${updatedSchemas.length} schemas available)`]);
                                       }
                                     } catch (refreshError) {

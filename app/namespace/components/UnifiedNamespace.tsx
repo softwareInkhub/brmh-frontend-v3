@@ -712,6 +712,13 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
   };
 
   const handleNamespaceClick = async (ns: UnifiedNamespace) => {
+    // Open namespace in a new tab instead of showing floating details
+    if (onOpenNamespaceTab) {
+      onOpenNamespaceTab(ns);
+      return;
+    }
+    
+    // Fallback to floating details if onOpenNamespaceTab is not provided
     // Set floating namespace details
     setFloatingNamespaceDetails(ns);
     setSelectedNamespaceId(ns["namespace-id"]);
