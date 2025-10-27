@@ -21,13 +21,15 @@ export default function AppContentClient({ children }: { children: React.ReactNo
       <div 
         className={`flex min-h-screen bg-gray-50 ${!hideSidebar ? 'ml-20' : ''} transition-all duration-300 ease-in-out`}
         style={{ 
-          marginRight: (isAIAgentOpen || aiAgentIsOpen) ? `${panelWidth}px` : '0px' 
+          marginRight: '0px',
+          maxWidth: '100%',
+          overflowX: 'hidden'
         }}
       >
         {!hideSidebar && <Sidebar />}
-        <div className="flex-1 min-h-screen overflow-auto">
+        <div className="flex-1 min-h-screen overflow-auto" style={{ maxWidth: '100%' }}>
           {/* {!hideSidebar && <Navbar onMenuClick={() => setIsCollapsed(!isCollapsed)} />} */}
-          <main className="w-full min-h-screen overflow-auto">
+          <main className="w-full min-h-screen overflow-auto" style={{ maxWidth: '100%' }}>
             {children}
           </main>
         </div>

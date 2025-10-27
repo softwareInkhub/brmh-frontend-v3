@@ -93,7 +93,7 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
   const [showGeneratedCode, setShowGeneratedCode] = useState(false);
   
   // State for resizable workspace
-  const [workspaceWidth, setWorkspaceWidth] = useState(800);
+  const [workspaceWidth, setWorkspaceWidth] = useState(550);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartWidth, setDragStartWidth] = useState(0);
@@ -116,7 +116,7 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
   const handleResizeMove = (e: MouseEvent) => {
     if (!isResizing) return;
     const deltaX = e.clientX - dragStartX;
-    const newWidth = Math.max(400, Math.min(1200, dragStartWidth - deltaX));
+    const newWidth = Math.max(400, Math.min(900, dragStartWidth - deltaX));
     setWorkspaceWidth(newWidth);
   };
 
@@ -541,7 +541,7 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
         const entry = (it as any).webkitGetAsEntry ? (it as any).webkitGetAsEntry() : null;
         if (entry) {
           pending.push(readEntry(entry));
-        } else {
+          } else {
           const f = it.getAsFile();
           if (f) collected.push(f);
         }
@@ -655,10 +655,10 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
           const schema = { ...item.data || item, source: 'workspace' };
           setDroppedSchemas(prev => [...prev, schema]);
           setConsoleOutput(prev => [...prev, `📋 Added schema context: ${schema.schemaName || schema.name || 'Unknown Schema'}`]);
-          addMessage({
-            role: 'user',
+        addMessage({
+          role: 'user',
             content: `Added schema context from namespace: ${schema.schemaName || schema.name || 'Unknown Schema'}`
-          });
+        });
         } else {
           setConsoleOutput(prev => [...prev, `⚠️ Unknown drop item type: ${JSON.stringify(item)}`]);
         }
@@ -666,7 +666,7 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
         setConsoleOutput(prev => [...prev, `❌ Error adding item: ${e?.message || 'Unknown error'}`]);
       }
     },
-    collect: (monitor) => ({ 
+    collect: (monitor) => ({
       isOver: monitor.isOver(),
       isNamespaceDropOver: monitor.getItemType() === 'namespace' && monitor.isOver(),
       isSchemaDropOver: monitor.getItemType() === 'SCHEMA' && monitor.isOver()
@@ -1041,21 +1041,13 @@ What would you like to work on today?`,
   };
 
   // Test function to debug chat UI
-  const testChatUI = () => {
-    console.log('[Frontend] 🧪 Testing chat UI...');
-    addMessage({
-      role: 'assistant',
-      content: 'This is a test message to verify the chat UI is working!'
-    });
-  };
-
   // Function to handle Lambda generation using the dedicated endpoint
   const handleLambdaGeneration = async (message: string, selectedSchema: any = null) => {
     try {
       setConsoleOutput(prev => [...prev, `🔄 Generating Lambda function...`]);
-      
-      const response = await fetch(`${API_BASE_URL}/ai-agent/lambda-codegen`, {
-        method: 'POST',
+        
+        const response = await fetch(`${API_BASE_URL}/ai-agent/lambda-codegen`, {
+          method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -1080,7 +1072,7 @@ What would you like to work on today?`,
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const reader = response.body?.getReader();
+          const reader = response.body?.getReader();
       if (!reader) {
         // Fallback for non-streaming responses
         try {
@@ -1106,20 +1098,20 @@ What would you like to work on today?`,
         }
       }
 
-      let generatedCode = '';
+            let generatedCode = '';
       let functionName = (lambdaForm.functionName && lambdaForm.functionName.trim()) 
         ? lambdaForm.functionName.trim() 
         : (selectedSchema ? `${selectedSchema.schemaName || selectedSchema.name}Handler` : 'GeneratedHandler');
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
+            
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              const chunk = new TextDecoder().decode(value);
+              const lines = chunk.split('\n');
+              
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
             const dataContent = line.slice(6);
             
             if (dataContent.trim() === '[DONE]' || dataContent.trim().includes('[DONE]')) {
@@ -1150,20 +1142,20 @@ What would you like to work on today?`,
               }
               if (data.message) {
                 generatedCode += data.message;
-              }
-            } catch (e) {
+                      }
+                    } catch (e) {
               console.log('Failed to parse streaming data:', e);
               // Try to extract code from raw content
               if (dataContent.includes('```')) {
                 const match = dataContent.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
                 if (match && match[1]) {
                   generatedCode += match[1];
+                    }
+                  }
                 }
               }
             }
           }
-        }
-      }
 
       if (generatedCode && generatedCode.trim()) {
         // Set the generated Lambda code in the Lambda tab's code box
@@ -1182,22 +1174,22 @@ What would you like to work on today?`,
         });
         
         setConsoleOutput(prev => [...prev, `✅ Lambda function generated: ${functionName}`]);
-      } else {
+        } else {
         console.log('Debug: generatedCode is empty or whitespace:', generatedCode);
         setConsoleOutput(prev => [...prev, `⚠️ No Lambda code was generated. Raw response: ${generatedCode}`]);
-        
+          
         // Add helpful message to user
-        addMessage({
-          role: 'assistant',
+          addMessage({
+            role: 'assistant',
           content: `⚠️ No Lambda code was generated. Please try:\n\n• Being more specific about what you want to build\n• Including the programming language (Node.js, Python, etc.)\n• Describing the function's purpose clearly\n\nExample: "Create a Node.js Lambda function that processes user data and saves it to DynamoDB"`
-        });
-      }
-    } catch (error) {
+          });
+        }
+      } catch (error) {
       console.error('Error in schema Lambda generation:', error);
       setConsoleOutput(prev => [...prev, `❌ Error generating Lambda: ${error instanceof Error ? error.message : 'Unknown error'}`]);
-      
-      addMessage({
-        role: 'assistant',
+        
+        addMessage({
+          role: 'assistant',
         content: `❌ Failed to generate Lambda function: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
@@ -1242,7 +1234,7 @@ What would you like to work on today?`,
       }
       
       const response = await fetch(`${API_BASE_URL}/ai-agent/generate-documents`, {
-        method: 'POST',
+          method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -1291,15 +1283,15 @@ What would you like to work on today?`,
         });
         
         setConsoleOutput(prev => [...prev, `📄 Documents ready for download: ${Object.keys(result.documents).join(', ')}`]);
-      } else {
+                        } else {
         throw new Error(result.error || 'Failed to generate documents');
       }
     } catch (error) {
       console.error('Error in document generation:', error);
       setConsoleOutput(prev => [...prev, `❌ Error generating documents: ${error instanceof Error ? error.message : 'Unknown error'}`]);
-      
-      addMessage({
-        role: 'assistant',
+                        
+                        addMessage({
+                          role: 'assistant',
         content: `❌ Failed to generate documents: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
@@ -1418,22 +1410,22 @@ What would you like to work on today?`,
         const downloadLinks = documentFiles.map(file => 
           `[📄 Download ${file.name}](#download:${file.name})`
         ).join('\n');
-        
-        addMessage({
-          role: 'assistant',
+          
+          addMessage({
+            role: 'assistant',
           content: `📋 **Generated Documents for your project:**\n\n${downloadLinks}\n\n**Available Documents:**\n${Object.keys(documentResult.documents).map(doc => `• **${doc.toUpperCase()}** - ${documentResult.documents[doc].type || 'Document'}`).join('\n')}\n\n💡 **Tip:** Click the download links above to save the documents to your computer.\n\n🎯 **Namespace Created:** You can view and manage the generated namespace [here](/namespace/${namespaceResult.namespaceId}).`
-        });
+          });
         
         setConsoleOutput(prev => [...prev, `📄 Documents ready for download: ${Object.keys(documentResult.documents).join(', ')}`]);
       } else {
         throw new Error(documentResult.error || 'Failed to generate documents');
-      }
-    } catch (error) {
+        }
+      } catch (error) {
       console.error('Error in document generation from prompt:', error);
       setConsoleOutput(prev => [...prev, `❌ Error generating documents: ${error instanceof Error ? error.message : 'Unknown error'}`]);
-      
-      addMessage({
-        role: 'assistant',
+        
+        addMessage({
+          role: 'assistant',
         content: `❌ Failed to generate documents: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
@@ -1461,7 +1453,7 @@ What would you like to work on today?`,
         addMessage({ role: 'assistant', content: `Using schema: ${chosenName}` });
         const schemaObj = match.schema || match;
         await handleLambdaGeneration(pendingSchemaSelection.prompt, schemaObj);
-        return;
+      return;
       }
       addMessage({ role: 'assistant', content: 'I did not recognize that schema name. Please reply with the exact schema name as shown in the list (e.g., "Use Users").' });
       return;
@@ -1473,7 +1465,7 @@ What would you like to work on today?`,
     console.log('[Frontend] 🏠 Current namespace:', localNamespace?.['namespace-id']);
     
     // Add user message to chat
-    addMessage({
+        addMessage({
       role: 'user',
       content: userMessage
     });
@@ -1484,9 +1476,9 @@ What would you like to work on today?`,
     // If no namespace context and intent is namespace generation, call smart endpoint
     if (!localNamespace?.['namespace-id'] && isNamespaceGenerationIntent(userMessage)) {
       await generateNamespaceSmart(userMessage);
-      return;
-    }
-
+        return;
+      }
+      
     // If user explicitly asks to generate a lambda, call dedicated endpoint directly
     const lowerUM = userMessage.toLowerCase();
     const lambdaIntent =
@@ -1583,7 +1575,7 @@ What would you like to work on today?`,
     
     // Debug logging for document intent detection
     console.log('[Frontend] 🔍 Intent detection:', {
-      message: userMessage,
+            message: userMessage,
       lowerMessage: lowerUM,
       documentIntent: documentIntent,
       namespaceContextIntent: namespaceContextIntent,
@@ -1629,7 +1621,7 @@ What would you like to work on today?`,
               content: schemaData,
               originalFile: file.name
             };
-          } catch (e) {
+                    } catch (e) {
             return null;
           }
         })
@@ -1669,12 +1661,12 @@ What would you like to work on today?`,
 
     try {
       await handleStreamingResponse(userMessage);
-    } catch (error) {
+      } catch (error) {
       console.error('Error handling streaming response:', error);
       setConsoleOutput(prev => [...prev, `❌ Error processing message: ${error instanceof Error ? error.message : 'Unknown error'}`]);
       
-      addMessage({
-        role: 'assistant',
+        addMessage({
+          role: 'assistant',
         content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
@@ -1693,7 +1685,7 @@ What would you like to work on today?`,
       setConsoleOutput(prev => [...prev, `💬 Processing message: ${userMessage}`]);
         
         const requestBody = {
-        message: userMessage,
+      message: userMessage,
         namespace: localNamespace?.['namespace-id'] || null, // Pass null for general context to enable namespace generation
         allNamespaces: [localNamespace, ...droppedNamespaces].filter(Boolean), // Pass all namespaces in context
         history: messages.slice(-10), // Send last 10 messages for context
@@ -1718,20 +1710,20 @@ What would you like to work on today?`,
 
         if (response.ok) {
         setConsoleOutput(prev => [...prev, `✅ Connected to backend, starting streaming...`]);
-          const reader = response.body?.getReader();
+    const reader = response.body?.getReader();
           if (reader) {
-            let chunkCount = 0;
-            
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                chunkCount++;
-                const chunk = new TextDecoder().decode(value);
-                const lines = chunk.split('\n');
-                
-                for (const line of lines) {
-                  if (line.startsWith('data: ')) {
+    let chunkCount = 0;
+    
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        chunkCount++;
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
                     const dataContent = line.slice(6);
                     
                     console.log('[Frontend Debug] Processing data line:', { line, dataContent });
@@ -1760,11 +1752,11 @@ What would you like to work on today?`,
                           actionCount: data.actions.length,
                           actions: data.actions
                         });
-                        actions = data.actions;
+                actions = data.actions;
                         setConsoleOutput(prev => [...prev, `📋 Received ${data.actions.length} action(s) from AI agent (route: ${data.route})`]);
-                      }
-                      
-                      if (data.route === 'schema') {
+              }
+              
+              if (data.route === 'schema') {
                     // Handle schema-specific messages - stream JSON schema content live
                     console.log('[Frontend Debug] ⚠️ SCHEMA ROUTE MESSAGE:', data);
                     console.log('[Frontend Debug] ⚠️ Type:', data.type, 'Content:', data.content?.substring(0, 200));
@@ -1772,8 +1764,8 @@ What would you like to work on today?`,
                       // Stream JSON schema content progressively in the live box
                       console.log('[Frontend Debug] ✅ Adding to live schema box:', data.content?.substring(0, 100));
                       if (data.content) {
-                        setLiveSchema(prev => prev + data.content);
-                            setIsStreamingSchema(true);
+                  setLiveSchema(prev => prev + data.content);
+                  setIsStreamingSchema(true);
                         setConsoleOutput(prev => [...prev, `🔄 Live schema streaming...`]);
                           }
                         } else if (data.type === 'live_schema_complete') {
@@ -1781,7 +1773,7 @@ What would you like to work on today?`,
                       console.log('[Frontend Debug] ✅ Schema generation completed');
                           setIsStreamingSchema(false);
                           setConsoleOutput(prev => [...prev, `✅ Live schema generation completed`]);
-                        } else {
+                  } else {
                       console.log('[Frontend Debug] ⚠️ UNEXPECTED MESSAGE TYPE IN SCHEMA ROUTE:', data.type, data.content?.substring(0, 100));
                         }
                       } else if (data.route === 'lambda') {
@@ -1914,7 +1906,7 @@ What would you like to work on today?`,
                             actionCount: data.actions?.length || 0,
                             actions: data.actions
                           });
-                        } else {
+                  } else {
                           // This might be an unexpected message type
                           console.log('[Frontend Debug] ⚠️ UNEXPECTED CHAT ROUTE MESSAGE TYPE:', {
                             type: data.type,
@@ -1953,15 +1945,15 @@ What would you like to work on today?`,
         if (action.type === 'generate_schema' && action.status === 'complete') {
           const schemaData = action.data;
           if (schemaData) {
-              const newSchema = {
+        const newSchema = {
               id: getNowId(),
               schemaName: `Generated Schema ${schemas.length + 1}`,
-              schema: schemaData,
+          schema: schemaData,
               content: schemaData,
               saved: false,
-              timestamp: new Date()
-            };
-            setSchemas(prev => [...prev, newSchema]);
+          timestamp: new Date()
+        };
+        setSchemas(prev => [...prev, newSchema]);
             setSchemaNames(prev => ({ ...prev, [newSchema.id]: newSchema.schemaName }));
               setLiveSchema('');
               setIsStreamingSchema(false);
@@ -3018,7 +3010,7 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
           // API Gateway is now created automatically during deployment
           if (deployResult.apiGatewayUrl) {
             setConsoleOutput(prev => [...prev, `✅ API Gateway created automatically!`]);
-              setConsoleOutput(prev => [...prev, `🌐 API Gateway URL: ${deployResult.apiGatewayUrl}`]);
+            setConsoleOutput(prev => [...prev, `🌐 API Gateway URL: ${deployResult.apiGatewayUrl}`]);
               setConsoleOutput(prev => [...prev, `   Endpoint: ${deployResult.apiGatewayUrl}/${deployResult.functionName || func.name}`]);
             setConsoleOutput(prev => [...prev, `   API ID: ${deployResult.apiId}`]);
             
@@ -3439,12 +3431,13 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
   return (
     <div 
       ref={namespaceDropRef as any}
-      className={`fixed top-0 right-0 h-full flex flex-col bg-white shadow-2xl border-l border-gray-200 z-50 transform transition-transform duration-300 ease-in-out ${
+      className={`fixed top-0 right-0 h-full flex flex-col bg-white shadow-2xl border-l border-gray-200 z-[60] pointer-events-auto ${
         isNamespaceDropOver ? 'bg-blue-50 border-2 border-blue-400' : 
         isSchemaDropOver ? 'bg-purple-50 border-2 border-purple-400' : ''
-      } ${isResizing ? '' : 'transition-all duration-200'}`}
+      }`}
       style={{ 
-        width: `${workspaceWidth}px` 
+        width: `${workspaceWidth}px`,
+        maxWidth: `${workspaceWidth}px`
       }}
     >
       {/* Resize Handle */}
@@ -3468,9 +3461,9 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="text-blue-600 font-medium">Working with:</span>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
                       {(localNamespace ? 1 : 0) + droppedNamespaces.length} Namespace(s)
-                    </span>
+                  </span>
                   </div>
                   {localNamespace && (
                     <div className="text-xs text-gray-600 ml-2">
@@ -3595,7 +3588,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           </div>
           {showGeneratedCode && (
             <div className="p-4 bg-gray-50 max-h-64 overflow-y-auto">
-              <div className="mb-4">
+            <div className="mb-4">
                 <h4 className="font-medium text-sm mb-2">Lambda Code:</h4>
                 <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
                   {generatedLambdaCode}
@@ -3606,9 +3599,8 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         </div>
       )}
 
-      {/* Main Content Area - Takes remaining space */}
-      
-        <div className="flex-1 overflow-auto p-4 hidden bg-[#f8f9fb]">
+        {/* Main Content Area - Takes remaining space */}
+        <div className={`flex-1 overflow-auto p-4 bg-[#f8f9fb] ${activeTab === 'lambda' ? 'hidden' : ''}`}>
         {activeTab === 'lambda' && (
           <div className="h-full overflow-y-auto hidden">
             <h3 className="font-medium text-lg mb-2">Lambda Code Generation</h3>
@@ -3617,12 +3609,12 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             </p>
             
             {/* Lambda Code Display */}
-            {generatedLambdaCode && (
+                {generatedLambdaCode && (
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-medium text-gray-900">Generated Lambda Code</h4>
                   <div className="flex gap-2">
-                    <button
+                  <button
                       onClick={() => {
                         navigator.clipboard.writeText(generatedLambdaCode);
                         setConsoleOutput(prev => [...prev, '📋 Lambda code copied to clipboard']);
@@ -3630,20 +3622,20 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                       className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                     >
                       Copy Code
-                    </button>
+                  </button>
                     <button
                       onClick={() => setGeneratedLambdaCode('')}
                       className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                     >
                       Clear
                     </button>
-                  </div>
+              </div>
                 </div>
                 <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm overflow-x-auto">
                   <pre className="whitespace-pre-wrap">{generatedLambdaCode}</pre>
-                </div>
-              </div>
-            )}
+            </div>
+          </div>
+        )}
             
           </div>
         )}
@@ -3651,10 +3643,10 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         {activeTab === 'api' && (
           <div className="h-full overflow-y-auto">
             <h3 className="font-medium text-lg mb-2">API Method Creation & Management</h3>
-            <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-gray-600 mb-4">
               Create reusable API methods from API Gateway URLs with OpenAPI specifications. 
               Generate methods that can be overridden with different URLs and saved to your namespace.
-              <br />
+                <br />
               <span className="text-blue-600 font-medium">💡 Tip:</span> Use deployed Lambda endpoints or any API Gateway URL to create methods!
             </p>
             
@@ -4043,7 +4035,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             ) : (
               <div className="space-y-4">
                 {schemas.map((schema: any, index: number) => (
-                  <div
+                  <div 
                     key={schema.id} 
                     className={`border border-gray-200 rounded-lg p-4 ${isEditingSchema && index === 0 ? 'bg-blue-50 border-blue-200' : 'bg-white'} hover:shadow-md transition-shadow`}
                   >
@@ -4453,14 +4445,15 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         )}
       </div>
 
+
       {/* Chat Messages Area - Show only for lambda tab */}
       {activeTab === 'lambda' && (
-        <div 
+      <div 
           ref={sidebarSchemaDropRef as any}
-          className={`flex-1 overflow-y-auto p-4 space-y-4 bg-white transition-colors ${
+        className={`flex-1 overflow-y-auto p-4 space-y-4 bg-white transition-colors ${
             isSidebarSchemaDropOver ? 'bg-purple-50 border-2 border-dashed border-purple-300' : ''
-          }`}
-        >
+        }`}
+      >
         {activeTab === 'lambda' && isSidebarSchemaDropOver && (
           <div className="text-center py-8 text-purple-600 font-medium">
             Drop schema here to add context
@@ -4551,7 +4544,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           </div>
         ))}
         <div ref={messagesEndRef} />
-        </div>
+      </div>
       )}
 
       {/* File Upload and Context Area */}
@@ -4860,25 +4853,15 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-1">
-            <button
-              onClick={handleSendMessage}
-              disabled={isLoading || !inputMessage.trim()}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-            <button
-              onClick={testChatUI}
-              className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
-              title="Test Chat UI"
-            >
-              Test
-            </button>
-          </div>
+          <button
+            onClick={handleSendMessage}
+            disabled={isLoading || !inputMessage.trim()}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Send className="w-4 h-4" />
+          </button>
         </div>
       </div>
-
     </div>
   );
 };
