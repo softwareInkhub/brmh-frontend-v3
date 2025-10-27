@@ -1144,14 +1144,28 @@ What would you like to work on today?`,
               if (data.content) {
                 generatedCode += data.content;
               }
+              // Additional fallback: check for code in different fields
+              if (data.code) {
+                generatedCode += data.code;
+              }
+              if (data.message) {
+                generatedCode += data.message;
+              }
             } catch (e) {
               console.log('Failed to parse streaming data:', e);
+              // Try to extract code from raw content
+              if (dataContent.includes('```')) {
+                const match = dataContent.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
+                if (match && match[1]) {
+                  generatedCode += match[1];
+                }
+              }
             }
           }
         }
       }
 
-      if (generatedCode) {
+      if (generatedCode && generatedCode.trim()) {
         // Set the generated Lambda code in the Lambda tab's code box
         setGeneratedLambdaCode(generatedCode);
         
@@ -1169,7 +1183,14 @@ What would you like to work on today?`,
         
         setConsoleOutput(prev => [...prev, `✅ Lambda function generated: ${functionName}`]);
       } else {
-        throw new Error('No Lambda code was generated');
+        console.log('Debug: generatedCode is empty or whitespace:', generatedCode);
+        setConsoleOutput(prev => [...prev, `⚠️ No Lambda code was generated. Raw response: ${generatedCode}`]);
+        
+        // Add helpful message to user
+        addMessage({
+          role: 'assistant',
+          content: `⚠️ No Lambda code was generated. Please try:\n\n• Being more specific about what you want to build\n• Including the programming language (Node.js, Python, etc.)\n• Describing the function's purpose clearly\n\nExample: "Create a Node.js Lambda function that processes user data and saves it to DynamoDB"`
+        });
       }
     } catch (error) {
       console.error('Error in schema Lambda generation:', error);
@@ -3586,14 +3607,851 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
       )}
 
       {/* Main Content Area - Takes remaining space */}
-     {activeTab === 'lambda' && (
-      <div className="h-full overflow-y-auto hidden h-[0px]">
-        <h3 className="font-medium text-lg mb-2">Lambda Code Generation</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Generate AWS Lambda function code using AI. Describe what you want to build and get ready-to-use code.
-        </p>
+      
+        <div className="flex-1 overflow-auto p-4 hidden bg-[#f8f9fb]">
+        {activeTab === 'lambda' && (
+          <div className="h-full overflow-y-auto hidden">
+            <h3 className="font-medium text-lg mb-2">Lambda Code Generation</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Generate AWS Lambda function code using AI. Describe what you want to build and get ready-to-use code.
+            </p>
+            
+            {/* Lambda Code Display */}
+            {generatedLambdaCode && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-gray-900">Generated Lambda Code</h4>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedLambdaCode);
+                        setConsoleOutput(prev => [...prev, '📋 Lambda code copied to clipboard']);
+                      }}
+                      className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                    >
+                      Copy Code
+                    </button>
+                    <button
+                      onClick={() => setGeneratedLambdaCode('')}
+                      className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+                  <pre className="whitespace-pre-wrap">{generatedLambdaCode}</pre>
+                </div>
+              </div>
+            )}
+            
+          </div>
+        )}
+        
+        {activeTab === 'api' && (
+          <div className="h-full overflow-y-auto">
+            <h3 className="font-medium text-lg mb-2">API Method Creation & Management</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Create reusable API methods from API Gateway URLs with OpenAPI specifications. 
+              Generate methods that can be overridden with different URLs and saved to your namespace.
+              <br />
+              <span className="text-blue-600 font-medium">💡 Tip:</span> Use deployed Lambda endpoints or any API Gateway URL to create methods!
+            </p>
+            
+            {/* API Method Creation Agent */}
+            <APIMethodCreationAgent 
+              namespace={localNamespace}
+              deployedEndpoints={deployedEndpoints}
+              onMethodCreated={(method) => {
+                console.log('New method created:', method);
+                // Optionally refresh namespace data or show success message
+              }}
+            />
+          </div>
+        )}
+        {activeTab === 'web-scraping' && (
+          <div className="h-full overflow-y-auto">
+            <div className="mb-4">
+              <h3 className="font-medium text-lg mb-2">Web Scraping Agent</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Automatically scrape APIs, schemas, and documentation from popular services like Shopify, Pinterest, Google, Stripe, and GitHub.
+                <br />
+                <span className="text-blue-600 font-medium">💡 Tip:</span> Select a service and click "Scrape & Save" to import everything into your namespace!
+              </p>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h4 className="font-medium text-purple-800 mb-2">Instructions:</h4>
+                <ul className="text-sm text-purple-700 space-y-1">
+                  <li>• Select a service from the dropdown below</li>
+                  <li>• Choose what to scrape (APIs, Schemas, Documentation)</li>
+                  <li>• Click "Preview" to see what will be scraped</li>
+                  <li>• Click "Scrape & Save" to import everything to your namespace</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+              <h4 className="font-medium mb-4">Service Selection</h4>
+              
+              {/* Debug info */}
+              <div className="text-xs text-gray-500 mb-2">
+                Debug: selectedService = "{selectedService}", customUrl = "{customUrl}", supportedServices count = {supportedServices.length}
+                <br />
+                Should show custom URL input: {selectedService === 'custom-url' ? 'YES' : 'NO'}
+                <br />
+                <button 
+                  onClick={() => {
+                    console.log('Test button clicked');
+                    setSelectedService('custom-url');
+                    setCustomUrl('https://example.com');
+                  }}
+                  className="px-2 py-1 bg-blue-500 text-white text-xs rounded"
+                >
+                  Test: Set Custom URL
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Service or URL</label>
+                  <select 
+                    value={selectedService} 
+                    onChange={(e) => {
+                      console.log('Service selection changed:', e.target.value);
+                      setSelectedService(e.target.value);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+                  >
+                    <option value="">Select a service or enter custom URL...</option>
+                    {supportedServices.map(service => (
+                      <option key={service.key} value={service.key}>
+                        {service.name}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  {selectedService === 'custom-url' && (
+                    <input
+                      type="url"
+                      placeholder="Enter any URL (e.g., https://api.example.com/docs)"
+                      value={customUrl}
+                      onChange={(e) => {
+                        console.log('Custom URL input changed:', e.target.value);
+                        setCustomUrl(e.target.value);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Options</label>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={scrapeOptions.apis} 
+                        onChange={(e) => setScrapeOptions(prev => ({ ...prev, apis: e.target.checked }))}
+                        className="mr-2"
+                      />
+                      Scrape APIs
+                    </label>
+                    <label className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={scrapeOptions.schemas} 
+                        onChange={(e) => setScrapeOptions(prev => ({ ...prev, schemas: e.target.checked }))}
+                        className="mr-2"
+                      />
+                      Scrape Schemas
+                    </label>
+                    <label className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={scrapeOptions.documentation} 
+                        onChange={(e) => setScrapeOptions(prev => ({ ...prev, documentation: e.target.checked }))}
+                        className="mr-2"
+                      />
+                      Scrape Documentation
+                    </label>
+                    <label className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={scrapeOptions.followLinks} 
+                        onChange={(e) => setScrapeOptions(prev => ({ ...prev, followLinks: e.target.checked }))}
+                        className="mr-2"
+                      />
+                      Follow Links (find more content)
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={handlePreviewScrape}
+                  disabled={!selectedService || isScraping}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isScraping ? 'Scraping...' : 'Preview'}
+                </button>
+                <button
+                  onClick={handleScrapeAndSave}
+                  disabled={!selectedService || isScraping}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isScraping ? 'Scraping...' : 'Scrape & Save'}
+                </button>
+              </div>
+            </div>
+            
+
+            
+            {scrapedData && (
+              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-medium">Scraped Data Preview</h4>
+                  <button
+                    onClick={() => setShowAllScrapedData(true)}
+                    className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    View All Data
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div className="bg-blue-50 p-3 rounded">
+                    <h5 className="font-medium text-blue-800">APIs</h5>
+                    <p className="text-2xl font-bold text-blue-600">{scrapedData.apis?.length || 0}</p>
+                  </div>
+                  <div className="bg-green-50 p-3 rounded">
+                    <h5 className="font-medium text-green-800">Schemas</h5>
+                    <p className="text-2xl font-bold text-green-600">{scrapedData.schemas?.length || 0}</p>
+                  </div>
+                  <div className="bg-purple-50 p-3 rounded">
+                    <h5 className="font-medium text-purple-800">Documentation</h5>
+                    <p className="text-2xl font-bold text-purple-600">{scrapedData.documentation?.length || 0}</p>
+                  </div>
+                </div>
+                
+                {/* Detailed Data Display */}
+                <div className="space-y-4">
+                  {/* APIs Section */}
+                  {scrapedData.apis && scrapedData.apis.length > 0 && (
+                    <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                      <h5 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
+                        <span>🔗</span>
+                        APIs ({scrapedData.apis.length})
+                      </h5>
+                      <div className="space-y-3 max-h-60 overflow-y-auto">
+                        {scrapedData.apis.slice(0, 10).map((api: any, index: number) => (
+                          <div key={index} className="bg-white p-3 rounded border border-blue-100">
+                            <div className="flex items-center justify-between mb-2">
+                              <h6 className="font-medium text-blue-700">{api.name || api.endpoint}</h6>
+                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                {api.format || 'API'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-2">{api.description}</p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <span className="bg-gray-100 px-2 py-1 rounded">{api.method || 'GET'}</span>
+                              <span className="truncate">{api.url}</span>
+                            </div>
+                            {api.openapiSpec && (
+                              <details className="mt-2">
+                                <summary className="text-xs text-blue-600 cursor-pointer">View OpenAPI Spec</summary>
+                                <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto">
+                                  {JSON.stringify(api.openapiSpec, null, 2)}
+                                </pre>
+                              </details>
+                            )}
+                          </div>
+                        ))}
+                        {scrapedData.apis.length > 10 && (
+                          <div className="text-center text-sm text-gray-500">
+                            ... and {scrapedData.apis.length - 10} more APIs
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Schemas Section */}
+                  {scrapedData.schemas && scrapedData.schemas.length > 0 && (
+                    <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+                      <h5 className="font-medium text-green-800 mb-3 flex items-center gap-2">
+                        <span>📋</span>
+                        Schemas ({scrapedData.schemas.length})
+                      </h5>
+                      <div className="space-y-3 max-h-60 overflow-y-auto">
+                        {scrapedData.schemas.slice(0, 5).map((schema: any, index: number) => (
+                          <div key={index} className="bg-white p-3 rounded border border-green-100">
+                            <div className="flex items-center justify-between mb-2">
+                              <h6 className="font-medium text-green-700">{schema.name}</h6>
+                              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                {schema.format || 'JSON'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-2">{schema.description}</p>
+                            {schema.schema && (
+                              <details className="mt-2">
+                                <summary className="text-xs text-green-600 cursor-pointer">View JSON Schema</summary>
+                                <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto">
+                                  {JSON.stringify(schema.schema, null, 2)}
+                                </pre>
+                              </details>
+                            )}
+                          </div>
+                        ))}
+                        {scrapedData.schemas.length > 5 && (
+                          <div className="text-center text-sm text-gray-500">
+                            ... and {scrapedData.schemas.length - 5} more schemas
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Documentation Section */}
+                  {scrapedData.documentation && scrapedData.documentation.length > 0 && (
+                    <div className="border border-purple-200 rounded-lg p-4 bg-purple-50">
+                      <h5 className="font-medium text-purple-800 mb-3 flex items-center gap-2">
+                        <span>📚</span>
+                        Documentation ({scrapedData.documentation.length})
+                      </h5>
+                      <div className="space-y-3 max-h-60 overflow-y-auto">
+                        {scrapedData.documentation.slice(0, 5).map((doc: any, index: number) => (
+                          <div key={index} className="bg-white p-3 rounded border border-purple-100">
+                            <div className="flex items-center justify-between mb-2">
+                              <h6 className="font-medium text-purple-700">{doc.title}</h6>
+                              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                                {doc.format || 'PDF'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-2">{doc.content}</p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <span>Section {doc.section}</span>
+                              {doc.url && (
+                                <a href={doc.url} target="_blank" rel="noopener noreferrer" 
+                                   className="text-purple-600 hover:underline">
+                                  View Source
+                                </a>
+                              )}
+                            </div>
+                            {doc.data && doc.contentType && (
+                              <details className="mt-2">
+                                <summary className="text-xs text-purple-600 cursor-pointer">View Document Data</summary>
+                                <div className="text-xs bg-gray-100 p-2 rounded mt-1">
+                                  <p><strong>Content Type:</strong> {doc.contentType}</p>
+                                  <p><strong>Data Size:</strong> {Math.round(doc.data.length / 1024)} KB</p>
+                                  <p><strong>Format:</strong> {doc.format}</p>
+                                </div>
+                              </details>
+                            )}
+                          </div>
+                        ))}
+                        {scrapedData.documentation.length > 5 && (
+                          <div className="text-center text-sm text-gray-500">
+                            ... and {scrapedData.documentation.length - 5} more documents
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Errors Section */}
+                  {scrapedData.errors && scrapedData.errors.length > 0 && (
+                    <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+                      <h5 className="font-medium text-red-800 mb-3 flex items-center gap-2">
+                        <span>⚠️</span>
+                        Errors ({scrapedData.errors.length})
+                      </h5>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {scrapedData.errors.map((error: string, index: number) => (
+                          <div key={index} className="text-sm text-red-700 bg-red-100 p-2 rounded">
+                            {error}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <h4 className="font-medium mb-2">Scraping Log</h4>
+              <div className="bg-gray-100 p-3 rounded text-xs overflow-y-auto max-h-40">
+                {scrapingLog.length > 0 ? (
+                  scrapingLog.map((log, index) => (
+                    <div key={index} className={`mb-1 ${log.type === 'error' ? 'text-red-600' : log.type === 'success' ? 'text-green-600' : 'text-gray-600'}`}>
+                      {log.timestamp}: {log.message}
+                    </div>
+                  ))
+                ) : (
+                  'No scraping activity yet...'
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {activeTab === 'schema' && (
+          <div className="h-full overflow-y-auto">
+            <div className="mb-4">
+              <h3 className="font-medium text-lg mb-2">Schema Management</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Use the chat below to generate and manage schemas. The AI will create schemas based on your descriptions.
+                <br />
+                <span className="text-blue-600 font-medium">💡 Tip:</span> Drag any schema below to the chat area to provide context for your AI conversations!
+              </p>
+            </div>
+            
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <h4 className="font-medium">Generated Schemas</h4>
+                {isStreamingSchema && (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-blue-600">Live</span>
+                  </div>
+                )}
+                {Object.values(savingSchema).some(Boolean) && (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-green-600">Saving</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <span className="text-sm text-gray-600">
+                  {schemas.length > 0 ? 'Schema generated' : 'No schema generated yet'}
+                </span>
+              </div>
+            </div>
+            
+            {/* Live Streaming Preview */}
+            {isStreamingSchema && (
+              <div className="mb-4 p-4 border border-blue-200 rounded-lg bg-blue-50">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium text-blue-700">Live Schema Generation</span>
+                </div>
+                <pre className="text-sm overflow-x-auto bg-white p-3 rounded border">
+                  {liveSchema || 'Waiting for schema...'}
+                </pre>
+              </div>
+            )}
+            
+            {schemas.length === 0 ? (
+              <div className="text-gray-500">No schemas generated yet...</div>
+            ) : (
+              <div className="space-y-4">
+                {schemas.map((schema: any, index: number) => (
+                  <div
+                    key={schema.id} 
+                    className={`border border-gray-200 rounded-lg p-4 ${isEditingSchema && index === 0 ? 'bg-blue-50 border-blue-200' : 'bg-white'} hover:shadow-md transition-shadow`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 text-gray-400">
+                          <span className="text-xs">📋</span>
+                        </div>
+                        <h4 className="font-medium">{schema.schemaName || schema.name || 'Unnamed Schema'}</h4>
+                        {schema.edited && (
+                          <span className="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">Edited</span>
+                        )}
+                        {!schema.saved && (
+                          <>
+                            <input
+                              type="text"
+                              className="border rounded px-2 py-1 text-xs mr-2"
+                              placeholder="Schema Name"
+                              value={schemaNames[schema.id] || ''}
+                              onChange={e => setSchemaNames(prev => ({ ...prev, [schema.id]: e.target.value }))}
+                              style={{ minWidth: 120 }}
+                            />
+                            <button
+                              onClick={async () => {
+                                setSavingSchema((prev) => ({ ...prev, [schema.id]: true }));
+                                try {
+                                  setConsoleOutput(prev => [...prev, `💾 Saving schema "${schemaNames[schema.id] || schema.schemaName || schema.name || 'Unnamed Schema'}" to namespace...`]);
+                                  
+                                  const payload = {
+                                    namespaceId: namespace?.['namespace-id'],
+                                    schemaName: schemaNames[schema.id] || schema.schemaName || schema.name || 'Unnamed Schema',
+                                    schemaType: schema.schemaType || (schema.schema && schema.schema.type) || 'object',
+                                    schema: schema.schema,
+                                    isArray: schema.isArray || false,
+                                    originalType: schema.originalType || (schema.schema && schema.schema.type) || 'object',
+                                    url: schema.url || '',
+                                  };
+                                  
+                                  const response = await fetch(`${API_BASE_URL}/save-schema-to-namespace`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(payload)
+                                  });
+                                  
+                                  if (response.ok) {
+                                    const result = await response.json();
+                                    setConsoleOutput(prev => [...prev, `✅ Schema saved successfully! Schema ID: ${result.schemaId}`]);
+                                    
+                                    // Update the schemas list to mark as saved
+                                    setSchemas(prev => prev.map(s => s.id === schema.id ? { 
+                                      ...s, 
+                                      saved: true, 
+                                      schemaName: payload.schemaName,
+                                      schemaId: result.schemaId 
+                                    } : s));
+                                    
+                                    // Refresh the saved schemas list for the Lambda dropdown
+                                    try {
+                                      const schemasResponse = await fetch(`/unified/schema?namespaceId=${namespace?.['namespace-id']}`);
+                                      if (schemasResponse.ok) {
+                                        const updatedSchemas = await schemasResponse.json();
+                                        setSchemas(updatedSchemas);
+                                        setConsoleOutput(prev => [...prev, `🔄 Updated saved schemas list (${updatedSchemas.length} schemas available)`]);
+                                      }
+                                    } catch (refreshError) {
+                                      console.error('Error refreshing schemas:', refreshError);
+                                      setConsoleOutput(prev => [...prev, `⚠️ Warning: Could not refresh schemas list automatically`]);
+                                    }
+                                    
+                                    // Dispatch event to refresh other components
+                                    if (typeof window !== 'undefined' && window.dispatchEvent) {
+                                      window.dispatchEvent(new CustomEvent('refresh-unified-namespace'));
+                                    }
+                                    
+                                    setConsoleOutput(prev => [...prev, `📋 Schema "${payload.schemaName}" is now available in your namespace!`]);
+                                  } else {
+                                    const errorData = await response.json();
+                                    setConsoleOutput(prev => [...prev, `❌ Failed to save schema: ${errorData.error || 'Unknown error'}`]);
+                                  }
+                                } catch (error) {
+                                  console.error('Error saving schema:', error);
+                                  setConsoleOutput(prev => [...prev, `❌ Error saving schema: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+                                } finally {
+                                  setSavingSchema((prev) => ({ ...prev, [schema.id]: false }));
+                                }
+                              }}
+                              disabled={savingSchema[schema.id] || !(schemaNames[schema.id] && schemaNames[schema.id].trim())}
+                              className="px-2 py-1 text-xs rounded bg-green-500 text-white hover:bg-green-600 disabled:opacity-50"
+                            >
+                              {savingSchema[schema.id] ? 'Saving...' : 'Save to Namespace'}
+                            </button>
+                          </>
+                        )}
+                        {schema.saved && (
+                          <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800">Saved</span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setShowRawSchema(prev => ({ ...prev, [index]: !prev[index] }))}
+                        className="text-xs text-blue-500 hover:underline"
+                      >
+                        {showRawSchema[index] ? 'Hide Raw' : 'Show Raw'}
+                      </button>
+                    </div>
+                    {showRawSchema[index] ? (
+                      <pre className="text-sm overflow-x-auto">
+                        {(rawSchemas.find(r => r.id === schema.id)?.content) || JSON.stringify(schema.schema, null, 2)}
+                      </pre>
+                    ) : (
+                      <pre className="text-sm overflow-x-auto">
+                        {JSON.stringify(schema.schema, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {activeTab === 'files' && (
+          <div className="h-full flex">
+            {/* File Tree Panel */}
+            <div className="w-1/3 border-r border-gray-200 bg-white p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium">Project Files</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={saveFilesToS3}
+                    disabled={projectFiles.length === 0 || isSavingToS3}
+                    className={`px-2 py-1 text-xs rounded ${
+                      projectFiles.length === 0 || isSavingToS3
+                        ? 'bg-gray-300 cursor-not-allowed'
+                        : 'bg-purple-500 hover:bg-purple-600 text-white'
+                    }`}
+                    title="Save all project files to S3 cloud bucket"
+                  >
+                    {isSavingToS3 ? 'Saving to S3...' : 'Save to S3 Cloud Bucket'}
+                  </button>
+                  <button
+                    onClick={downloadProjectFiles}
+                    disabled={projectFiles.length === 0 || isDownloading}
+                    className={`px-2 py-1 text-xs rounded ${
+                      projectFiles.length === 0 || isDownloading
+                        ? 'bg-gray-300 cursor-not-allowed'
+                        : 'bg-green-500 hover:bg-green-600 text-white'
+                    }`}
+                    title="Download all project files as ZIP"
+                  >
+                    {isDownloading ? 'Downloading...' : 'Download ZIP'}
+                  </button>
+                  <button
+                    onClick={refreshFileTree}
+                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
+                {projectFiles.length === 0 ? (
+                  <div className="text-gray-500 text-sm">No files found...</div>
+                ) : (
+                  renderFileTree(projectFiles)
+                )}
+              </div>
+            </div>
+            
+            {/* File Content Panel */}
+            <div className="flex-1 p-4">
+              {selectedFile ? (
+                <div className="h-full flex flex-col">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-medium">{selectedFile.name}</h3>
+                    <span className="text-sm text-gray-500">{selectedFile.path}</span>
+                  </div>
+                  <div className="flex-1 overflow-auto bg-gray-900 text-green-400 font-mono text-sm rounded-lg p-4">
+                    {selectedFile.content || fileContent ? (
+                      <pre className="whitespace-pre-wrap">{selectedFile.content || fileContent}</pre>
+                    ) : (
+                      <div className="text-gray-500">Select a file to view its content...</div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center text-gray-500">
+                  <div className="text-center">
+                    <Folder size={48} className="mx-auto mb-4 text-gray-300" />
+                    <p>Select a file from the tree to view its content</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {activeTab === 'deployment' && (
+          <div className="h-full overflow-y-auto">
+            <div className="mb-4">
+              <h3 className="font-medium text-lg mb-2">Deployment Configuration</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Configure Lambda function deployment settings and deploy your project.
+              </p>
+            </div>
+            
+            {/* Deployed Endpoints Section */}
+            {deployedEndpoints.length > 0 && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <h4 className="font-medium text-green-800 mb-3">🌐 Deployed API Gateway Endpoints</h4>
+                <div className="space-y-3">
+                  {deployedEndpoints.map((endpoint, index) => (
+                    <div key={index} className="bg-white border border-green-200 rounded p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-green-700">{endpoint.functionName}</span>
+                        <span className="text-xs text-green-600">
+                          {endpoint.deployedAt.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-sm">
+                          <span className="font-medium">API Gateway URL:</span>
+                          <code className="ml-2 bg-gray-100 px-2 py-1 rounded text-xs break-all">
+                            {endpoint.apiGatewayUrl}
+                          </code>
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          <span className="font-medium">Function ARN:</span>
+                          <span className="ml-2 break-all">{endpoint.functionArn}</span>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(endpoint.apiGatewayUrl);
+                            setConsoleOutput(prev => [...prev, `📋 Copied API Gateway URL to clipboard: ${endpoint.apiGatewayUrl}`]);
+                          }}
+                          className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                        >
+                          Copy URL
+                        </button>
+                        <button
+                          onClick={() => {
+                            const testUrl = endpoint.apiGatewayUrl;
+                            setConsoleOutput(prev => [...prev, `🧪 Testing endpoint: ${testUrl}`]);
+                            fetch(testUrl, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ test: true, message: 'Hello from deployment tab!' })
+                            })
+                              .then(res => res.json())
+                              .then(data => {
+                                setConsoleOutput(prev => [...prev, `✅ Test successful: ${JSON.stringify(data)}`]);
+                              })
+                              .catch(err => {
+                                setConsoleOutput(prev => [...prev, `❌ Test failed: ${err.message}`]);
+                              });
+                          }}
+                          className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                        >
+                          Test Endpoint
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h4 className="font-medium">Lambda Configuration</h4>
+                
+
+                
+                <div>
+                  <label className="block font-semibold mb-1">Function Name</label>
+                  <input
+                    className="w-full border rounded px-2 py-1 mb-2"
+                    value={lambdaForm.functionName}
+                    onChange={e => setLambdaForm(f => ({ ...f, functionName: e.target.value }))}
+                    placeholder="handler.js"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block font-semibold mb-1">Runtime</label>
+                  <select
+                    className="w-full border rounded px-2 py-1 mb-2"
+                    value={lambdaForm.runtime}
+                    onChange={e => setLambdaForm(f => ({ ...f, runtime: e.target.value }))}
+                  >
+                    <option value="nodejs18.x">Node.js 18.x</option>
+                    <option value="nodejs20.x">Node.js 20.x</option>
+                    <option value="python3.12">Python 3.12</option>
+                    <option value="python3.11">Python 3.11</option>
+                    <option value="python3.10">Python 3.10</option>
+                    <option value="java21">Java 21</option>
+                    <option value="java17">Java 17</option>
+                    <option value="java11">Java 11</option>
+                    <option value="dotnet8">.NET 8</option>
+                    <option value="dotnet6">.NET 6</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block font-semibold mb-1">Handler</label>
+                  <input
+                    className="w-full border rounded px-2 py-1 mb-2"
+                    value={lambdaForm.handler}
+                    onChange={e => setLambdaForm(f => ({ ...f, handler: e.target.value }))}
+                    placeholder="index.handler"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <h4 className="font-medium">Resource Configuration</h4>
+                
+                <div>
+                  <label className="block font-semibold mb-1">Memory (MB)</label>
+                  <input
+                    type="number"
+                    className="w-full border rounded px-2 py-1 mb-2"
+                    value={lambdaForm.memory}
+                    min={128}
+                    max={10240}
+                    onChange={e => setLambdaForm(f => ({ ...f, memory: Number(e.target.value) }))}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block font-semibold mb-1">Timeout (seconds)</label>
+                  <input
+                    type="number"
+                    className="w-full border rounded px-2 py-1 mb-2"
+                    value={lambdaForm.timeout}
+                    min={1}
+                    max={900}
+                    onChange={e => setLambdaForm(f => ({ ...f, timeout: Number(e.target.value) }))}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block font-semibold mb-1">Environment Variables (JSON)</label>
+                  <textarea
+                    className="w-full border rounded px-2 py-1 mb-2 font-mono"
+                    value={lambdaForm.environment}
+                    onChange={e => setLambdaForm(f => ({ ...f, environment: e.target.value }))}
+                    placeholder='{"KEY":"VALUE"}'
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="pt-4">
+                  <button
+                    onClick={runProject}
+                    disabled={isRunningProject}
+                    className={`w-full px-4 py-2 text-sm rounded ${
+                      isRunningProject 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-green-500 hover:bg-green-600'
+                    } text-white`}
+                  >
+                    {isRunningProject ? 'Deploying...' : 'Deploy Project'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {activeTab === 'console' && (
+          <div className="h-full flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium">Console Output</h3>
+                {isDeploying && (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-green-600">Deploying</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConsoleOutput([])}
+                  className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 bg-gray-900 text-green-400 font-mono text-sm rounded-b-lg">
+              {consoleOutput.length === 0 ? (
+                <div className="text-gray-500">No console output yet...</div>
+              ) : (
+                consoleOutput.map((output: string, index: number) => (
+                  <div key={index} className="mb-1">
+                    <span className="text-gray-400">$ </span>
+                    {output}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
-     )}
 
       {/* Chat Messages Area - Show only for lambda tab */}
       {activeTab === 'lambda' && (
@@ -3606,21 +4464,6 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         {activeTab === 'lambda' && isSidebarSchemaDropOver && (
           <div className="text-center py-8 text-purple-600 font-medium">
             Drop schema here to add context
-          </div>
-        )}
-        
-        {/* Code Generation Tips - Always show for Lambda tab */}
-        {activeTab === 'lambda' && (
-          <div className="mb-4">
-            <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
-              <h4 className="font-medium text-blue-900 mb-2">💡 Code Generation Tips</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Describe the function's purpose clearly</li>
-                <li>• Specify the programming language (Node.js, Python, etc.)</li>
-                <li>• Mention any AWS services you want to integrate with</li>
-                <li>• Include error handling requirements</li>
-              </ul>
-            </div>
           </div>
         )}
         
@@ -3651,6 +4494,19 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                 <p className="text-xs text-blue-600">"Build a project management tool"</p>
               </div>
             </div>
+          </div>
+        )}
+        
+        {/* Code Generation Tips - Only show for Lambda tab */}
+        {activeTab === 'lambda' && (
+          <div className="bg-blue-50 rounded-lg border border-blue-200 p-4 mb-4">
+            <h4 className="font-medium text-blue-900 mb-2">💡 Code Generation Tips</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• Describe the function's purpose clearly</li>
+              <li>• Specify the programming language (Node.js, Python, etc.)</li>
+              <li>• Mention any AWS services you want to integrate with</li>
+              <li>• Include error handling requirements</li>
+            </ul>
           </div>
         )}
         
