@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bot, Send, File, Folder, Play, Database, Code, X, Upload, FileText, Image, Archive } from 'lucide-react';
+import { Bot, Send, File, Folder, Play, Database, Code, X, Upload, FileText, Image, Archive, Cloud, Download, RefreshCw } from 'lucide-react';
 import { useDrop } from 'react-dnd';
 import { useNamespaceContext } from '../../components/NamespaceContext';
 import APIMethodCreationAgent from './APIMethodCreationAgent';
@@ -93,7 +93,7 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
   const [showGeneratedCode, setShowGeneratedCode] = useState(false);
   
   // State for resizable workspace
-  const [workspaceWidth, setWorkspaceWidth] = useState(550);
+  const [workspaceWidth, setWorkspaceWidth] = useState(600);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartWidth, setDragStartWidth] = useState(0);
@@ -3431,7 +3431,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
   return (
     <div 
       ref={namespaceDropRef as any}
-      className={`fixed top-0 right-0 h-full flex flex-col bg-white shadow-2xl border-l border-gray-200 z-[60] pointer-events-auto ${
+      className={`fixed top-0 right-0 h-full flex flex-col bg-white shadow-2xl border-l border-gray-200 z-[60] pointer-events-auto transform transition-all duration-500 ease-out animate-slide-in-right ${
         isNamespaceDropOver ? 'bg-blue-50 border-2 border-blue-400' : 
         isSchemaDropOver ? 'bg-purple-50 border-2 border-purple-400' : ''
       }`}
@@ -4160,37 +4160,38 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             {/* File Tree Panel */}
             <div className="w-1/3 border-r border-gray-200 bg-white p-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium">Project Files</h3>
+                <h3 className="font-medium">Files</h3>
                 <div className="flex gap-2">
                   <button
                     onClick={saveFilesToS3}
                     disabled={projectFiles.length === 0 || isSavingToS3}
-                    className={`px-2 py-1 text-xs rounded ${
+                    className={`p-2 rounded-lg transition-colors ${
                       projectFiles.length === 0 || isSavingToS3
-                        ? 'bg-gray-300 cursor-not-allowed'
+                        ? 'bg-gray-300 cursor-not-allowed text-gray-500'
                         : 'bg-purple-500 hover:bg-purple-600 text-white'
                     }`}
-                    title="Save all project files to S3 cloud bucket"
+                    title={isSavingToS3 ? 'Saving to S3...' : 'Save all project files to S3 cloud bucket'}
                   >
-                    {isSavingToS3 ? 'Saving to S3...' : 'Save to S3 Cloud Bucket'}
+                    <Cloud className="w-4 h-4" />
                   </button>
                   <button
                     onClick={downloadProjectFiles}
                     disabled={projectFiles.length === 0 || isDownloading}
-                    className={`px-2 py-1 text-xs rounded ${
+                    className={`p-2 rounded-lg transition-colors ${
                       projectFiles.length === 0 || isDownloading
-                        ? 'bg-gray-300 cursor-not-allowed'
+                        ? 'bg-gray-300 cursor-not-allowed text-gray-500'
                         : 'bg-green-500 hover:bg-green-600 text-white'
                     }`}
-                    title="Download all project files as ZIP"
+                    title={isDownloading ? 'Downloading...' : 'Download all project files as ZIP'}
                   >
-                    {isDownloading ? 'Downloading...' : 'Download ZIP'}
+                    <Download className="w-4 h-4" />
                   </button>
                   <button
                     onClick={refreshFileTree}
-                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                    className="p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                    title="Refresh file tree"
                   >
-                    Refresh
+                    <RefreshCw className="w-4 h-4" />
                   </button>
                 </div>
               </div>
