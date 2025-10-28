@@ -18,50 +18,47 @@ import {
   Plus,
   Bell,
   User,
+  Menu,
+  X,
 } from 'lucide-react';
 
 const sidebarItems = [
   {
     name: 'Dashboard',
     path: '/',
-    icon: <LayoutDashboard size={24} />, // Use your logo or API icon
+    icon: <LayoutDashboard size={20} />,
   },
   {
     name: 'Namespace',
     path: '/namespace',
-    icon: <Database size={24} />,
+    icon: <Database size={20} />,
   },
   {
-  name: 'AWS',
-  path: '/aws',
-  icon: <Cloud size={24} />, // AWS icon
+    name: 'AWS',
+    path: '/aws',
+    icon: <Cloud size={20} />,
   },
   {
     name: 'Tests',
     path: '/tests',
-    icon: <Play size={24} />, // Tests icon
+    icon: <Play size={20} />,
   },
   {
     name: 'Docs',
     path: '/docsPage',
-    icon: <BookOpen size={24} />, // Documentation icon
+    icon: <BookOpen size={20} />,
   },
   {
     name: 'Notification',
     path: '/notification-service',
-    icon: <Bell size={24} />,
+    icon: <Bell size={20} />,
   },
-  {
-    name: 'Settings',
-    path: '/settings',
-    icon: <Settings size={24} />, // Settings icon
-  },
-
 ];
 
 const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -77,6 +74,23 @@ const Sidebar: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isMobileMenuOpen) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMobileMenuOpen]);
 
   const handleLogout = async () => {
     const api = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
@@ -108,95 +122,98 @@ const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="fixed top-0 left-0 z-40 h-screen w-20 bg-[#f7f8fa] border-r border-gray-200 flex flex-col items-center py-4">
-      {/* Logo */}
-      <div className="mb-6 flex flex-col items-center">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-300 flex items-center justify-center mb-1 hover:scale-105 transition-all duration-300 cursor-pointer" onClick={() => {
-          window.location.href = '/landingPage';
-        }}>
-          {/* Replace with your logo if needed */}
-          <span className="text-white font-bold text-2xl">B</span>
-        </div>
-      </div>
-      {/* Icons */}
-      <nav className="flex flex-col gap-2 flex-1 items-center w-full">
-        {sidebarItems.map((item) => (
-          <Link
-            key={item.name}
-            href={item.path}
-            className={`flex flex-col items-center gap-1 py-2 w-full group transition-colors
-              ${pathname === item.path ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-blue-500 hover:bg-gray-100'}`}
+    <>
+      {/* Mobile Hamburger Menu Button */}
+      <button
+        className="md:hidden fixed top-4 left-4 z-50  bg-white  pb-4"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       >
-            <span className="flex items-center justify-center w-full">{item.icon}</span>
-            <span className="text-[11px] font-medium mt-0.5 group-hover:text-blue-500" style={{fontSize:'11px'}}>{item.name}</span>
-            </Link>
-        ))}
-          </nav>
-      
-      {/* Notification and User Profile */}
-      <div className="mt-auto mb-4 flex flex-col items-center gap-3">
-        {/* Notification Bell */}
-        <div className="relative group">
-          <button className="flex flex-col items-center gap-1 py-2 w-full text-gray-500 hover:text-blue-500 hover:bg-gray-100 rounded-lg transition-colors">
-            <div className="relative">
-              <Bell size={20} />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
-            </div>
-            <span className="text-[11px] font-medium">Notify</span>
-          </button>
-        </div>
+        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
 
-        {/* User Profile */}
-        <div className="relative group" ref={dropdownRef}>
-          <button 
-            className="flex flex-col items-center gap-1 py-2 w-full text-gray-500 hover:text-blue-500 hover:bg-gray-100 rounded-lg transition-colors"
-            onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-          >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-blue-400 flex items-center justify-center shadow-sm group-hover:shadow-md transition-all">
-              <User size={16} className="text-white" />
-            </div>
-            <span className="text-[11px] font-medium">Profile</span>
-          </button>
-          
-          {/* Dropdown Menu */}
-          {isProfileDropdownOpen && (
-            <div className="absolute bottom-0 left-full ml-2 w-48 py-2 bg-white rounded-xl shadow-lg border border-gray-100 z-50">
-              <Link 
-                href="/profile" 
-                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                onClick={() => setIsProfileDropdownOpen(false)}
-              >
-                <User size={14} />
-                Profile
-              </Link>
-              <Link 
-                href="/settings" 
-                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                onClick={() => setIsProfileDropdownOpen(false)}
-              >
-                <Settings size={14} />
-                Settings
-              </Link>
-              <div className="h-px bg-gray-200 my-2"></div>
-              <button 
-                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                onClick={() => {
-                  setIsProfileDropdownOpen(false);
-                  handleLogout();
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
-                Sign out
-              </button>
-            </div>
-          )}
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/50 bg-opacity-50 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed top-0 left-0 z-40 h-screen bg-white border-r border-gray-200 flex flex-col py-5
+        transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        w-64 md:w-20
+      `}>
+        {/* Logo - Mobile only */}
+        <div className="mb-8 flex items-center justify-center px-6 md:hidden">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-300 flex items-center justify-center mr-3">
+            <span className="text-white font-bold text-lg">B</span>
+          </div>
+          <span className="text-xl font-bold text-gray-900">BRMH</span>
         </div>
-      </div>
+        
+        {/* Desktop Logo */}
+        <div className="mb-6 flex flex-col items-center hidden md:flex">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-300 flex items-center justify-center mb-1 hover:scale-105 transition-all duration-300 cursor-pointer" onClick={() => {
+            window.location.href = '/landingPage';
+          }}>
+            <span className="text-white font-bold text-2xl">B</span>
+          </div>
+        </div>
+        
+        {/* Main Navigation */}
+        <nav className="flex flex-col flex-1 px-4 md:px-0">
+          <div className="space-y-1 md:space-y-2">
+            {sidebarItems.map((item) => (
+              <Link
+                key={item.name}
+                href={item.path}
+                className={`flex items-center gap-3 py-2.5 px-3 rounded-lg group transition-colors md:flex-col md:gap-1 md:py-2 md:w-full
+                  ${pathname === item.path 
+                    ? 'bg-yellow-50 text-yellow-700 border border-yellow-200 md:bg-white md:text-blue-600 md:shadow-sm' 
+                    : 'text-gray-600 hover:text-yellow-700 hover:bg-yellow-50 md:text-gray-500 md:hover:text-blue-600 md:hover:bg-gray-100'
+                  }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <div className={`${pathname === item.path ? 'text-yellow-600 md:text-blue-600' : 'text-gray-500 group-hover:text-yellow-700 md:group-hover:text-blue-600'}`}>
+                  {item.icon}
+                </div>
+                <span className="font-medium text-sm md:hidden">{item.name}</span>
+                <span className="text-[11px] font-medium mt-0.5 group-hover:text-blue-600 hidden md:block" style={{fontSize:'11px'}}>{item.name}</span>
+              </Link>
+            ))}
+          </div>
+        </nav>
+        
+        {/* Bottom Section - Settings and Help */}
+        <div className="mt-auto px-4 md:px-0">
+          <div className="h-px bg-gray-200 mb-3"></div>
+          <div className="space-y-1">
+            <Link
+              href="/settings"
+              className="flex items-center gap-3 py-2.5 px-3 rounded-lg text-gray-600 hover:text-yellow-700 hover:bg-yellow-50 transition-colors md:flex-col md:gap-1 md:py-2 md:w-full md:text-gray-500 md:hover:text-blue-600 md:hover:bg-gray-100"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <Settings size={20} className="text-gray-500" />
+              <span className="font-medium text-sm md:hidden">Settings</span>
+              <span className="text-[11px] font-medium mt-0.5 group-hover:text-blue-600 hidden md:block" style={{fontSize:'11px'}}>Settings</span>
+            </Link>
+            
+            <Link
+              href="/help"
+              className="flex items-center gap-3 py-2.5 px-3 rounded-lg text-gray-600 hover:text-yellow-700 hover:bg-yellow-50 transition-colors md:flex-col md:gap-1 md:py-2 md:w-full md:text-gray-500 md:hover:text-blue-600 md:hover:bg-gray-100"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <HelpCircle size={20} className="text-gray-500" />
+              <span className="font-medium text-sm md:hidden">Help Center</span>
+              <span className="text-[11px] font-medium mt-0.5 group-hover:text-blue-600 hidden md:block" style={{fontSize:'11px'}}>Help</span>
+            </Link>
+          </div>
+        </div>
       </aside>
+    </>
   );
 };
 

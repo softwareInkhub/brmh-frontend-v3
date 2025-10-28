@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Sidebar from "./projectSidebar";
-// import Navbar from "./Navbar";
+import DashboardNavbar from "./DashboardNavbar";
 import FooterWithCollapseButton from "./FooterWithCollapseButton";
 import GlobalAIAgentButton from "./GlobalAIAgentButton";
 import { usePathname } from 'next/navigation';
@@ -19,7 +19,7 @@ export default function AppContentClient({ children }: { children: React.ReactNo
   return (
     <>
       <div 
-        className={`flex min-h-screen bg-gray-50 ${!hideSidebar ? 'ml-20' : ''} transition-all duration-300 ease-in-out`}
+        className={`flex min-h-screen bg-gray-50 ${!hideSidebar ? 'ml-0 md:ml-20' : ''} transition-all duration-300 ease-in-out`}
         style={{ 
           marginRight: '0px',
           maxWidth: '100%',
@@ -28,8 +28,8 @@ export default function AppContentClient({ children }: { children: React.ReactNo
       >
         {!hideSidebar && <Sidebar />}
         <div className="flex-1 min-h-screen overflow-auto" style={{ maxWidth: '100%' }}>
-          {/* {!hideSidebar && <Navbar onMenuClick={() => setIsCollapsed(!isCollapsed)} />} */}
-          <main className="w-full min-h-screen overflow-auto" style={{ maxWidth: '100%' }}>
+          {!hideSidebar && <DashboardNavbar />}
+          <main className="w-full min-h-screen overflow-auto px-2 md:px-0" style={{ maxWidth: '100%' }}>
             {children}
           </main>
         </div>

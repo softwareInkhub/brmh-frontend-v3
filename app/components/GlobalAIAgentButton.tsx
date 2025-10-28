@@ -182,26 +182,6 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
           
           <Bot className="w-7 h-7 text-white" />
           
-          {/* Test button for debugging */}
-          <div
-            onClick={() => {
-              const testNamespace = {
-                'namespace-id': 'test-123',
-                'namespace-name': 'Test Namespace'
-              };
-              console.log('Test drop with namespace:', testNamespace);
-              setDroppedNamespace(testNamespace);
-              setIsOpen(true);
-              toast.success(`AI Agent context set to: ${testNamespace['namespace-name']}`, {
-                description: 'Test drop successful',
-                duration: 3000,
-              });
-            }}
-            className="absolute -top-8 left-0 text-xs bg-red-500 text-white px-2 py-1 rounded opacity-50 hover:opacity-100 cursor-pointer"
-            title="Test drop"
-          >
-            Test
-          </div>
           
         </button>
       </div>

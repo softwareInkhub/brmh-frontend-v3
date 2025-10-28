@@ -85,10 +85,12 @@ function fieldsToSchema(fields: any[]): Record<string, any> {
 }
 
 function NamespacePage(props: React.PropsWithChildren<{}>) {
-  const { isCollapsed } = useSidePanel();
+  const { isCollapsed, setIsCollapsed } = useSidePanel();
   const { setCurrentNamespace } = useNamespaceContext();
   const [activeTab, setActiveTab] = useState('overview');
   const [tabs, setTabs] = useState(initialTabs);
+  const [namespaceSearchQuery, setNamespaceSearchQuery] = useState('');
+  const [namespaceViewMode, setNamespaceViewMode] = useState<'grid' | 'list'>('grid');
 
   // Modal state for schema creation
   const [showModal, setShowModal] = useState(false);
@@ -888,19 +890,21 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
         <div className="flex flex-col h-full w-full">
     <div className="bg-[#f7f8fa] min-h-screen">
             <div className="flex h-screen">
-        {/* SidePanel (always visible) */}
+        {/* Mobile Overlay */}
+        {!isCollapsed && (
+          <div 
+            className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
+            onClick={() => setIsCollapsed(true)}
+          />
+        )}
+
+        {/* SidePanel (responsive) */}
         <div
-          style={{
-            width: isCollapsed ? 0 : 256,
-            minWidth: isCollapsed ? 0 : 256,
-            maxWidth: isCollapsed ? 0 : 256,
-            background: '#fff',
-            borderRight: isCollapsed ? 'none' : '1px solid #f0f0f0',
-            height: '100vh',
-            zIndex: 20,
-            overflow: isCollapsed ? 'hidden' : 'auto',
-            transition: 'width 0.2s, min-width 0.2s, max-width 0.2s',
-          }}
+          className={`${isCollapsed ? 'hidden' : 'block'} md:block fixed md:relative top-0 left-0 h-screen bg-white border-r border-gray-200 z-30 overflow-auto transition-all duration-300 ease-in-out ${
+            isCollapsed 
+              ? 'w-0 min-w-0 max-w-0 opacity-0 -translate-x-full md:translate-x-0' 
+              : 'w-80 md:w-64 min-w-80 md:min-w-64 max-w-80 md:max-w-64 opacity-100 translate-x-0'
+          }`}
         >
           {!isCollapsed && (
             <SidePanel
@@ -942,14 +946,17 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
         </div>
         {/* Main Content */}
         <div 
-          className="flex-1 min-h-0  overflow-y-auto transition-all duration-200"
+          className="flex-1 min-h-0 overflow-y-auto transition-all duration-200 md:ml-0"
         >
                
                 
+                {/* Namespace Bar */}
+                
+
                 {/* Tab Layout: Horizontal or Vertical */}
                 {tabLayout === 'horizontal' ? (
                   <>
-                    <div className="border-b bg-white px-4 py-2 overflow-x-auto whitespace-nowrap relative scrollbar-thin-x">
+                    <div className="border-b bg-white px-2 md:px-4 py-2 overflow-x-auto whitespace-nowrap relative scrollbar-thin-x">
                       <div className="flex items-center gap-1" style={{ minWidth: 'fit-content', width: 'fit-content', display: 'inline-flex' }}>
                         {/* Sticky container for view button and Overview tab */}
                         <div className="sticky left-0 z-10 bg-white flex items-center pr-2" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.04)' }}>
@@ -958,12 +965,12 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                             title={`Switch to ${tabLayout === 'horizontal' ? 'Vertical' : 'Horizontal'} Tabs View`}
                             onClick={() => setTabLayout(tabLayout === 'horizontal' ? 'vertical' : 'horizontal')}
                           >
-                            {tabLayout === 'horizontal' ? <LayoutPanelLeft size={18} /> : <LayoutGrid size={18} />}
+                            {tabLayout === 'horizontal' ? <LayoutPanelLeft size={16} /> : <LayoutGrid size={16} />}
                           </button>
                           {tabs.filter(tab => tab.key === 'overview').map(tab => (
                 <div key={tab.key} className="flex items-center group">
                   <button
-                    className={`px-4 py-2 text-sm rounded-t-lg transition
+                    className={`px-2 md:px-4 py-2 text-xs md:text-sm rounded-t-lg transition
                       ${activeTab === tab.key ? 'font-medium text-gray-700 border-b-2 border-blue-600 bg-white' : 'text-gray-700 hover:bg-gray-100'}
                       ${tab.bold ? 'font-bold' : ''}
                       ${tab.italic ? 'italic' : ''}
@@ -984,7 +991,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           {tabs.filter(tab => tab.pinned && tab.key !== 'overview').map(tab => (
                             <div key={tab.key} className="flex items-center group">
                               <button
-                                className={`px-4 py-2 text-sm rounded-t-lg transition
+                                className={`px-2 md:px-4 py-2 text-xs md:text-sm rounded-t-lg transition
                                   ${activeTab === tab.key ? 'font-medium text-blue-700 border-b-2 border-blue-600 bg-white' : 'text-gray-700 hover:bg-gray-100'}
                                   ${tab.bold ? 'font-bold' : ''}
                                   ${tab.italic ? 'italic' : ''}
@@ -1013,7 +1020,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                         {tabs.filter(tab => !tab.pinned && tab.key !== 'overview').map(tab => (
                           <div key={tab.key} className="flex items-center group">
                             <button
-                              className={`px-4 py-2 text-sm rounded-t-lg transition
+                              className={`px-2 md:px-4 py-2 text-xs md:text-sm rounded-t-lg transition
                                 ${activeTab === tab.key ? 'font-medium text-gray-700 border-b-2 border-blue-600 bg-white' : 'text-gray-700 hover:bg-gray-100'}
                                 ${tab.bold ? 'font-bold' : ''}
                                 ${tab.italic ? 'italic' : ''}
@@ -1057,8 +1064,8 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
               </button>
             </div>
                     </div>
-                    {/* Main Tab Content with conditional left padding */}
-                    <div className={`${isCollapsed ? 'pl-0' : 'pl-8'} pr-8 w-full pt-4 transition-all duration-200`}>
+                    {/* Main Tab Content with responsive padding */}
+                    <div className={`${isCollapsed ? 'pl-0' : 'pl-2 md:pl-8'} pr-2 md:pr-8 w-full pt-2 md:pt-4 transition-all duration-200`}>
                       {activeTab === 'overview' && (
                         <UnifiedNamespace
                           externalModalTrigger={sidePanelModal}

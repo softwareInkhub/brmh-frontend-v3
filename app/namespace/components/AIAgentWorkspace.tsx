@@ -93,7 +93,7 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
   const [showGeneratedCode, setShowGeneratedCode] = useState(false);
   
   // State for resizable workspace
-  const [workspaceWidth, setWorkspaceWidth] = useState(600);
+  const [workspaceWidth, setWorkspaceWidth] = useState(typeof window !== 'undefined' && window.innerWidth < 768 ? window.innerWidth : 600);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartWidth, setDragStartWidth] = useState(0);
@@ -107,6 +107,9 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
 
   // Resize handlers
   const handleResizeStart = (e: React.MouseEvent) => {
+    // Disable resize on mobile
+    if (typeof window !== 'undefined' && window.innerWidth < 768) return;
+    
     e.preventDefault();
     setIsResizing(true);
     setDragStartX(e.clientX);
@@ -116,7 +119,8 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
   const handleResizeMove = (e: MouseEvent) => {
     if (!isResizing) return;
     const deltaX = e.clientX - dragStartX;
-    const newWidth = Math.max(400, Math.min(900, dragStartWidth - deltaX));
+    const maxWidth = typeof window !== 'undefined' && window.innerWidth < 768 ? window.innerWidth : 900;
+    const newWidth = Math.max(300, Math.min(maxWidth, dragStartWidth - deltaX));
     setWorkspaceWidth(newWidth);
   };
 
@@ -3436,13 +3440,13 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         isSchemaDropOver ? 'bg-purple-50 border-2 border-purple-400' : ''
       }`}
       style={{ 
-        width: `${workspaceWidth}px`,
-        maxWidth: `${workspaceWidth}px`
+        width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : `${workspaceWidth}px`,
+        maxWidth: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : `${workspaceWidth}px`
       }}
     >
-      {/* Resize Handle */}
+      {/* Resize Handle - Hidden on mobile */}
       <div 
-        className={`absolute left-0 top-0 h-full w-1 cursor-ew-resize hover:bg-blue-400 transition-colors z-10 ${isResizing ? 'bg-blue-500' : 'bg-transparent hover:bg-blue-300'}`}
+        className={`hidden md:block absolute left-0 top-0 h-full w-1 cursor-ew-resize hover:bg-blue-400 transition-colors z-10 ${isResizing ? 'bg-blue-500' : 'bg-transparent hover:bg-blue-300'}`}
         onMouseDown={handleResizeStart}
         title="Drag to resize workspace width"
       >
@@ -3501,76 +3505,76 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200 bg-white px-4 pt-2">
+        <div className="flex border-b border-gray-200 bg-white px-2 md:px-4 pt-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('lambda')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'lambda'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Code size={16} /> Lambda
+            <Code size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Lambda</span>
         </button>
         <button
           onClick={() => setActiveTab('api')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'api'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Database size={16} /> API
+            <Database size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">API</span>
         </button>
         <button
           onClick={() => setActiveTab('web-scraping')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'web-scraping'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <FileText size={16} /> Web Scraping
+            <FileText size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Web Scraping</span>
         </button>
         <button
           onClick={() => setActiveTab('files')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'files'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Folder size={16} /> Files
+            <Folder size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Files</span>
         </button>
         <button
           onClick={() => setActiveTab('schema')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'schema'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Database size={16} /> Schema
+            <Database size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Schema</span>
         </button>
         <button
           onClick={() => setActiveTab('deployment')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'deployment'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Play size={16} /> Deployment
+            <Play size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Deployment</span>
         </button>
         <button
           onClick={() => setActiveTab('console')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'console'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Play size={16} /> Console
+            <Play size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Console</span>
         </button>
       </div>
 
@@ -4156,48 +4160,48 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           </div>
         )}
         {activeTab === 'files' && (
-          <div className="h-full flex">
+          <div className="h-full flex flex-col md:flex-row">
             {/* File Tree Panel */}
-            <div className="w-1/3 border-r border-gray-200 bg-white p-4">
+            <div className="w-full md:w-1/3 border-r border-gray-200 bg-white p-2 md:p-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium">Files</h3>
-                <div className="flex gap-2">
+                <h3 className="font-medium text-sm md:text-base">Files</h3>
+                <div className="flex gap-1 md:gap-2">
                   <button
                     onClick={saveFilesToS3}
                     disabled={projectFiles.length === 0 || isSavingToS3}
-                    className={`p-2 rounded-lg transition-colors ${
+                    className={`p-1.5 md:p-2 rounded-lg transition-colors ${
                       projectFiles.length === 0 || isSavingToS3
                         ? 'bg-gray-300 cursor-not-allowed text-gray-500'
                         : 'bg-purple-500 hover:bg-purple-600 text-white'
                     }`}
                     title={isSavingToS3 ? 'Saving to S3...' : 'Save all project files to S3 cloud bucket'}
                   >
-                    <Cloud className="w-4 h-4" />
+                    <Cloud className="w-3 h-3 md:w-4 md:h-4" />
                   </button>
                   <button
                     onClick={downloadProjectFiles}
                     disabled={projectFiles.length === 0 || isDownloading}
-                    className={`p-2 rounded-lg transition-colors ${
+                    className={`p-1.5 md:p-2 rounded-lg transition-colors ${
                       projectFiles.length === 0 || isDownloading
                         ? 'bg-gray-300 cursor-not-allowed text-gray-500'
                         : 'bg-green-500 hover:bg-green-600 text-white'
                     }`}
                     title={isDownloading ? 'Downloading...' : 'Download all project files as ZIP'}
                   >
-                    <Download className="w-4 h-4" />
+                    <Download className="w-3 h-3 md:w-4 md:h-4" />
                   </button>
                   <button
                     onClick={refreshFileTree}
-                    className="p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                    className="p-1.5 md:p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
                     title="Refresh file tree"
                   >
-                    <RefreshCw className="w-4 h-4" />
+                    <RefreshCw className="w-3 h-3 md:w-4 md:h-4" />
                   </button>
                 </div>
               </div>
-              <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
+              <div className="overflow-y-auto max-h-[200px] md:max-h-[calc(100vh-300px)]">
                 {projectFiles.length === 0 ? (
-                  <div className="text-gray-500 text-sm">No files found...</div>
+                  <div className="text-gray-500 text-xs md:text-sm">No files found...</div>
                 ) : (
                   renderFileTree(projectFiles)
                 )}
@@ -4205,14 +4209,14 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             </div>
             
             {/* File Content Panel */}
-            <div className="flex-1 p-4">
+            <div className="flex-1 p-2 md:p-4">
               {selectedFile ? (
                 <div className="h-full flex flex-col">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-medium">{selectedFile.name}</h3>
-                    <span className="text-sm text-gray-500">{selectedFile.path}</span>
+                  <div className="flex items-center justify-between mb-2 md:mb-4">
+                    <h3 className="font-medium text-sm md:text-base truncate">{selectedFile.name}</h3>
+                    <span className="text-xs md:text-sm text-gray-500 hidden md:inline">{selectedFile.path}</span>
                   </div>
-                  <div className="flex-1 overflow-auto bg-gray-900 text-green-400 font-mono text-sm rounded-lg p-4">
+                  <div className="flex-1 overflow-auto bg-gray-900 text-green-400 font-mono text-xs md:text-sm rounded-lg p-2 md:p-4">
                     {selectedFile.content || fileContent ? (
                       <pre className="whitespace-pre-wrap">{selectedFile.content || fileContent}</pre>
                     ) : (
@@ -4223,8 +4227,8 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
               ) : (
                 <div className="h-full flex items-center justify-center text-gray-500">
                   <div className="text-center">
-                    <Folder size={48} className="mx-auto mb-4 text-gray-300" />
-                    <p>Select a file from the tree to view its content</p>
+                    <Folder size={32} className="mx-auto mb-2 md:mb-4 text-gray-300 md:w-12 md:h-12" />
+                    <p className="text-sm md:text-base">Select a file from the tree to view its content</p>
                   </div>
                 </div>
               )}
@@ -4772,97 +4776,97 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
       )}
 
 
-      {/* Chat Input - Always at bottom */}
-      <div className="border-t border-gray-200 p-4 bg-white relative">
-        {/* Selected Namespace Chips */}
-        {droppedNamespaces.length > 0 && (
-          <div className="mb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap gap-2">
-                {droppedNamespaces.map((ns, index) => (
-                  <div
-                    key={ns['namespace-id'] || index}
-                    className="inline-flex items-center gap-1.5 bg-blue-100/80 text-blue-700 px-2 py-1 rounded-full text-xs font-medium border border-blue-200"
-                  >
-                    <span>@{ns['namespace-name']}</span>
-                    <button
-                      onClick={() => {
-                        setDroppedNamespaces(prev => prev.filter((_, i) => i !== index));
-                      }}
-                      className="ml-1 hover:bg-blue-200 rounded-full p-0.5 transition-colors"
-                      title="Remove namespace"
+        {/* Chat Input - Always at bottom */}
+        <div className="border-t border-gray-200 p-2 md:p-4 bg-white relative">
+          {/* Selected Namespace Chips */}
+          {droppedNamespaces.length > 0 && (
+            <div className="mb-2 md:mb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-wrap gap-1 md:gap-2">
+                  {droppedNamespaces.map((ns, index) => (
+                    <div
+                      key={ns['namespace-id'] || index}
+                      className="inline-flex items-center gap-1 bg-blue-100/80 text-blue-700 px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-xs font-medium border border-blue-200"
                     >
-                      <X className="w-3 h-3 text-blue-600" />
-                    </button>
-                  </div>
-                ))}
+                      <span className="truncate max-w-[80px] md:max-w-none">@{ns['namespace-name']}</span>
+                      <button
+                        onClick={() => {
+                          setDroppedNamespaces(prev => prev.filter((_, i) => i !== index));
+                        }}
+                        className="ml-1 hover:bg-blue-200 rounded-full p-0.5 transition-colors"
+                        title="Remove namespace"
+                      >
+                        <X className="w-2.5 h-2.5 md:w-3 md:h-3 text-blue-600" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => {
+                    setDroppedNamespaces([]);
+                    addMessage({ 
+                      role: 'assistant', 
+                      content: 'Cleared all dropped namespaces from context.' 
+                    });
+                  }}
+                  className="text-xs text-red-600 hover:text-red-800"
+                >
+                  Clear all
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  setDroppedNamespaces([]);
-                  addMessage({ 
-                    role: 'assistant', 
-                    content: 'Cleared all dropped namespaces from context.' 
-                  });
-                }}
-                className="text-xs text-red-600 hover:text-red-800"
-              >
-                Clear all
-              </button>
             </div>
-          </div>
-        )}
-        
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <textarea
-              ref={inputRef}
-              value={inputMessage}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              onKeyDown={handleKeyDown}
-              placeholder={namespace ? "Type your message... (Upload files or drag schemas for context)" : "Type your message... (Try: 'Create a namespace for...' to generate a new project)"}
-              className="w-full resize-none border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={1}
-              disabled={isLoading}
-            />
-            
-            {/* Namespace Suggestions Dropdown */}
-            {showNamespaceSuggestions && namespaceSuggestions.length > 0 && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
-                {namespaceSuggestions.map((ns, index) => (
-                  <div
-                    key={ns['namespace-id']}
-                    className={`px-3 py-2 cursor-pointer flex items-center gap-2 ${
-                      index === selectedSuggestionIndex 
-                        ? 'bg-blue-100 text-blue-700' 
-                        : 'hover:bg-gray-100'
-                    }`}
-                    onClick={() => selectNamespace(ns)}
-                  >
-                    <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
-                      <Database className="w-3 h-3 text-blue-600" />
+          )}
+          
+          <div className="flex gap-1 md:gap-2">
+            <div className="flex-1 relative">
+              <textarea
+                ref={inputRef}
+                value={inputMessage}
+                onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyDown}
+                placeholder={namespace ? "Type your message..." : "Type your message... (Try: 'Create a namespace for...' to generate a new project)"}
+                className="w-full resize-none border border-gray-300 rounded-lg px-2 md:px-3 py-1.5 md:py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                rows={1}
+                disabled={isLoading}
+              />
+              
+              {/* Namespace Suggestions Dropdown */}
+              {showNamespaceSuggestions && namespaceSuggestions.length > 0 && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-32 md:max-h-48 overflow-y-auto z-50">
+                  {namespaceSuggestions.map((ns, index) => (
+                    <div
+                      key={ns['namespace-id']}
+                      className={`px-2 md:px-3 py-1.5 md:py-2 cursor-pointer flex items-center gap-2 ${
+                        index === selectedSuggestionIndex 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : 'hover:bg-gray-100'
+                      }`}
+                      onClick={() => selectNamespace(ns)}
+                    >
+                      <div className="w-4 h-4 md:w-6 md:h-6 bg-blue-100 rounded flex items-center justify-center">
+                        <Database className="w-2 h-2 md:w-3 md:h-3 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-xs md:text-sm truncate">{ns['namespace-name']}</div>
+                        {ns['namespace-url'] && (
+                          <div className="text-xs text-gray-500 truncate hidden md:block">{ns['namespace-url']}</div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{ns['namespace-name']}</div>
-                      {ns['namespace-url'] && (
-                        <div className="text-xs text-gray-500 truncate">{ns['namespace-url']}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={handleSendMessage}
+              disabled={isLoading || !inputMessage.trim()}
+              className="px-2 md:px-4 py-1.5 md:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Send className="w-3 h-3 md:w-4 md:h-4" />
+            </button>
           </div>
-          <button
-            onClick={handleSendMessage}
-            disabled={isLoading || !inputMessage.trim()}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send className="w-4 h-4" />
-          </button>
         </div>
-      </div>
     </div>
   );
 };

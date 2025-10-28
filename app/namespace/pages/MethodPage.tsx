@@ -1282,66 +1282,65 @@ Please select an indexing configuration above.`);
       </div>
 
       {/* Header Section */}
-      <div className="px-4 py-2 border-b border-gray-200 bg-white">
+      <div className="px-3 md:px-4 py-2 border-b border-gray-200 bg-white">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-2 md:gap-3">
             <Settings className="text-blue-500" size={20} />
-            <h2 className="text-lg font-semibold text-gray-800">Method Details</h2>
-              </div>
-              {/* Action Buttons */}
-          <div className="flex gap-2 items-center">
-                <button
-                  title="Test Method"
-              className="w-8 h-8 flex items-center justify-center bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors"
-                  onClick={() => {
-                    if (onTest) onTest(editMethod, namespace);
-                  }}
-                >
-              <Play size={16} />
-                </button>
-                <button
-                  title="Edit"
-              className="w-8 h-8 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-                  onClick={() => setEditMode(true)}
-                >
-              <Edit size={16} />
-                </button>
-                <button
-                  title="Delete"
-              className="w-8 h-8 flex items-center justify-center bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
-                  onClick={async () => {
-                    if (window.confirm('Are you sure you want to delete this method?')) {
-                      try {
-                        const res = await fetch(`${API_BASE_URL}/unified/methods/${editMethod["namespace-method-id"]}`, {
-                          method: 'DELETE',
-                        });
-                        if (!res.ok && res.status !== 204) throw new Error('Failed to delete method');
-                        
-                        // Refresh side panel data to remove the deleted method
-                        if (refreshSidePanelData) {
-                          await refreshSidePanelData();
-                        }
-                        
-                        alert('Method deleted successfully!');
-                        window.close();
-                      } catch (error) {
-                        console.error('Error deleting method:', error);
-                        alert('Failed to delete method');
-                      }
-                    }
-                  }}
-                >
-              <Trash2 size={16} />
-                </button>
+            <h2 className="text-base md:text-lg font-semibold text-gray-800">Method Details</h2>
           </div>
-              </div>
-            </div>
+          <div className="flex gap-2 items-center">
+            <button
+              title="Test Method"
+              className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-green-100 hover:bg-green-200 text-green-700 rounded-2xl transition-colors shadow-sm"
+              onClick={() => {
+                if (onTest) onTest(editMethod, namespace);
+              }}
+            >
+              <Play size={16} />
+            </button>
+            <button
+              title="Edit"
+              className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-2xl transition-colors shadow-sm"
+              onClick={() => setEditMode(true)}
+            >
+              <Edit size={16} />
+            </button>
+            <button
+              title="Delete"
+              className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-red-600 hover:bg-red-700 text-white rounded-2xl transition-colors shadow-sm"
+              onClick={async () => {
+                if (window.confirm('Are you sure you want to delete this method?')) {
+                  try {
+                    const res = await fetch(`${API_BASE_URL}/unified/methods/${editMethod["namespace-method-id"]}`, {
+                      method: 'DELETE',
+                    });
+                    if (!res.ok && res.status !== 204) throw new Error('Failed to delete method');
+                    
+                    // Refresh side panel data to remove the deleted method
+                    if (refreshSidePanelData) {
+                      await refreshSidePanelData();
+                    }
+                    
+                    alert('Method deleted successfully!');
+                    window.close();
+                  } catch (error) {
+                    console.error('Error deleting method:', error);
+                    alert('Failed to delete method');
+                  }
+                }
+              }}
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
 
             {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200 bg-white">
+      <div className="flex border-b border-gray-200 bg-white overflow-x-auto">
               <button
                 onClick={() => setActiveTab('details')}
-          className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+          className={`px-2 md:px-3 py-1 md:py-1.5 text-xs font-medium border-b-2 transition-colors ${
                   activeTab === 'details'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1351,7 +1350,7 @@ Please select an indexing configuration above.`);
               </button>
               <button
                 onClick={() => setActiveTab('caching')}
-          className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+          className={`px-2 md:px-3 py-1 md:py-1.5 text-xs font-medium border-b-2 transition-colors ${
                   activeTab === 'caching'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1361,7 +1360,7 @@ Please select an indexing configuration above.`);
               </button>
               <button
                 onClick={() => setActiveTab('search')}
-          className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+          className={`px-2 md:px-3 py-1 md:py-1.5 text-xs font-medium border-b-2 transition-colors ${
                   activeTab === 'search'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1375,15 +1374,15 @@ Please select an indexing configuration above.`);
       {!editMode ? (
         <>
             {activeTab === 'details' && (
-            <div className="px-4 py-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+            <div className="px-3 md:px-4 py-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-6 gap-y-2 md:gap-y-3">
                 <div>
                   <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Edit size={14} className="text-blue-400" /> Name</div>
-                  <div className="text-sm font-semibold text-gray-900">{editMethod["namespace-method-name"] || ''}</div>
+                  <div className="text-sm md:text-base font-semibold text-gray-900 break-words">{editMethod["namespace-method-name"] || ''}</div>
                 </div>
                 <div>
                   <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Hash size={14} className="text-purple-400" /> ID</div>
-                  <div className="text-xs font-mono text-gray-700">
+                  <div className="text-xs font-mono text-gray-700 break-all">
                     {editMethod["namespace-method-id"] || editMethod["id"] || editMethod["methodId"] || <span className="italic text-gray-400">No ID</span>}
                   </div>
                 </div>
@@ -1393,13 +1392,13 @@ Please select an indexing configuration above.`);
                 </div>
                 <div>
                   <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Link size={14} className="text-pink-400" /> URL Override</div>
-                  <div className="text-xs text-gray-700">{editMethod["namespace-method-url-override"] || <span className="italic text-gray-400">None</span>}</div>
+                  <div className="text-xs text-gray-700 break-all">{editMethod["namespace-method-url-override"] || <span className="italic text-gray-400">None</span>}</div>
                 </div>
                 <div>
                   <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Settings size={14} className="text-blue-400" /> Table Name</div>
                   <div className="text-xs text-gray-700">{editMethod["namespace-method-tableName"] || editMethod["tableName"] || <span className="italic text-gray-400">null</span>}</div>
                 </div>
-                <div className="sm:col-span-2">
+                <div className="md:col-span-2">
                   <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Tag size={14} className="text-yellow-400" /> Tags</div>
                   <div className="flex flex-wrap gap-1">
                     {Array.isArray(editMethod.tags) && editMethod.tags.length > 0 ? (
@@ -1411,7 +1410,7 @@ Please select an indexing configuration above.`);
                     )}
                   </div>
                 </div>
-                <div className="sm:col-span-2">
+                <div className="md:col-span-2">
                   <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Settings size={14} className="text-blue-400" /> Query Params</div>
                   <div className="flex flex-wrap gap-1">
                     {(Array.isArray(editMethod["namespace-method-queryParams"]) ? editMethod["namespace-method-queryParams"] : []).length > 0 ? (
@@ -1423,7 +1422,7 @@ Please select an indexing configuration above.`);
                     )}
                   </div>
                 </div>
-                <div className="sm:col-span-2 flex items-center gap-2 mt-2">
+                <div className="md:col-span-2 flex items-center gap-2 mt-2">
                   <div className="flex flex-col">
                     <CheckCircle size={16} className={editMethod['save-data'] ? 'text-green-500' : 'text-gray-300'} />
                     <span className={editMethod['save-data'] ? 'text-green-700 font-semibold text-xs' : 'text-gray-400 text-xs'}>Save Data</span>
@@ -1870,17 +1869,17 @@ Please select an indexing configuration above.`);
             )}
           </>
         ) : (
-          <form onSubmit={handleSave} className="flex flex-col gap-6 animate-fade-in p-4 md:p-6">
+          <form onSubmit={handleSave} className="flex flex-col gap-4 md:gap-6 animate-fade-in p-3 md:p-6">
             <div className="flex items-center gap-3 mb-2">
               <Edit size={24} className="text-blue-500" />
               <h2 className="text-xl font-bold text-blue-700 tracking-tight">Edit Method</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-3 md:gap-y-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
                 <input
                   type="text"
-                  className="w-full border border-blue-200 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition outline-none bg-blue-50 placeholder-gray-400"
+                  className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm md:text-base focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition outline-none bg-blue-50 placeholder-gray-400"
                   value={editMethod["namespace-method-name"] || ''}
                   onChange={e => handleInput("namespace-method-name", e.target.value)}
                 />
@@ -1889,7 +1888,7 @@ Please select an indexing configuration above.`);
                 <label className="block text-xs font-medium text-gray-700 mb-1">ID</label>
                 <input
                   type="text"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base bg-gray-100"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm md:text-base bg-gray-100"
                   value={editMethod["namespace-method-id"] || ''}
                   readOnly
                 />
@@ -1898,7 +1897,7 @@ Please select an indexing configuration above.`);
                 <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
                 <input
                   type="text"
-                  className="w-full border border-green-200 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-green-400 focus:border-green-400 transition outline-none bg-green-50 placeholder-gray-400"
+                  className="w-full border border-green-200 rounded-lg px-3 py-2 text-sm md:text-base focus:ring-2 focus:ring-green-400 focus:border-green-400 transition outline-none bg-green-50 placeholder-gray-400"
                   value={editMethod["namespace-method-type"] || ''}
                   onChange={e => handleInput("namespace-method-type", e.target.value)}
                 />
@@ -1907,12 +1906,12 @@ Please select an indexing configuration above.`);
                 <label className="block text-xs font-medium text-gray-700 mb-1">URL Override</label>
                 <input
                   type="text"
-                  className="w-full border border-pink-200 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition outline-none bg-pink-50 placeholder-gray-400"
+                  className="w-full border border-pink-200 rounded-lg px-3 py-2 text-sm md:text-base focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition outline-none bg-pink-50 placeholder-gray-400"
                   value={editMethod["namespace-method-url-override"] || ''}
                   onChange={e => handleInput("namespace-method-url-override", e.target.value)}
                 />
               </div>
-              <div className="sm:col-span-2">
+              <div className="md:col-span-2">
                 <label className="block text-xs font-medium text-gray-700 mb-1">Tags (comma separated)</label>
                 <input
                   type="text"
@@ -1925,7 +1924,7 @@ Please select an indexing configuration above.`);
                 <label className="block text-xs font-medium text-gray-700 mb-1">Query Params</label>
                 <div className="space-y-2">
                   {(Array.isArray(editMethod["namespace-method-queryParams"]) ? editMethod["namespace-method-queryParams"] : []).map((q: any, idx: number) => (
-                    <div key={idx} className="flex gap-2 items-center">
+                    <div key={idx} className="flex flex-col md:flex-row gap-2 items-stretch md:items-center">
                       <input
                         type="text"
                         className="border border-blue-200 rounded px-2 py-1 text-xs flex-1 bg-blue-50 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
