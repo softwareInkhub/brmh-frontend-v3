@@ -893,14 +893,14 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
         {/* Mobile Overlay */}
         {!isCollapsed && (
           <div 
-            className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
+            className="md:hidden fixed inset-0  bg-opacity-50 z-20"
             onClick={() => setIsCollapsed(true)}
           />
         )}
 
         {/* SidePanel (responsive) */}
         <div
-          className={`${isCollapsed ? 'hidden' : 'block'} md:block fixed md:relative top-0 left-0 h-screen bg-white border-r border-gray-200 z-30 overflow-auto transition-all duration-300 ease-in-out ${
+          className={`${isCollapsed ? 'hidden' : 'block'} md:block fixed md:relative top-0 left-0 h-screen bg-transparent bg-red-500 z-30 overflow-auto transition-all duration-300 ease-in-out ${
             isCollapsed 
               ? 'w-0 min-w-0 max-w-0 opacity-0 -translate-x-full md:translate-x-0' 
               : 'w-80 md:w-64 min-w-80 md:min-w-64 max-w-80 md:max-w-64 opacity-100 translate-x-0'
