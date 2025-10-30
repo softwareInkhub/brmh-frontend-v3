@@ -208,40 +208,81 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
     candidates: Array<{ id?: string; name?: string; schemaName?: string; namespaceId?: string; schema?: any }>;
   } | null>(null);
 
-  // Helper: list schemas from backend, trying multiple endpoints for compatibility
+  // Helper: list schemas from backend using the correct filtered endpoint
   const listSchemas = async (nsId?: string | null): Promise<any[]> => {
     if (!nsId) return [];
-    const endpoints: string[] = [
-      `${API_BASE_URL}/unified/schema?namespaceId=${encodeURIComponent(nsId)}`,
-      `${API_BASE_URL}/unified/schemas?namespaceId=${encodeURIComponent(nsId)}`,
-      `${API_BASE_URL}/unified/schema/list?namespaceId=${encodeURIComponent(nsId)}`
-    ];
-    for (const url of endpoints) {
-      try {
-        const res = await fetch(url);
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) return data;
-          if (Array.isArray((data || {}).items)) return (data as any).items;
-        }
-      } catch {}
+    try {
+      // Use the selection endpoint that properly filters by namespace
+      const url = `${API_BASE_URL}/unified/schema/selection?namespaceIds=${encodeURIComponent(nsId)}&limit=1000`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        return data.schemas || [];
+      }
+    } catch (error) {
+      console.warn(`Failed to fetch schemas for namespace ${nsId}:`, error);
     }
     return [];
   };
 
-  // Helper: get schemas from ALL namespaces in context
+  // Helper: get schemas from ALL namespaces in context using filtered selection endpoint
   const getAllSchemasFromContext = async (): Promise<{namespace: any, schemas: any[]}[]> => {
     const allNamespaces = [localNamespace, ...droppedNamespaces].filter(Boolean);
-    const results = await Promise.all(
-      allNamespaces.map(async (ns) => {
-        const schemas = await listSchemas(ns['namespace-id'] || ns.id);
+    if (allNamespaces.length === 0) return [];
+    
+    // Use the filtered selection endpoint that properly filters by namespace
+    const namespaceIds = allNamespaces.map(ns => ns['namespace-id'] || ns.id).filter(Boolean);
+    if (namespaceIds.length === 0) return [];
+    
+    const url = `${API_BASE_URL}/unified/schema/selection?namespaceIds=${namespaceIds.join(',')}&limit=1000`;
+    
+    try {
+      const response = await fetch(url);
+      let schemas: any[] = [];
+      if (response.ok) {
+        const data = await response.json();
+        schemas = data.schemas || [];
+      }
+
+      // Fetch namespace details to get authoritative schemaIds per namespace
+      const namespaceDetails = await Promise.all(
+        allNamespaces.map(async (ns) => {
+          const nsId = ns['namespace-id'] || ns.id;
+          try {
+            const nsRes = await fetch(`${API_BASE_URL}/unified/namespaces/${nsId}`);
+            const nsData = nsRes.ok ? await nsRes.json() : null;
+            const schemaIds: string[] = Array.isArray(nsData?.schemaIds) ? nsData.schemaIds : (Array.isArray(nsData?.['schema-ids']) ? nsData['schema-ids'] : []);
+            return { ns, nsId, schemaIds };
+          } catch {
+            return { ns, nsId, schemaIds: [] as string[] };
+          }
+        })
+      );
+
+      // Group schemas by namespace using (1) namespaceId match or (2) schemaIds membership
+      const results = namespaceDetails.map(({ ns, nsId, schemaIds }) => {
+        const nsSchemas = (schemas || []).filter((s: any) => {
+          const sNsId = s.namespaceId || s['namespace-id'];
+          if (sNsId) return sNsId === nsId;
+          if (schemaIds && schemaIds.length > 0) return schemaIds.includes(s.id);
+          return false;
+        });
         return {
           namespace: ns,
-          schemas: schemas
+          schemas: nsSchemas
         };
-      })
-    );
-    return results;
+      });
+
+      return results;
+    } catch (error) {
+      console.warn('Failed to fetch schemas via selection endpoint:', error);
+    }
+    
+    // Fallback: return empty results if the endpoint fails
+    return allNamespaces.map(ns => ({
+      namespace: ns,
+      schemas: []
+    }));
   };
   const [schemas, setSchemas] = useState<any[]>([]);
   const [rawSchemas, setRawSchemas] = useState<{ id: string; content: string }[]>([]);
@@ -1507,14 +1548,48 @@ What would you like to work on today?`,
           return;
         }
 
-        const allSchemasData = await getAllSchemasFromContext();
-        const allSchemas = allSchemasData.flatMap(data => 
-          data.schemas.map(schema => ({
-            ...schema,
-            namespaceName: data.namespace['namespace-name'] || data.namespace.name,
-            namespaceId: data.namespace['namespace-id'] || data.namespace.id
-          }))
-        );
+        let allSchemas: any[] = [];
+        let allSchemasData: {namespace: any, schemas: any[]}[] = [];
+        
+        try {
+          allSchemasData = await getAllSchemasFromContext();
+          allSchemas = allSchemasData.flatMap(data => 
+            data.schemas.map(schema => ({
+              ...schema,
+              namespaceName: data.namespace['namespace-name'] || data.namespace.name,
+              namespaceId: data.namespace['namespace-id'] || data.namespace.id
+            }))
+          );
+
+          // Fallback: if nothing returned, retry per-namespace fetch using legacy helper
+          if (allSchemas.length === 0) {
+            const retryResults = await Promise.all(
+              [localNamespace, ...droppedNamespaces].filter(Boolean).map(async (ns) => {
+                const nsId = ns['namespace-id'] || ns.id;
+                try {
+                  const schemas = await listSchemas(nsId);
+                  return {
+                    namespace: ns,
+                    schemas: schemas.map(s => ({
+                      ...s,
+                      namespaceName: ns['namespace-name'] || ns.name,
+                      namespaceId: nsId
+                    }))
+                  };
+                } catch (error) {
+                  console.warn(`Failed to fetch schemas for namespace ${nsId}:`, error);
+                  return { namespace: ns, schemas: [] };
+                }
+              })
+            );
+            allSchemasData = retryResults;
+            allSchemas = retryResults.flatMap(r => r.schemas);
+          }
+        } catch (error) {
+          console.error('Error fetching schemas:', error);
+          // Don't show error message - just continue with empty schemas
+          allSchemas = [];
+        }
 
         if (allSchemas.length > 0) {
           // Group schemas by namespace for better display
