@@ -6,6 +6,7 @@ import { useDrop } from 'react-dnd';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import { useNamespaceContext } from './NamespaceContext';
+import { useAIAgent } from './AIAgentContext';
 
 // Dynamically import AIAgentWorkspace to prevent SSR issues
 const AIAgentWorkspace = dynamic(() => import('../namespace/components/AIAgentWorkspace'), {
@@ -30,6 +31,7 @@ interface GlobalAIAgentButtonProps {
 
 const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = true, onOpen, onClose }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { setIsOpen: setContextIsOpen } = useAIAgent();
   const [droppedNamespace, setDroppedNamespace] = useState<any>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -108,11 +110,13 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
       });
     }
     setIsOpen(true);
+    setContextIsOpen(true);
     onOpen?.();
   };
 
   const handleCloseAIAgent = () => {
     setIsOpen(false);
+    setContextIsOpen(false);
     setDroppedNamespace(null);
     onClose?.();
   };
@@ -124,7 +128,7 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
       {/* Global Floating AI Agent Button */}
       <div
         ref={dropRef}
-        className={`fixed bottom-6 right-6 z-40 transition-all duration-300 ${
+        className={`fixed bottom-12 right-6 z-40 transition-all duration-300 ${
           isDragOver ? 'scale-110' : 'scale-100'
         }`}
         style={{ 
@@ -178,38 +182,7 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
           
           <Bot className="w-7 h-7 text-white" />
           
-          {/* Test button for debugging */}
-          <div
-            onClick={() => {
-              const testNamespace = {
-                'namespace-id': 'test-123',
-                'namespace-name': 'Test Namespace'
-              };
-              console.log('Test drop with namespace:', testNamespace);
-              setDroppedNamespace(testNamespace);
-              setIsOpen(true);
-              toast.success(`AI Agent context set to: ${testNamespace['namespace-name']}`, {
-                description: 'Test drop successful',
-                duration: 3000,
-              });
-            }}
-            className="absolute -top-8 left-0 text-xs bg-red-500 text-white px-2 py-1 rounded opacity-50 hover:opacity-100 cursor-pointer"
-            title="Test drop"
-          >
-            Test
-          </div>
           
-          {/* Tooltip */}
-          <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-            AI Agent Workspace
-            <div className="text-xs text-gray-300 mt-1">
-              {currentNamespace 
-                ? `Click to open with: ${currentNamespace['namespace-name']}`
-                : 'Drag a namespace here for context'
-              }
-            </div>
-            <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-          </div>
         </button>
       </div>
 

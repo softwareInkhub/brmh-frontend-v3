@@ -41,7 +41,7 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden pl-20 pr-20">
+    <section className="relative pt-14 pb-10 md:pt-28 md:pb-20 overflow-hidden px-3 md:px-20">
       {/* Gradient background */}
       <div className="absolute inset-0 z-0">
         <div className="w-full h-full bg-gradient-to-br from-[#e0f2fe] via-white to-[#ede9fe]" />
@@ -99,21 +99,21 @@ export default function Hero() {
           </defs>
         </g>
       </svg>
-      <div className="container-custom relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="relative z-10 max-w-[22rem] sm:max-w-xl md:max-w-none mx-auto">
+        <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
           {/* Left Content */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="space-y-8 max-w-xl lg:max-w-2xl mx-auto lg:mx-0"
+            className="space-y-5 md:space-y-8 max-w-xl lg:max-w-2xl mx-auto md:mx-0 text-center md:text-left"
           >
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.8 }}
-                className="text-5xl md:text-6xl lg:text-7xl font-bold font-display leading-tight tracking-tight text-gray-900 drop-shadow-sm"
+                className="text-[28px] sm:text-4xl md:text-5xl lg:text-6xl font-bold font-display leading-snug tracking-tight text-gray-900"
               >
                 <span className="bg-gradient-to-r from-blue-500 via-blue-400 to-purple-500 bg-clip-text text-transparent">BRMH</span>
                 <br />
@@ -124,7 +124,7 @@ export default function Hero() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4, duration: 0.8 }}
-                className="text-2xl md:text-3xl text-gray-700 dark:text-gray-200 leading-relaxed max-w-2xl font-normal"
+                className="text-[13px] sm:text-base md:text-xl text-gray-700 dark:text-gray-200 leading-relaxed max-w-2xl font-normal mx-auto md:mx-0"
               >
                 Easily create, manage, and expose your APIs and namespaces with powerful schema and method control.
               </motion.p>
@@ -134,14 +134,14 @@ export default function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6, duration: 0.8 }}
-              className="flex flex-col sm:flex-row gap-4"
+              className="flex flex-col sm:flex-row gap-2.5 sm:gap-4 items-stretch sm:items-center justify-center md:justify-start"
             >
-              <a href="#get-started" className="btn-primary flex items-center justify-center group">
+              <a href="#get-started" className="btn-primary flex items-center justify-center group text-xs sm:text-sm px-4 py-2">
                 Get Started
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
               </a>
-              <a href="#demo" className="btn-secondary flex items-center justify-center group">
-                <Play className="mr-2 w-5 h-5" />
+              <a href="#demo" className="btn-secondary flex items-center justify-center group text-xs sm:text-sm px-4 py-2">
+                <Play className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
                 Watch Demo
               </a>
             </motion.div>
@@ -151,7 +151,7 @@ export default function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8, duration: 0.8 }}
-              className="flex items-center space-x-6 text-sm text-gray-500"
+              className="flex flex-wrap justify-center md:justify-start gap-x-5 gap-y-2 text-xs sm:text-sm text-gray-500"
             >
               <div className="flex items-center space-x-2">
                 <Shield className="w-4 h-4 text-green-500" />
@@ -168,16 +168,16 @@ export default function Hero() {
             </motion.div>
           </motion.div>
 
-          {/* Right Content - Visual */}
+          {/* Right Content - Visual (hide on phones) */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3, duration: 0.8 }}
-            className="relative"
+            className="relative hidden md:block"
           >
-            <div className="relative bg-white rounded-2xl shadow-2xl p-8 border border-gray-200">
+            <div className="relative bg-white rounded-2xl shadow-2xl p-6 md:p-8 border border-gray-200">
               {/* Mock API Interface */}
-              <div className="space-y-6">
+              <div className="space-y-4 md:space-y-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                   <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
@@ -186,16 +186,16 @@ export default function Hero() {
                   <Code className="w-5 h-5 text-gray-400" />
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm font-mono text-gray-600">GET</span>
-                    <span className="text-sm font-mono text-primary-600">/api/users</span>
-                    <span className="text-xs text-gray-400">200 OK</span>
+                    <span className="text-xs md:text-sm font-mono text-gray-600">GET</span>
+                    <span className="text-xs md:text-sm font-mono text-primary-600">/api/users</span>
+                    <span className="text-[10px] md:text-xs text-gray-400">200 OK</span>
                   </div>
                   
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <pre className="text-xs text-gray-700 font-mono min-h-[120px] whitespace-pre-wrap transition-all duration-300">
+                  <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+                    <pre className="text-[10px] md:text-xs text-gray-700 font-mono min-h-[90px] md:min-h-[120px] whitespace-pre-wrap transition-all duration-300">
                       {typedCode}
                       <span className="animate-pulse text-gray-400">|</span>
                     </pre>
@@ -203,9 +203,9 @@ export default function Hero() {
                   
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm font-mono text-gray-600">POST</span>
-                    <span className="text-sm font-mono text-primary-600">/api/users</span>
-                    <span className="text-xs text-gray-400">201 Created</span>
+                    <span className="text-xs md:text-sm font-mono text-gray-600">POST</span>
+                    <span className="text-xs md:text-sm font-mono text-primary-600">/api/users</span>
+                    <span className="text-[10px] md:text-xs text-gray-400">201 Created</span>
                   </div>
                 </div>
               </div>
@@ -214,17 +214,17 @@ export default function Hero() {
               <motion.div
                 animate={{ y: [-10, 10, -10] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-4 -right-4 bg-primary-100 rounded-lg p-3"
+                className="absolute -top-4 -right-4 bg-primary-100 rounded-lg p-2 md:p-3"
               >
-                <Database className="w-6 h-6 text-primary-600" />
+                <Database className="w-5 h-5 md:w-6 md:h-6 text-primary-600" />
               </motion.div>
               
               <motion.div
                 animate={{ y: [10, -10, 10] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -bottom-4 -left-4 bg-green-100 rounded-lg p-3"
+                className="absolute -bottom-4 -left-4 bg-green-100 rounded-lg p-2 md:p-3"
               >
-                <Globe className="w-6 h-6 text-green-600" />
+                <Globe className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
               </motion.div>
             </div>
           </motion.div>

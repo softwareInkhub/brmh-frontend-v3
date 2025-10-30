@@ -12,6 +12,7 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
   const [loading, setLoading] = useState(true);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'methods' | 'schemas'>('accounts');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -349,126 +350,256 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
   if (!namespace || Object.keys(namespace).length === 0) return <div className="p-8">Namespace not found.</div>;
 
   return (
-    <div className="p-8 w-full bg-gradient-to-b from-gray-50 to-white min-h-screen">
+    <div className="pt-4 px-4 md:p-8 w-full bg-gradient-to-b from-gray-50 to-white min-h-screen">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-4  justify-between">
-          {/* Icon */}
-         
-          <div className="min-w-0 flex justify-center items-center gap-4">
-          <div className="flex-shrink-0">
-            {namespace['icon-url'] ? (
-              <img
-                src={namespace['icon-url']}
-                alt={`${namespace['namespace-name']} icon`}
-                className="w-12 h-12 rounded-lg object-cover shadow-sm"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-                <Database size={20} className="text-blue-600" />
-              </div>
-            )}
-          </div>
-            <h2 className="text-2xl font-bold text-gray-900 truncate">{namespace['namespace-name']}</h2>
-            <div className="mt-2 flex flex-wrap gap-3 text-gray-700">
-              <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-1">
-                <span className="text-xs text-gray-500">ID</span>
-                <span className="font-mono text-xs text-gray-800 truncate max-w-[280px]">{namespace['namespace-id']}</span>
-                <button
-                  onClick={() => copyToClipboard(namespace['namespace-id'])}
-                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Copy ID"
-                >
-                  <Copy size={12} />
-                </button>
-              </div>
+      <div className="mb-4 md:mb-6">
+        {/* Mobile Layout */}
+        <div className="md:hidden space-y-4">
+          {/* Namespace Info */}
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              {namespace['icon-url'] ? (
+                <img
+                  src={namespace['icon-url']}
+                  alt={`${namespace['namespace-name']} icon`}
+                  className="w-10 h-10 rounded-lg object-cover shadow-sm"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
+                  <Database size={18} className="text-blue-600" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold text-gray-900 truncate">{namespace['namespace-name']}</h2>
               {namespace['namespace-url'] && (
-                <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-1">
-                  <Globe size={14} className="text-gray-500" />
-                  <span className="font-mono text-xs text-gray-800 truncate max-w-[320px]">{namespace['namespace-url']}</span>
+                <p className="text-xs text-gray-500 truncate mt-0.5">{namespace['namespace-url']}</p>
+              )}
+            </div>
+            {/* Settings Button */}
+            <div className="relative">
+              <button
+                onClick={() => toggleMenu('namespace-actions')}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Namespace actions"
+              >
+                <Settings size={18} />
+              </button>
+              {openMenus['namespace-actions'] && (
+                <div className="menu-dropdown absolute right-0 top-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[160px]">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyToClipboard(namespace['namespace-id']);
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
+                  >
+                    <Copy size={14} />
+                    Copy ID
+                  </button>
+                  <div className="border-t border-gray-100 my-1"></div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      editNamespace();
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
+                  >
+                    <Edit3 size={14} />
+                    Edit 
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openDuplicateModal();
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 w-full text-left"
+                  >
+                    <CopyIcon size={14} />
+                    Duplicate 
+                  </button>
+                 <button
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     openDeleteModal();
+                   }}
+                   className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                 >
+                   <Trash2 size={14} />
+                   Delete 
+                 </button>
                 </div>
               )}
             </div>
           </div>
-           {/* Search Box and Namespace Actions */}
-       <div className="mb-6 flex items-center gap-4">
-         <div className="relative max-w-md">
-           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-             <Search size={16} className="text-gray-400" />
-           </div>
-           <input
-             type="text"
-             placeholder="Search accounts, methods, schemas..."
-             value={searchQuery}
-             onChange={(e) => setSearchQuery(e.target.value)}
-             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-           />
-           {searchQuery && (
-             <button
-               onClick={() => setSearchQuery('')}
-               className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-             >
-               ×
-             </button>
-           )}
-         </div>
-         
-         {/* Namespace Actions */}
-         <div className="relative">
-           <button
-             onClick={() => toggleMenu('namespace-actions')}
-             className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-             title="Namespace actions"
-           >
-             <Settings size={18} />
-           </button>
-           {openMenus['namespace-actions'] && (
-             <div className="menu-dropdown absolute right-0 top-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[160px]">
-               <button
-                 onClick={(e) => {
-                   e.stopPropagation();
-                   editNamespace();
-                 }}
-                 className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
-               >
-                 <Edit3 size={14} />
-                 Edit 
-               </button>
-               <button
-                 onClick={(e) => {
-                   e.stopPropagation();
-                   openDuplicateModal();
-                 }}
-                 className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 w-full text-left"
-               >
-                 <CopyIcon size={14} />
-                 Duplicate 
-               </button>
+
+
+          {/* Search Box */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={16} className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search accounts, methods, schemas..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            />
+            {searchQuery && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openDeleteModal();
-                }}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
               >
-                <Trash2 size={14} />
-                Delete 
+                ×
               </button>
-             </div>
-           )}
-         </div>
-       </div>
+            )}
+          </div>
         </div>
-             </div>
 
-      
+        {/* Desktop Layout */}
+        <div className="hidden md:block">
+          <div className="flex items-center gap-4 justify-between">
+            {/* Icon and Title */}
+            <div className="min-w-0 flex items-center gap-4">
+              <div className="flex-shrink-0">
+                {namespace['icon-url'] ? (
+                  <img
+                    src={namespace['icon-url']}
+                    alt={`${namespace['namespace-name']} icon`}
+                    className="w-12 h-12 rounded-lg object-cover shadow-sm"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
+                    <Database size={20} className="text-blue-600" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-2xl font-bold text-gray-900 truncate">{namespace['namespace-name']}</h2>
+                {namespace['namespace-url'] && (
+                  <p className="text-sm text-gray-500 truncate mt-1">{namespace['namespace-url']}</p>
+                )}
+              </div>
+            </div>
+            
+            {/* Search Box and Namespace Actions */}
+            <div className="flex items-center gap-4">
+              <div className="relative max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search size={16} className="text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search accounts, methods, schemas..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              
+              {/* Namespace Actions */}
+              <div className="relative">
+                <button
+                  onClick={() => toggleMenu('namespace-actions')}
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Namespace actions"
+                >
+                  <Settings size={18} />
+                </button>
+                {openMenus['namespace-actions'] && (
+                  <div className="menu-dropdown absolute right-0 top-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[160px]">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyToClipboard(namespace['namespace-id']);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
+                    >
+                      <Copy size={14} />
+                      Copy ID
+                    </button>
+                    <div className="border-t border-gray-100 my-1"></div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        editNamespace();
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
+                    >
+                      <Edit3 size={14} />
+                      Edit 
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openDuplicateModal();
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 w-full text-left"
+                    >
+                      <CopyIcon size={14} />
+                      Duplicate 
+                    </button>
+                   <button
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       openDeleteModal();
+                     }}
+                     className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                   >
+                     <Trash2 size={14} />
+                     Delete 
+                   </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 ">
+      {/* Tabs */}
+      <div className="mb-4 md:mb-6">
+        <div className="flex items-center gap-2 border-b border-gray-200">
+          <button
+            className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-t-lg transition-colors ${activeTab === 'accounts' ? 'bg-white border border-b-white border-gray-200 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}
+            onClick={() => setActiveTab('accounts')}
+          >
+            Accounts <span className="text-xs text-gray-500">({filteredAccounts.length})</span>
+          </button>
+          <button
+            className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-t-lg transition-colors ${activeTab === 'methods' ? 'bg-white border border-b-white border-gray-200 text-green-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}
+            onClick={() => setActiveTab('methods')}
+          >
+            Methods <span className="text-xs text-gray-500">({filteredMethods.length})</span>
+          </button>
+          <button
+            className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-t-lg transition-colors ${activeTab === 'schemas' ? 'bg-white border border-b-white border-gray-200 text-purple-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}
+            onClick={() => setActiveTab('schemas')}
+          >
+            Schemas <span className="text-xs text-gray-500">({filteredSchemas.length})</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Accounts Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col shadow-sm h-[66vh]">
+        {activeTab === 'accounts' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 flex flex-col shadow-sm h-[50vh] md:h-[66vh]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold flex items-center gap-2 text-gray-900">
             <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
@@ -542,8 +673,10 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
             )}
           </div>
         </div>
+        )}
         {/* Methods Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col shadow-sm h-[66vh]">
+        {activeTab === 'methods' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 flex flex-col shadow-sm h-[50vh] md:h-[66vh]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold flex items-center gap-2 text-gray-900">
             <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
@@ -629,8 +762,10 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
             )}
           </div>
         </div>
+        )}
         {/* Schemas Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col shadow-sm h-[66vh]">
+        {activeTab === 'schemas' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 flex flex-col shadow-sm h-[50vh] md:h-[66vh]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold flex items-center gap-2 text-gray-900">
             <span className="inline-block w-2 h-2 bg-purple-500 rounded-full"></span>
@@ -698,6 +833,7 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}

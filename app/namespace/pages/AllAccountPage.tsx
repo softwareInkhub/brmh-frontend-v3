@@ -81,6 +81,22 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshS
     };
   }, [isResizing]);
 
+  // Keep drawer responsive to viewport changes
+  useEffect(() => {
+    const onResize = () => {
+      if (typeof window === 'undefined') return;
+      const vw = window.innerWidth;
+      if (vw < 768) {
+        setSidePanelWidth(vw); // mobile: full width
+      } else if (sidePanelWidth < 320) {
+        setSidePanelWidth(400);
+      }
+    };
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [sidePanelWidth]);
+
   const handleCreateInput = (field: string, value: any) => {
     setCreateData((prev: any) => ({ ...prev, [field]: value }));
   };
@@ -367,17 +383,29 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshS
   const filtered = accounts.filter(acc => (acc['namespace-account-name'] || '').toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="p-8 w-full flex relative">
+    <div className="p-4 md:p-8 w-full flex flex-col md:flex-row relative">
       <div className="flex-1 pr-0">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">All Accounts</h2>
-          <div className="flex items-center gap-3">
-            <div className="relative">
+        <div className="mb-4 md:mb-6">
+          {/* Title + Create */}
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">All Accounts</h2>
+            <button
+              className="inline-flex items-center justify-center gap-1 md:gap-2 bg-blue-600 hover:bg-blue-700 text-white px-2 md:px-4 py-1.5 md:py-2 rounded shadow whitespace-nowrap text-sm md:text-base"
+              onClick={() => setSidePanel('create')}
+            >
+              <Plus size={14} className="md:hidden" />
+              <Plus size={18} className="hidden md:block" />
+              <span className="hidden sm:inline">Create Account</span><span className="sm:hidden">Create</span>
+            </button>
+          </div>
+          {/* Search + View */}
+          <div className="mt-3 flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
               <input
                 type="text"
                 placeholder="Search accounts..."
-                className="pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
@@ -401,12 +429,6 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshS
                 ≡
               </button>
             </div>
-            <button
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
-              onClick={() => setSidePanel('create')}
-            >
-              <Plus size={18} /> Create Account
-            </button>
           </div>
         </div>
 
@@ -414,11 +436,11 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshS
         {loading ? (
           <div>Loading...</div>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-3">
             {filtered.map(acc => (
               <div
                 key={acc['namespace-account-id']}
-                className="group relative rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm hover:shadow-md transition cursor-pointer"
+                className="group relative rounded-xl border border-gray-200 bg-white px-3 md:px-4 py-3 shadow-sm hover:shadow-md transition cursor-pointer"
                 onClick={() => onViewAccount && onViewAccount(acc, acc.namespace)}
               >
                 {/* actions */}
@@ -452,7 +474,7 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshS
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="divide-y">
               {filtered.map(acc => (
-                <div key={acc['namespace-account-id']} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
+                <div key={acc['namespace-account-id']} className="flex items-center gap-3 px-3 md:px-4 py-3 hover:bg-gray-50">
                   <div className="w-8 h-8 rounded bg-blue-50 flex items-center justify-center border border-blue-100"><User size={16} className="text-blue-600" /></div>
                   <div className="min-w-0 flex-1">
                     <div className="font-medium text-gray-900 truncate">{acc['namespace-account-name']}</div>
@@ -468,14 +490,19 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshS
           </div>
         )}
       </div>
+      {/* Overlay (mobile) */}
+      {sidePanel && (
+        <div className="md:hidden fixed inset-0 bg-black/40 z-40" onClick={() => setSidePanel(null)} />
+      )}
       {/* Side Panel with draggable resizer */}
       <div
         className={`fixed top-0 right-0 h-full bg-white border-l border-gray-200 shadow-2xl z-50 transition-transform duration-300 flex flex-col`}
-        style={{ minHeight: '100vh', width: sidePanel ? sidePanelWidth : 0, transform: sidePanel ? 'translateX(0)' : `translateX(${sidePanelWidth}px)`, boxShadow: sidePanel ? '0 0 32px 0 rgba(0,0,0,0.10)' : 'none', borderTopLeftRadius: 16, borderBottomLeftRadius: 16 /*, overflow: 'auto'*/ }}
+        style={{ minHeight: '100vh', width: sidePanel ? (typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : sidePanelWidth) : 0, transform: sidePanel ? 'translateX(0)' : `translateX(${typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : sidePanelWidth}px)`, boxShadow: sidePanel ? '0 0 32px 0 rgba(0,0,0,0.10)' : 'none', borderTopLeftRadius: 16, borderBottomLeftRadius: 16 }}
       >
         {/* Draggable resizer */}
         {sidePanel && (
           <div
+            className="hidden md:block"
             style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 8, cursor: 'ew-resize', zIndex: 10 }}
             onMouseDown={() => setIsResizing(true)}
           >

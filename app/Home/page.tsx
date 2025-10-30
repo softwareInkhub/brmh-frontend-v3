@@ -2,7 +2,7 @@
 
 import React, { useState, Suspense } from 'react';
 import NamespaceLibrarySidebar from '../components/NamespaceLibrarySidebar';
-import Navbar from '../components/Navbar';
+// import Navbar from '../components/Navbar';
 import { LayoutGrid, List, Upload, Plus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -29,7 +29,7 @@ function HomePageContent() {
   return (
     <div className="min-h-[100vh] bg-[#f7f8fa] flex flex-col">
       {/* Navbar */}
-      <Navbar onMenuClick={() => {}} />
+      {/* <Navbar onMenuClick={() => {}} /> */}
       <div className="flex flex-1 h-[calc(100vh-56px)]">
         {/* Sidebar */}
         <NamespaceLibrarySidebar 
