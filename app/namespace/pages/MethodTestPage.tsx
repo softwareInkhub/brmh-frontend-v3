@@ -691,8 +691,8 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
   return (
     <div className="w-full h-full bg-white">
       {/* Breadcrumbs */}
-      <div className="bg-gray-50 border-b border-gray-200 px-4 py-2">
-        <div className="flex items-center space-x-1 text-xs text-gray-600">
+      <div className="bg-gray-50 border-b border-gray-200 px-3 md:px-4 py-2">
+        <div className="flex items-center space-x-1 text-[10px] md:text-xs text-gray-600 overflow-x-auto">
           <Home className="h-3 w-3" />
           <ChevronRight className="h-3 w-3" />
           <span className="hover:text-blue-600 cursor-pointer">Namespaces</span>
@@ -706,12 +706,12 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
       {/* Layout Container */}
       <div className="h-full flex flex-col" style={{ height: 'calc(100vh - 60px)' }}>
         {/* Request Panel */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-4" style={{ maxHeight: '500px' }}>
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-4" style={{ maxHeight: '520px' }}>
           <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 rounded-t-lg">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-800">API Request</h3>
-              <div className="flex items-center space-x-2">
-                <span className="text-xs text-gray-500">GET Find pet by ID</span>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-gray-800 whitespace-nowrap">API Request</h3>
+              <div className="flex items-center space-x-2 min-w-0">
+                <span className="text-xs text-gray-500 truncate">GET Find pet by ID</span>
                 <button className="text-xs text-gray-400 hover:text-gray-600">+</button>
                 <button className="text-xs text-gray-400 hover:text-gray-600">...</button>
               </div>
@@ -719,8 +719,8 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
           </div>
           
           <div className="p-3">
-            {/* API Method and URL Section */}
-            <div className="flex items-end space-x-1 mb-2">
+            {/* API Method + URL in the same line; Account + Max Iterations in the same line */}
+            <div className="flex items-end gap-2 mb-2">
               <div className="relative">
                 <button className="bg-green-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center space-x-1">
                   <span>{methodType}</span>
@@ -734,7 +734,9 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                 className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter URL"
               />
-              <div className="w-28">
+            </div>
+            <div className="flex items-end gap-2 mb-2">
+              <div className="flex-1">
                 <div className="relative">
                   <select
                     value={selectedAccount?.['namespace-account-id'] || ''}
@@ -776,7 +778,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                   </div>
                 </div>
               </div>
-              <div className="w-16">
+              <div className="w-24">
                 <input
                   type="number"
                   value={maxIterations}
@@ -794,8 +796,8 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
             )}
 
             {/* Request Configuration Sub-Tabs */}
-            <div className="border-b border-gray-200 mb-2">
-              <div className="flex space-x-4">
+            <div className="border-b border-gray-200 mb-2 overflow-x-auto">
+              <div className="flex space-x-4 text-xs">
                 <button
                   onClick={() => setActiveTab('params')}
                   className={`px-1 py-1.5 text-xs font-medium border-b-2 transition-colors ${
@@ -969,7 +971,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end space-x-2 mt-3">
+            <div className="flex flex-wrap justify-end gap-2 mt-3">
               <button
                 className="px-3 py-1 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50"
                 onClick={() => {
@@ -1076,7 +1078,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
         
         {/* Bottom Panels Container */}
         {(showResponse || showValidate) && (
-          <div className="flex gap-4 h-[370px] w-[100%]">
+          <div className="flex flex-col md:flex-row gap-4 md:h-[370px] w-[100%]">
             {showResponse && (
               <div className=" border border-gray-200 rounded-lg shadow-sm w-[100%] ">
                 <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 rounded-t-lg ">
@@ -1107,7 +1109,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                   </div>
                 </div>
                 
-                <div className="p-4 h-full overflow-auto  w-[100%]">
+                <div className="p-3 md:p-4 h-full overflow-auto  w-[100%]">
                   {!response && (
                     <div className="flex items-center justify-center h-32 text-gray-500">
                       <div className="text-center">
@@ -1164,7 +1166,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                       </div>
 
                       {/* Response Content */}
-                      <div className="max-h-56 overflow-auto">
+                      <div className="max-h-64 md:max-h-56 overflow-auto">
                         {responseTab === 'pretty' && (
                           <div className="bg-gray-900 text-gray-100 font-mono text-xs rounded">
                             <div className="p-3">
@@ -1383,7 +1385,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
             )}
 
             {showValidate && (
-              <div className=" border border-gray-200 rounded-lg shadow-sm  w-[40%]">
+              <div className=" border border-gray-200 rounded-lg shadow-sm  w-[100%] md:w-[40%]">
                 <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 rounded-t-lg">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-gray-800">Validate</h3>

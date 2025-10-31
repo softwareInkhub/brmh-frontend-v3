@@ -721,61 +721,69 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50/30 overflow-hidden">
+    <div className="h-screen w-full flex flex-col bg-gradient-to-br from-slate-50 via-white mb-10 to-blue-50/30 overflow-hidden relative z-10">
       {/* Header Section - Modern Design */}
-      <div className="px-6 py-2 border-b border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <div className="p-1.5 bg-purple-100 rounded-lg">
-                <Zap size={16} className="text-purple-600" />
+      <div className="px-3 md:px-6 py-2 border-b border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
+          <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-6">
+            <div className="flex items-center gap-2 text-xs md:text-sm text-slate-600">
+              <div className="p-1 md:p-1.5 bg-purple-100 rounded-lg">
+                <Zap size={14} className="text-purple-600 md:hidden" />
+                <Zap size={16} className="text-purple-600 hidden md:block" />
               </div>
               <span className="font-medium">Method:</span> 
-              <span className="text-slate-900">{methodName || <span className="italic text-slate-400">None</span>}</span>
+              <span className="text-slate-900 truncate">{methodName || <span className="italic text-slate-400">None</span>}</span>
             </div>
             {namespace && (
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <div className="p-1.5 bg-blue-100 rounded-lg">
-                  <Database size={16} className="text-blue-600" />
+              <div className="flex items-center gap-2 text-xs md:text-sm text-slate-600">
+                <div className="p-1 md:p-1.5 bg-blue-100 rounded-lg">
+                  <Database size={14} className="text-blue-600 md:hidden" />
+                  <Database size={16} className="text-blue-600 hidden md:block" />
                 </div>
                 <span className="font-medium">Namespace:</span> 
-                <span className="text-slate-900 font-medium">{namespace['namespace-name']}</span>
+                <span className="text-slate-900 font-medium truncate">{namespace['namespace-name']}</span>
               </div>
             )}
-            {isReadOnly && !isInEditMode && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 rounded-lg">
-                <Eye size={14} className="text-blue-600" />
-                <span className="text-xs font-semibold text-blue-700">Preview Mode</span>
-              </div>
-            )}
-            {isInEditMode && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/50 rounded-lg">
-                <Edit size={14} className="text-green-600" />
-                <span className="text-xs font-semibold text-green-700">Edit Mode</span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center space-x-3">
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <FileText size={16} className="text-slate-600" />
-                Schema Name
+              {isReadOnly && !isInEditMode && (
+                <div className="flex items-center gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 rounded-lg">
+                  <Eye size={12} className="text-blue-600 md:hidden" />
+                  <Eye size={14} className="text-blue-600 hidden md:block" />
+                  <span className="text-xs font-semibold text-blue-700">Preview Mode</span>
+          </div>
+              )}
+              {isInEditMode && (
+                <div className="flex items-center gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/50 rounded-lg">
+                  <Edit size={12} className="text-green-600 md:hidden" />
+                  <Edit size={14} className="text-green-600 hidden md:block" />
+                  <span className="text-xs font-semibold text-green-700">Edit Mode</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 md:space-x-3">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-xs md:text-sm font-medium text-slate-700">
+                <FileText size={14} className="text-slate-600 md:hidden" />
+                <FileText size={16} className="text-slate-600 hidden md:block" />
+                <span className="hidden sm:inline">Schema Name</span>
+                <span className="sm:hidden">Name</span>
                 <span className="text-red-500">*</span>
               </div>
-              <input
-                id="schema-name"
-                className={`border border-slate-200 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 w-56 ${isReadOnly ? 'bg-slate-50 cursor-not-allowed text-slate-500' : 'bg-white shadow-sm hover:shadow-md'}`}
+            <input
+              id="schema-name"
+                className={`border border-slate-200 px-2 md:px-3 py-1.5 md:py-2 rounded-lg text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 w-32 md:w-56 ${isReadOnly ? 'bg-slate-50 cursor-not-allowed text-slate-500' : 'bg-white shadow-sm hover:shadow-md'}`}
                 placeholder="Enter schema name..."
-                value={schemaName}
-                onChange={e => {
+              value={schemaName}
+              onChange={e => {
                   if (!isReadOnly) {
-                    setSchemaName(e.target.value);
-                    if (onSchemaNameChange) onSchemaNameChange(e.target.value);
+                setSchemaName(e.target.value);
+                if (onSchemaNameChange) onSchemaNameChange(e.target.value);
                   }
-                }}
-                required
+              }}
+              required
                 readOnly={isReadOnly}
-              />
+            />
             </div>
           </div>
         </div>
@@ -783,90 +791,98 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
 
       {/* Database Operations Section - Right below header */}
       {isEditing && (
-        <div className="px-6 py-4 bg-gradient-to-br from-slate-50/50 to-white border-b border-slate-200/60">
-          <div className="flex items-center justify-between">
+        <div className="px-3 md:px-6 py-3 md:py-4 bg-gradient-to-br from-slate-50/50 to-white border-b border-slate-200/60">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
             {/* Operations Buttons - Left aligned */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2 overflow-x-auto">
               {/* Create Data Button */}
-              <button
+        <button
                 onClick={() => setActiveTab('createData')}
-                className="group relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 hover:text-blue-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                className="group relative flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 hover:text-blue-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
               >
-                <div className="p-1 bg-blue-100 rounded-md group-hover:bg-blue-200 transition-colors duration-200">
-                  <PlusCircle size={12} className="text-blue-600" />
+                <div className="p-0.5 md:p-1 bg-blue-100 rounded-md group-hover:bg-blue-200 transition-colors duration-200">
+                  <PlusCircle size={10} className="text-blue-600 md:hidden" />
+                  <PlusCircle size={12} className="text-blue-600 hidden md:block" />
                 </div>
                 <span>Create</span>
-              </button>
+        </button>
 
               {/* Update Data Button */}
               <button
                 onClick={() => setActiveTab('updateData')}
-                className="group relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:border-orange-300 hover:bg-orange-50 text-gray-700 hover:text-orange-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                className="group relative flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 bg-white border border-gray-200 hover:border-orange-300 hover:bg-orange-50 text-gray-700 hover:text-orange-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
               >
-                <div className="p-1 bg-orange-100 rounded-md group-hover:bg-orange-200 transition-colors duration-200">
-                  <RefreshCw size={12} className="text-orange-600" />
-                </div>
+                <div className="p-0.5 md:p-1 bg-orange-100 rounded-md group-hover:bg-orange-200 transition-colors duration-200">
+                  <RefreshCw size={10} className="text-orange-600 md:hidden" />
+                  <RefreshCw size={12} className="text-orange-600 hidden md:block" />
+      </div>
                 <span>Update</span>
               </button>
 
               {/* Read Data Button */}
               <button
                 onClick={() => setActiveTab('readData')}
-                className="group relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:border-purple-300 hover:bg-purple-50 text-gray-700 hover:text-purple-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                className="group relative flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 bg-white border border-gray-200 hover:border-purple-300 hover:bg-purple-50 text-gray-700 hover:text-purple-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
               >
-                <div className="p-1 bg-purple-100 rounded-md group-hover:bg-purple-200 transition-colors duration-200">
-                  <Eye size={12} className="text-purple-600" />
-                </div>
+                <div className="p-0.5 md:p-1 bg-purple-100 rounded-md group-hover:bg-purple-200 transition-colors duration-200">
+                  <Eye size={10} className="text-purple-600 md:hidden" />
+                  <Eye size={12} className="text-purple-600 hidden md:block" />
+            </div>
                 <span>Read</span>
               </button>
 
               {/* Delete Data Button */}
               <button
                 onClick={() => setActiveTab('deleteData')}
-                className="group relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-700 hover:text-red-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                className="group relative flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 bg-white border border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-700 hover:text-red-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
               >
-                <div className="p-1 bg-red-100 rounded-md group-hover:bg-red-200 transition-colors duration-200">
-                  <Trash2 size={12} className="text-red-600" />
-                </div>
+                <div className="p-0.5 md:p-1 bg-red-100 rounded-md group-hover:bg-red-200 transition-colors duration-200">
+                  <Trash2 size={10} className="text-red-600 md:hidden" />
+                  <Trash2 size={12} className="text-red-600 hidden md:block" />
+          </div>
                 <span>Delete</span>
               </button>
-            </div>
+          </div>
             
             {/* Right side buttons - Schema actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2 overflow-x-auto">
               {/* Action buttons container with slide-in animation */}
               {isInEditMode && (
                 <div 
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-1 md:gap-2"
                   style={{ animation: 'slideInFromLeft 0.4s ease-out' }}
                 >
                   {/* Validate Button */}
                   <button
-                    className="group relative flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-200 hover:border-amber-300 hover:bg-amber-50 text-gray-700 hover:text-amber-700 rounded-md text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                    className="group relative flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-1 md:py-1.5 bg-white border border-gray-200 hover:border-amber-300 hover:bg-amber-50 text-gray-700 hover:text-amber-700 rounded-md text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
                     onClick={handleValidate}
                   >
                     <div className="p-0.5 bg-amber-100 rounded-sm group-hover:bg-amber-200 transition-colors duration-200">
-                      <CheckCircle size={10} className="text-amber-600" />
-                    </div>
-                    <span>Validate</span>
+                      <CheckCircle size={8} className="text-amber-600 md:hidden" />
+                      <CheckCircle size={10} className="text-amber-600 hidden md:block" />
+        </div>
+                    <span className="hidden sm:inline">Validate</span>
+                    <span className="sm:hidden">Val</span>
                   </button>
                   
                   {/* Update Schema Button */}
-                  <button
-                    className="group relative flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-200 hover:border-green-300 hover:bg-green-50 text-gray-700 hover:text-green-700 rounded-md text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              <button
+                    className="group relative flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-1 md:py-1.5 bg-white border border-gray-200 hover:border-green-300 hover:bg-green-50 text-gray-700 hover:text-green-700 rounded-md text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                     disabled={isSaving}
                     onClick={handleSave}
                   >
                     <div className="p-0.5 bg-green-100 rounded-sm group-hover:bg-green-200 transition-colors duration-200">
-                      <Save size={10} className="text-green-600" />
+                      <Save size={8} className="text-green-600 md:hidden" />
+                      <Save size={10} className="text-green-600 hidden md:block" />
                     </div>
-                    <span>{isEditing ? (isSaving ? 'Updating...' : 'Update Schema') : (isSaving ? 'Creating...' : 'Create Schema')}</span>
+                    <span className="hidden sm:inline">{isEditing ? (isSaving ? 'Updating...' : 'Update Schema') : (isSaving ? 'Creating...' : 'Create Schema')}</span>
+                    <span className="sm:hidden">{isEditing ? (isSaving ? 'Updating...' : 'Update') : (isSaving ? 'Creating...' : 'Create')}</span>
                   </button>
                   
                   {/* Delete Schema Button - Only show when editing existing schema */}
                   {isEditing && schemaObj && (schemaObj.id || schemaObj.schemaId) && (
                     <button
-                      className="group relative flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-700 hover:text-red-700 rounded-md text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                      className="group relative flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-1 md:py-1.5 bg-white border border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-700 hover:text-red-700 rounded-md text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
                       onClick={async () => {
                         if (!window.confirm('Are you sure you want to delete this schema?')) return;
                         const schemaId = schemaObj.id || schemaObj.schemaId;
@@ -884,15 +900,17 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
                       type="button"
                     >
                       <div className="p-0.5 bg-red-100 rounded-sm group-hover:bg-red-200 transition-colors duration-200">
-                        <Trash2 size={10} className="text-red-600" />
+                        <Trash2 size={8} className="text-red-600 md:hidden" />
+                        <Trash2 size={10} className="text-red-600 hidden md:block" />
                       </div>
-                      <span>Delete Schema</span>
+                      <span className="hidden sm:inline">Delete Schema</span>
+                      <span className="sm:hidden">Delete</span>
                     </button>
                   )}
                   
                   {/* Cancel Button */}
                   <button
-                    className="group relative flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 hover:text-gray-800 rounded-md text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                    className="group relative flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-1 md:py-1.5 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 hover:text-gray-800 rounded-md text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
                     onClick={() => {
                       setIsInEditMode(false);
                       if (initialSchema) {
@@ -907,7 +925,8 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
                     }}
                   >
                     <div className="p-0.5 bg-gray-100 rounded-sm group-hover:bg-gray-200 transition-colors duration-200">
-                      <X size={10} className="text-gray-600" />
+                      <X size={8} className="text-gray-600 md:hidden" />
+                      <X size={10} className="text-gray-600 hidden md:block" />
                     </div>
                     <span>Cancel</span>
                   </button>
@@ -917,12 +936,14 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
               {isReadOnly && (
                 <button
                   onClick={() => setIsInEditMode(true)}
-                  className="group relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:border-green-300 hover:bg-green-50 text-gray-700 hover:text-green-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                  className="group relative flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 bg-white border border-gray-200 hover:border-green-300 hover:bg-green-50 text-gray-700 hover:text-green-700 rounded-lg text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
                 >
-                  <div className="p-1 bg-green-100 rounded-md group-hover:bg-green-200 transition-colors duration-200">
-                    <Edit size={12} className="text-green-600" />
+                  <div className="p-0.5 md:p-1 bg-green-100 rounded-md group-hover:bg-green-200 transition-colors duration-200">
+                    <Edit size={10} className="text-green-600 md:hidden" />
+                    <Edit size={12} className="text-green-600 hidden md:block" />
                   </div>
-                  <span>Edit Schema</span>
+                  <span className="hidden sm:inline">Edit Schema</span>
+                  <span className="sm:hidden">Edit</span>
                 </button>
               )}
             </div>
@@ -933,25 +954,27 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
 
       {/* Schema Editor Section */}
       {activeTab === 'edit' || !activeTab ? (
-         <div className="flex-1 grid grid-cols-2 gap-6 min-h-0 w-full px-6 py-4 schema-scrollbar">
+         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6 min-h-0 w-full px-3 md:px-6 py-3 md:py-4 schema-scrollbar">
         {/* Modern Form Editor */}
-        <div className={`flex flex-col min-h-0 max-h-[65vh] bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 ${isReadOnly ? 'opacity-75' : ''}`}>
+        <div className={`flex flex-col min-h-0 max-h-[50vh] md:max-h-[65vh] bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 relative z-20 ${isReadOnly ? 'opacity-75' : ''}`}>
           <div className="flex items-center justify-between p-2 border-b border-slate-200/60 bg-gradient-to-r from-slate-50 to-white">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg">
-                <Layers size={18} className="text-purple-600" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg">
+                <Layers size={16} className="text-purple-600 md:hidden" />
+                <Layers size={18} className="text-purple-600 hidden md:block" />
               </div>
               <div>
-                <div className="font-semibold text-sm text-slate-800">{isReadOnly ? 'Schema Structure' : 'Visual Editor'}</div>
-                <div className="text-xs text-slate-500">Drag & drop interface</div>
+                <div className="font-semibold text-xs md:text-sm text-slate-800">{isReadOnly ? 'Schema Structure' : 'Visual Editor'}</div>
+                <div className="text-xs text-slate-500 hidden md:block">Drag & drop interface</div>
               </div>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200/50 rounded-lg">
-              <Sparkles size={14} className="text-emerald-600" />
+            <div className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200/50 rounded-lg">
+              <Sparkles size={12} className="text-emerald-600 md:hidden" />
+              <Sparkles size={14} className="text-emerald-600 hidden md:block" />
               <span className="text-xs font-semibold text-emerald-700">{fields.length} fields</span>
             </div>
           </div>
-           <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-br from-slate-50/50 to-white schema-scrollbar">
+           <div className="flex-1 overflow-y-auto p-3 md:p-4 bg-gradient-to-br from-slate-50/50 to-white schema-scrollbar">
             <NestedFieldsEditor 
               fields={fields} 
               onChange={isReadOnly ? () => {} : setFields} 
@@ -963,20 +986,21 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
         </div>
 
         {/* Modern JSON Schema Editor */}
-        <div className="flex flex-col min-h-0 max-h-[65vh] bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
+        <div className="flex flex-col min-h-0 max-h-[50vh] md:max-h-[65vh] bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 relative z-20">
           <div className="flex items-center justify-between p-2 border-b border-slate-200/60 bg-gradient-to-r from-slate-50 to-white">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-blue-100 to-cyan-100 rounded-lg">
-                <Code2 size={18} className="text-blue-600" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-gradient-to-r from-blue-100 to-cyan-100 rounded-lg">
+                <Code2 size={16} className="text-blue-600 md:hidden" />
+                <Code2 size={18} className="text-blue-600 hidden md:block" />
               </div>
               <div>
-                <div className="font-semibold text-sm text-slate-800">JSON Schema Editor</div>
-                <div className="text-xs text-slate-500">Code & configuration</div>
+                <div className="font-semibold text-xs md:text-sm text-slate-800">JSON Schema Editor</div>
+                <div className="text-xs text-slate-500 hidden md:block">Code & configuration</div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2">
               <button
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-slate-100 to-gray-100 hover:from-slate-200 hover:to-gray-200 text-slate-700 rounded-lg text-xs border border-slate-200/50 font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                className="flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 bg-gradient-to-r from-slate-100 to-gray-100 hover:from-slate-200 hover:to-gray-200 text-slate-700 rounded-lg text-xs border border-slate-200/50 font-medium transition-all duration-200 shadow-sm hover:shadow-md"
                 onClick={() => {
                   try {
                     setJsonSchema(JSON.stringify(JSON.parse(jsonSchema), null, 2));
@@ -984,11 +1008,13 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
                 }}
                 title="Format JSON"
               >
-                <Palette size={14} />
-                Format
+                <Palette size={12} className="md:hidden" />
+                <Palette size={14} className="hidden md:block" />
+                <span className="hidden sm:inline">Format</span>
+                <span className="sm:hidden">Fmt</span>
               </button>
               <button
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border font-medium transition-all duration-200 ${
+                className={`flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs border font-medium transition-all duration-200 ${
                   resolvedView 
                     ? 'bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 border-purple-200/50 shadow-md' 
                     : 'bg-gradient-to-r from-slate-100 to-gray-100 hover:from-slate-200 hover:to-gray-200 text-slate-700 border-slate-200/50 shadow-sm hover:shadow-md'
@@ -1002,8 +1028,10 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
                 }}
                 title="Toggle resolved view"
               >
-                <Sparkles size={14} />
-                {isResolving ? 'Resolving...' : (resolvedView ? 'Resolved ✓' : 'Resolve')}
+                <Sparkles size={12} className="md:hidden" />
+                <Sparkles size={14} className="hidden md:block" />
+                <span className="hidden sm:inline">{isResolving ? 'Resolving...' : (resolvedView ? 'Resolved ✓' : 'Resolve')}</span>
+                <span className="sm:hidden">{isResolving ? 'Resolving...' : (resolvedView ? 'Resolved ✓' : 'Resolve')}</span>
               </button>
             </div>
           </div>
@@ -1011,39 +1039,43 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
           {/* Modern Raw Fields Section */}
           <div className="border-b border-slate-200/60">
             <div
-              className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50/50 transition-all duration-200"
+              className="flex items-center justify-between p-2 md:p-3 cursor-pointer hover:bg-slate-50/50 transition-all duration-200"
               onClick={() => setShowRawFields(v => !v)}
             >
               <div className="flex items-center gap-2">
-                <Settings size={14} className="text-slate-500" />
-                <span className="text-sm font-medium text-slate-700">TypeScript/Raw Fields</span>
+                <Settings size={12} className="text-slate-500 md:hidden" />
+                <Settings size={14} className="text-slate-500 hidden md:block" />
+                <span className="text-xs md:text-sm font-medium text-slate-700">TypeScript/Raw Fields</span>
               </div>
               <div className={`p-1 rounded-md transition-all duration-200 ${showRawFields ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>
                 {showRawFields ? '▲' : '▼'}
               </div>
             </div>
             {showRawFields && (
-              <div className="p-4 border-t border-slate-200/60 bg-gradient-to-r from-slate-50/50 to-white">
+              <div className="p-3 md:p-4 border-t border-slate-200/60 bg-gradient-to-r from-slate-50/50 to-white">
                 <textarea
-                  className="w-full border border-slate-200 rounded-lg p-3 font-mono text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                  className="w-full border border-slate-200 rounded-lg p-2 md:p-3 font-mono text-xs md:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 shadow-sm"
                   placeholder={`Paste fields like:\nid: string;\nemail: string;\nrole: "ADMIN" | "USER";\ndepartmentId: string | null;`}
                   value={rawFields}
                   onChange={e => setRawFields(e.target.value)}
                   rows={3}
-                  style={{ minHeight: 80 }}
+                  style={{ minHeight: 60 }}
                 />
-                <div className="flex items-center justify-between mt-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-3">
                   <button
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                    className="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-xs md:text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
                     onClick={handleConvertRawFields}
                     type="button"
                   >
-                    <Zap size={14} />
-                    Convert to JSON Schema
+                    <Zap size={12} className="md:hidden" />
+                    <Zap size={14} className="hidden md:block" />
+                    <span className="hidden sm:inline">Convert to JSON Schema</span>
+                    <span className="sm:hidden">Convert</span>
                   </button>
                   {rawFieldsError && (
-                    <div className="flex items-center gap-1 text-sm text-red-600">
-                      <AlertTriangle size={14} />
+                    <div className="flex items-center gap-1 text-xs md:text-sm text-red-600">
+                      <AlertTriangle size={12} className="md:hidden" />
+                      <AlertTriangle size={14} className="hidden md:block" />
                       {rawFieldsError}
                     </div>
                   )}
@@ -1054,12 +1086,12 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
 
           {/* Modern JSON Schema Content */}
           <div className="flex-1 flex flex-col min-h-0">
-              {resolvedView ? (
+            {resolvedView ? (
                 <div className="flex-1 relative">
-                  <textarea
+              <textarea
                     className="absolute inset-0 w-full h-full border-0 p-4 font-mono text-sm bg-transparent text-transparent focus:outline-none focus:ring-0 resize-none overflow-y-auto leading-relaxed schema-scrollbar selection:bg-blue-600/30 caret-slate-100 z-10"
-                    value={resolvedSchema ? JSON.stringify(resolvedSchema, null, 2) : (resolveError ? `// ${resolveError}` : (isResolving ? '// Resolving...' : '// No resolved schema yet'))}
-                    readOnly
+                value={resolvedSchema ? JSON.stringify(resolvedSchema, null, 2) : (resolveError ? `// ${resolveError}` : (isResolving ? '// Resolving...' : '// No resolved schema yet'))}
+                readOnly
                     onScroll={(e) => {
                       const target = e.target as HTMLTextAreaElement;
                       const pre = target.nextElementSibling as HTMLElement;
@@ -1088,10 +1120,10 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
                 </div>
               ) : (
                 <div className="flex-1 relative">
-                  <textarea
+              <textarea
                     className={`absolute inset-0 w-full h-full border-0 p-4 font-mono text-sm bg-transparent text-transparent focus:outline-none focus:ring-0 resize-none overflow-y-auto leading-relaxed transition-all duration-200 schema-scrollbar selection:bg-blue-600/30 caret-slate-100 z-10 ${isReadOnly ? 'cursor-not-allowed' : 'cursor-text'}`}
-                    value={jsonSchema}
-                    onChange={handleJsonChange}
+                value={jsonSchema}
+                onChange={handleJsonChange}
                     readOnly={isReadOnly}
                     onScroll={(e) => {
                       const target = e.target as HTMLTextAreaElement;
@@ -1120,34 +1152,36 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
                     }} />
                   </pre>
                 </div>
-              )}
+            )}
             {jsonError && (
               <div className="p-3 border-t border-red-200/60 bg-gradient-to-r from-red-50 to-pink-50">
                 <div className="flex items-center gap-2 text-sm text-red-600">
                   <AlertTriangle size={14} />
                   {jsonError}
-                </div>
               </div>
-            )}
-          </div>
-        </div>
-        
-        {validationResult && (
-          <div className="mx-6 mt-4 p-4 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200/50 rounded-xl shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <CheckCircle size={16} className="text-emerald-600" />
-              <div className="font-semibold text-sm text-emerald-800">Validation Result</div>
-            </div>
-            <pre className="bg-white/80 p-3 rounded-lg text-sm font-mono border border-emerald-200/50 overflow-x-auto">
-              {JSON.stringify(validationResult, null, 2)}
-            </pre>
           </div>
         )}
-        {saveMessage && (
-          <div className="mx-6 mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 rounded-xl shadow-sm">
+      </div>
+        </div>
+        
+      {validationResult && (
+          <div className="mx-3 md:mx-6 mt-3 md:mt-4 p-3 md:p-4 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200/50 rounded-xl shadow-sm">
+            <div className="flex items-center gap-2 mb-2 md:mb-3">
+              <CheckCircle size={14} className="text-emerald-600 md:hidden" />
+              <CheckCircle size={16} className="text-emerald-600 hidden md:block" />
+              <div className="font-semibold text-xs md:text-sm text-emerald-800">Validation Result</div>
+            </div>
+            <pre className="bg-white/80 p-2 md:p-3 rounded-lg text-xs md:text-sm font-mono border border-emerald-200/50 overflow-x-auto">
+            {JSON.stringify(validationResult, null, 2)}
+          </pre>
+        </div>
+      )}
+      {saveMessage && (
+          <div className="mx-3 md:mx-6 mt-3 md:mt-4 p-3 md:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 rounded-xl shadow-sm">
             <div className="flex items-center gap-2">
-              <CheckCircle size={16} className="text-blue-600" />
-              <div className="text-blue-700 font-semibold text-sm">{saveMessage}</div>
+              <CheckCircle size={14} className="text-blue-600 md:hidden" />
+              <CheckCircle size={16} className="text-blue-600 hidden md:block" />
+              <div className="text-blue-700 font-semibold text-xs md:text-sm">{saveMessage}</div>
             </div>
           </div>
         )}
@@ -1156,27 +1190,29 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
 
       {/* CRUD Operations Section */}
       {activeTab === 'createData' && (
-        <div className="px-6 py-4 bg-white/90 backdrop-blur-sm border-t border-slate-200/60">
-          <div className="flex items-center gap-4 mb-6">
+        <div className="px-3 md:px-6 py-3 md:py-4 bg-white/90 backdrop-blur-sm border-t border-slate-200/60">
+          <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 mb-4 md:mb-6">
             <button
               onClick={() => setActiveTab('edit')}
-              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white rounded-lg text-xs md:text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
             >
-              <X size={16} />
+              <X size={14} className="md:hidden" />
+              <X size={16} className="hidden md:block" />
               Back to Editor
             </button>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-blue-100 to-cyan-100 rounded-lg">
-                <PlusCircle size={18} className="text-blue-600" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-gradient-to-r from-blue-100 to-cyan-100 rounded-lg">
+                <PlusCircle size={16} className="text-blue-600 md:hidden" />
+                <PlusCircle size={18} className="text-blue-600 hidden md:block" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-800">Create Data for Table</h2>
-                <div className="text-sm text-slate-500">Add new records to your schema table</div>
+                <h2 className="text-base md:text-lg font-semibold text-slate-800">Create Data for Table</h2>
+                <div className="text-xs md:text-sm text-slate-500">Add new records to your schema table</div>
               </div>
             </div>
           </div>
           
-          <label className="block text-sm font-medium mb-2">Account</label>
+          <label className="block text-xs md:text-sm font-medium mb-2">Account</label>
           <select
             className="border border-gray-200 p-2 rounded text-xs w-full mb-3"
             value={selectedAccountForData}
@@ -1267,16 +1303,16 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
                 required={JSON.parse(jsonSchema).required}
               />
 
-              <div className="flex gap-2 mt-4">
+              <div className="flex flex-col sm:flex-row gap-2 mt-4">
                 <button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm"
                 >
                   Create
                 </button>
                 <button
                   type="button"
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg"
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm"
                   onClick={() => {
                     const acc = accounts.find(a => a['namespace-account-id'] === selectedAccountForData);
                     const tableNameMap = acc?.tableName || {};
@@ -1304,22 +1340,24 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
       )}
 
       {activeTab === 'updateData' && (
-        <div className="px-6 py-4 bg-white/90 backdrop-blur-sm border-t border-slate-200/60">
-          <div className="flex items-center gap-4 mb-6">
+        <div className="px-3 md:px-6 py-3 md:py-4 bg-white/90 backdrop-blur-sm border-t border-slate-200/60">
+          <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 mb-4 md:mb-6">
             <button
               onClick={() => setActiveTab('edit')}
-              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white rounded-lg text-xs md:text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
             >
-              <X size={16} />
+              <X size={14} className="md:hidden" />
+              <X size={16} className="hidden md:block" />
               Back to Editor
             </button>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-orange-100 to-amber-100 rounded-lg">
-                <RefreshCw size={18} className="text-orange-600" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-gradient-to-r from-orange-100 to-amber-100 rounded-lg">
+                <RefreshCw size={16} className="text-orange-600 md:hidden" />
+                <RefreshCw size={18} className="text-orange-600 hidden md:block" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-800">Update Data in Table</h2>
-                <div className="text-sm text-slate-500">Modify existing records in your schema table</div>
+                <h2 className="text-base md:text-lg font-semibold text-slate-800">Update Data in Table</h2>
+                <div className="text-xs md:text-sm text-slate-500">Modify existing records in your schema table</div>
               </div>
             </div>
           </div>
@@ -1389,22 +1427,24 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
       )}
 
       {activeTab === 'readData' && (
-        <div className="px-6 py-4 bg-white/90 backdrop-blur-sm border-t border-slate-200/60">
-          <div className="flex items-center gap-4 mb-6">
+        <div className="px-3 md:px-6 py-3 md:py-4 bg-white/90 backdrop-blur-sm border-t border-slate-200/60">
+          <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 mb-4 md:mb-6">
             <button
               onClick={() => setActiveTab('edit')}
-              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white rounded-lg text-xs md:text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
             >
-              <X size={16} />
+              <X size={14} className="md:hidden" />
+              <X size={16} className="hidden md:block" />
               Back to Editor
             </button>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg">
-                <Eye size={18} className="text-purple-600" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg">
+                <Eye size={16} className="text-purple-600 md:hidden" />
+                <Eye size={18} className="text-purple-600 hidden md:block" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-800">Read Data from Table</h2>
-                <div className="text-sm text-slate-500">View and search records in your schema table</div>
+                <h2 className="text-base md:text-lg font-semibold text-slate-800">Read Data from Table</h2>
+                <div className="text-xs md:text-sm text-slate-500">View and search records in your schema table</div>
               </div>
             </div>
           </div>
@@ -1483,22 +1523,24 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
       )}
 
       {activeTab === 'deleteData' && (
-        <div className="px-6 py-4 bg-white/90 backdrop-blur-sm border-t border-slate-200/60">
-          <div className="flex items-center gap-4 mb-6">
+        <div className="px-3 md:px-6 py-3 md:py-4 bg-white/90 backdrop-blur-sm border-t border-slate-200/60">
+          <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 mb-4 md:mb-6">
             <button
               onClick={() => setActiveTab('edit')}
-              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white rounded-lg text-xs md:text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
             >
-              <X size={16} />
+              <X size={14} className="md:hidden" />
+              <X size={16} className="hidden md:block" />
               Back to Editor
             </button>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-red-100 to-pink-100 rounded-lg">
-                <Trash2 size={18} className="text-red-600" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-gradient-to-r from-red-100 to-pink-100 rounded-lg">
+                <Trash2 size={16} className="text-red-600 md:hidden" />
+                <Trash2 size={18} className="text-red-600 hidden md:block" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-800">Delete Data from Table</h2>
-                <div className="text-sm text-slate-500">Remove records from your schema table</div>
+                <h2 className="text-base md:text-lg font-semibold text-slate-800">Delete Data from Table</h2>
+                <div className="text-xs md:text-sm text-slate-500">Remove records from your schema table</div>
               </div>
             </div>
           </div>
@@ -1559,14 +1601,14 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
       )}
       {/* Move modal here so it always renders when showTableModal is true */}
       {showTableModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
           <div className="absolute inset-0 bg-black bg-opacity-30 backdrop-blur-sm"></div>
-          <div className="bg-white rounded-lg shadow-xl p-4 w-full max-w-sm relative z-10 border border-gray-200">
+          <div className="bg-white rounded-lg shadow-xl p-3 md:p-4 w-full max-w-sm relative z-10 border border-gray-200">
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
               onClick={() => setShowTableModal(false)}
             >✕</button>
-            <h2 className="text-base font-semibold mb-3">Create Table for Schema</h2>
+            <h2 className="text-sm md:text-base font-semibold mb-3">Create Table for Schema</h2>
             <label className="block text-xs font-medium mb-1">Account</label>
             <select
               className="border border-gray-200 p-2 rounded text-xs w-full mb-2"

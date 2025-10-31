@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bot, Send, File, Folder, Play, Database, Code, X, Upload, FileText, Image, Archive } from 'lucide-react';
+import { Bot, Send, File, Folder, Play, Database, Code, X, Upload, FileText, Image, Archive, Cloud, Download, RefreshCw } from 'lucide-react';
 import { useDrop } from 'react-dnd';
 import { useNamespaceContext } from '../../components/NamespaceContext';
 import APIMethodCreationAgent from './APIMethodCreationAgent';
@@ -88,6 +88,15 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
   
   // State for multiple dropped namespaces
   const [droppedNamespaces, setDroppedNamespaces] = useState<any[]>([]);
+  
+  // State for collapsible generated code
+  const [showGeneratedCode, setShowGeneratedCode] = useState(false);
+  
+  // State for resizable workspace
+  const [workspaceWidth, setWorkspaceWidth] = useState(typeof window !== 'undefined' && window.innerWidth < 768 ? window.innerWidth : 600);
+  const [isResizing, setIsResizing] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragStartWidth, setDragStartWidth] = useState(0);
   console.log('AIAgentWorkspace rendered with props:', { namespace, onClose });
   // Force rebuild to ensure latest changes are applied
   
@@ -95,28 +104,79 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
   useEffect(() => {
     console.log('Namespace changed:', namespace);
   }, [namespace]);
+
+  // Resize handlers
+  const handleResizeStart = (e: React.MouseEvent) => {
+    // Disable resize on mobile
+    if (typeof window !== 'undefined' && window.innerWidth < 768) return;
+    
+    e.preventDefault();
+    setIsResizing(true);
+    setDragStartX(e.clientX);
+    setDragStartWidth(workspaceWidth);
+  };
+
+  const handleResizeMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+    const deltaX = e.clientX - dragStartX;
+    const maxWidth = typeof window !== 'undefined' && window.innerWidth < 768 ? window.innerWidth : 900;
+    const newWidth = Math.max(300, Math.min(maxWidth, dragStartWidth - deltaX));
+    setWorkspaceWidth(newWidth);
+  };
+
+  const handleResizeEnd = () => {
+    setIsResizing(false);
+  };
+
+  // Add event listeners for resize
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      return () => {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+      };
+    }
+  }, [isResizing, dragStartX, dragStartWidth]);
   // 1. Change activeTab state to use 'lambda' instead of 'api'
-  const [activeTab, setActiveTab] = useState<'chat' | 'console' | 'lambda' | 'schema' | 'api' | 'files' | 'deployment'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'console' | 'lambda' | 'schema' | 'api' | 'files' | 'deployment' | 'web-scraping'>('lambda');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: `Hello! I'm your AI development assistant. I can help you:
-\n• **Create complete namespaces** from scratch (try: "Create a namespace for an e-commerce platform")
-• Design and generate API schemas\n• Write and test code\n• Create database models\n• Set up authentication\n• Run tests and debug issues\n• Manage your project structure
-
-💡 **Pro Tips:**
-• Upload files using the upload button or drag & drop
-• Drag schemas from the sidebar directly into this chat area for context
-• Drag schemas from the Schema tab for additional context
-• ${namespace ? 'You\'re working with a specific namespace - ask questions about it or generate BRD/HLD/LLD documents!' : 'You\'re in general context - perfect for creating new namespaces or generating documents for any project!'}
-
-What would you like to work on today?`,
+      content: `Hello! I'm your AI development assistant. How can I help you today?`,
       timestamp: new Date()
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Namespace autocomplete state
+  const [showNamespaceSuggestions, setShowNamespaceSuggestions] = useState(false);
+  const [namespaceSuggestions, setNamespaceSuggestions] = useState<any[]>([]);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
+  const [atSymbolPosition, setAtSymbolPosition] = useState(-1);
+  
+  // Fetch namespaces for autocomplete
+  const [availableNamespaces, setAvailableNamespaces] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const fetchNamespaces = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/unified/namespaces`);
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableNamespaces(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch namespaces for autocomplete:', error);
+      }
+    };
+    
+    fetchNamespaces();
+  }, []);
+  
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>(() => [
     {
       id: '1',
@@ -148,40 +208,81 @@ What would you like to work on today?`,
     candidates: Array<{ id?: string; name?: string; schemaName?: string; namespaceId?: string; schema?: any }>;
   } | null>(null);
 
-  // Helper: list schemas from backend, trying multiple endpoints for compatibility
+  // Helper: list schemas from backend using the correct filtered endpoint
   const listSchemas = async (nsId?: string | null): Promise<any[]> => {
     if (!nsId) return [];
-    const endpoints: string[] = [
-      `${API_BASE_URL}/unified/schema?namespaceId=${encodeURIComponent(nsId)}`,
-      `${API_BASE_URL}/unified/schemas?namespaceId=${encodeURIComponent(nsId)}`,
-      `${API_BASE_URL}/unified/schema/list?namespaceId=${encodeURIComponent(nsId)}`
-    ];
-    for (const url of endpoints) {
-      try {
-        const res = await fetch(url);
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) return data;
-          if (Array.isArray((data || {}).items)) return (data as any).items;
-        }
-      } catch {}
+    try {
+      // Use the selection endpoint that properly filters by namespace
+      const url = `${API_BASE_URL}/unified/schema/selection?namespaceIds=${encodeURIComponent(nsId)}&limit=1000`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        return data.schemas || [];
+      }
+    } catch (error) {
+      console.warn(`Failed to fetch schemas for namespace ${nsId}:`, error);
     }
     return [];
   };
 
-  // Helper: get schemas from ALL namespaces in context
+  // Helper: get schemas from ALL namespaces in context using filtered selection endpoint
   const getAllSchemasFromContext = async (): Promise<{namespace: any, schemas: any[]}[]> => {
     const allNamespaces = [localNamespace, ...droppedNamespaces].filter(Boolean);
-    const results = await Promise.all(
-      allNamespaces.map(async (ns) => {
-        const schemas = await listSchemas(ns['namespace-id'] || ns.id);
+    if (allNamespaces.length === 0) return [];
+    
+    // Use the filtered selection endpoint that properly filters by namespace
+    const namespaceIds = allNamespaces.map(ns => ns['namespace-id'] || ns.id).filter(Boolean);
+    if (namespaceIds.length === 0) return [];
+    
+    const url = `${API_BASE_URL}/unified/schema/selection?namespaceIds=${namespaceIds.join(',')}&limit=1000`;
+    
+    try {
+      const response = await fetch(url);
+      let schemas: any[] = [];
+      if (response.ok) {
+        const data = await response.json();
+        schemas = data.schemas || [];
+      }
+
+      // Fetch namespace details to get authoritative schemaIds per namespace
+      const namespaceDetails = await Promise.all(
+        allNamespaces.map(async (ns) => {
+          const nsId = ns['namespace-id'] || ns.id;
+          try {
+            const nsRes = await fetch(`${API_BASE_URL}/unified/namespaces/${nsId}`);
+            const nsData = nsRes.ok ? await nsRes.json() : null;
+            const schemaIds: string[] = Array.isArray(nsData?.schemaIds) ? nsData.schemaIds : (Array.isArray(nsData?.['schema-ids']) ? nsData['schema-ids'] : []);
+            return { ns, nsId, schemaIds };
+          } catch {
+            return { ns, nsId, schemaIds: [] as string[] };
+          }
+        })
+      );
+
+      // Group schemas by namespace using (1) namespaceId match or (2) schemaIds membership
+      const results = namespaceDetails.map(({ ns, nsId, schemaIds }) => {
+        const nsSchemas = (schemas || []).filter((s: any) => {
+          const sNsId = s.namespaceId || s['namespace-id'];
+          if (sNsId) return sNsId === nsId;
+          if (schemaIds && schemaIds.length > 0) return schemaIds.includes(s.id);
+          return false;
+        });
         return {
           namespace: ns,
-          schemas: schemas
+          schemas: nsSchemas
         };
-      })
-    );
-    return results;
+      });
+
+      return results;
+    } catch (error) {
+      console.warn('Failed to fetch schemas via selection endpoint:', error);
+    }
+    
+    // Fallback: return empty results if the endpoint fails
+    return allNamespaces.map(ns => ({
+      namespace: ns,
+      schemas: []
+    }));
   };
   const [schemas, setSchemas] = useState<any[]>([]);
   const [rawSchemas, setRawSchemas] = useState<{ id: string; content: string }[]>([]);
@@ -204,7 +305,7 @@ What would you like to work on today?`,
     schemas: [],
     apis: [],
     projectType: 'nodejs',
-    lastGenerated: null
+    lastGenerated: undefined
   });
   // 2. Add state for Lambda functions and Lambda creation form
   const [lambdaFunctions, setLambdaFunctions] = useState<any[]>([]);
@@ -288,11 +389,11 @@ What would you like to work on today?`,
     followLinks: true
   });
   const [isScraping, setIsScraping] = useState(false);
-  const [scrapedData, setScrapedData] = useState(null);
+  const [scrapedData, setScrapedData] = useState<any>(null);
   const [showAllScrapedData, setShowAllScrapedData] = useState(false);
   
 
-  const [scrapingLog, setScrapingLog] = useState([]);
+  const [scrapingLog, setScrapingLog] = useState<{message: any, type: string, timestamp: string}[]>([]);
   
 
   
@@ -340,7 +441,7 @@ What would you like to work on today?`,
           form.append('files', f.original, f.name);
         } else if (f.content && (f.type.startsWith('text/') || f.type === 'application/json' || f.type === 'text/markdown')) {
           const blob = new Blob([f.content], { type: f.type || 'text/plain' });
-          form.append('files', new File([blob], f.name, { type: f.type || 'text/plain' }));
+          form.append('files', new (File as any)([blob], f.name, { type: f.type || 'text/plain' }));
         }
       }
 
@@ -355,7 +456,7 @@ What would you like to work on today?`,
       }
 
       setConsoleOutput(prev => [...prev, `✅ Namespace created: ${data.namespaceId}`]);
-      addMessage({ role: 'assistant', content: `✅ Created namespace: ${data.namespaceId}`, timestamp: new Date() });
+      addMessage({ role: 'assistant', content: `✅ Created namespace: ${data.namespaceId}` });
       // Navigate to namespace page
       try {
         router.push('/namespace');
@@ -363,7 +464,7 @@ What would you like to work on today?`,
     } catch (err: any) {
       console.error('Smart generation error:', err);
       setConsoleOutput(prev => [...prev, `❌ Smart generation failed: ${err?.message || 'Unknown error'}`]);
-      addMessage({ role: 'assistant', content: `❌ Smart generation failed: ${err?.message || 'Unknown error'}`, timestamp: new Date() });
+      addMessage({ role: 'assistant', content: `❌ Smart generation failed: ${err?.message || 'Unknown error'}` });
     }
   }
 
@@ -438,8 +539,7 @@ What would you like to work on today?`,
           setTimeout(() => {
             addMessage({
               role: 'assistant',
-              content: `🎯 I detected ${schemaFiles.length} schema file(s) in your upload!\n\n**Available Actions:**\n• Type "generate lambda function" to create a Lambda using these schemas\n• Type "analyze schemas" to see detailed schema information\n• Type "combine schemas" to merge multiple schemas\n\n**Detected Schemas:**\n${schemaFiles.map((s, i) => `${i + 1}. **${s.name}** (${s.type})`).join('\n')}`,
-              timestamp: new Date()
+              content: `🎯 I detected ${schemaFiles.length} schema file(s) in your upload!\n\n**Available Actions:**\n• Type "generate lambda function" to create a Lambda using these schemas\n• Type "analyze schemas" to see detailed schema information\n• Type "combine schemas" to merge multiple schemas\n\n**Detected Schemas:**\n${schemaFiles.map((s, i) => `${i + 1}. **${s.name}** (${s.type})`).join('\n')}`
             });
           }, 1000);
         }
@@ -461,7 +561,7 @@ What would you like to work on today?`,
         if (entry.isFile) {
           entry.file((file: File) => {
             // Preserve folder structure in path within name (optional)
-            const namedFile = new File([file], pathPrefix ? `${pathPrefix}/${file.name}` : file.name, { type: file.type, lastModified: file.lastModified });
+            const namedFile = new (File as any)([file], pathPrefix ? `${pathPrefix}/${file.name}` : file.name, { type: file.type, lastModified: file.lastModified });
             collected.push(namedFile);
             resolve();
           });
@@ -486,7 +586,7 @@ What would you like to work on today?`,
         const entry = (it as any).webkitGetAsEntry ? (it as any).webkitGetAsEntry() : null;
         if (entry) {
           pending.push(readEntry(entry));
-        } else {
+          } else {
           const f = it.getAsFile();
           if (f) collected.push(f);
         }
@@ -560,57 +660,62 @@ What would you like to work on today?`,
     collect: (monitor) => ({ isOver: monitor.isOver() }),
   });
 
-  // React-DnD drop functionality for schemas in the dedicated schema drop zone
-  const [{ isOver: isSchemaDropOver }, schemaDropRef] = useDrop({
-    accept: 'SCHEMA',
-    drop: (item: { type: string; data: any }) => {
-      if (item.type === 'SCHEMA') {
-        const schema = { ...item.data, source: 'workspace' };
-        setDroppedSchemas(prev => [...prev, schema]);
-        setConsoleOutput(prev => [...prev, `📋 Added schema context: ${schema.schemaName || schema.name || 'Unknown Schema'}`]);
-        addMessage({
-          role: 'user',
-          content: `Added schema context from namespace: ${schema.schemaName || schema.name || 'Unknown Schema'}`
-        });
-      }
-    },
-    collect: (monitor) => ({ isOver: monitor.isOver() })
-  });
 
-  // React-DnD drop functionality for namespaces to add to context
-  const [{ isOver: isNamespaceDropOver }, namespaceDropRef] = useDrop({
-    accept: 'namespace',
+  // React-DnD drop functionality for namespaces and schemas to add to context
+  const [{ isNamespaceDropOver, isSchemaDropOver }, namespaceDropRef] = useDrop({
+    accept: ['namespace', 'SCHEMA'],
     drop: (item: any) => {
       try {
-        const droppedNs = item.namespace || item.data || item;
-        if (droppedNs && (droppedNs['namespace-id'] || droppedNs.id)) {
-          // Check if namespace is already in the list
-          const isAlreadyAdded = droppedNamespaces.some(ns => 
-            (ns['namespace-id'] || ns.id) === (droppedNs['namespace-id'] || droppedNs.id)
-          );
-          
-          if (!isAlreadyAdded) {
-            setDroppedNamespaces(prev => [...prev, droppedNs]);
-            setConsoleOutput(prev => [...prev, `📁 Added namespace to context: ${droppedNs['namespace-name'] || droppedNs.name || droppedNs.id}`]);
-            addMessage({ 
-              role: 'assistant', 
-              content: `Added namespace "${droppedNs['namespace-name'] || droppedNs.name}" to context. You now have ${droppedNamespaces.length + 1} namespace(s) in context.` 
-            });
+        console.log('Drop item received:', item);
+        
+        // Handle namespace drops - check for namespace properties
+        if (item.namespace || item['namespace-id'] || item['namespace-name']) {
+          const droppedNs = item.namespace || item;
+          if (droppedNs && (droppedNs['namespace-id'] || droppedNs.id)) {
+            // Check if namespace is already in the list
+            const isAlreadyAdded = droppedNamespaces.some(ns => 
+              (ns['namespace-id'] || ns.id) === (droppedNs['namespace-id'] || droppedNs.id)
+            );
+            
+            if (!isAlreadyAdded) {
+              setDroppedNamespaces(prev => [...prev, droppedNs]);
+              setConsoleOutput(prev => [...prev, `📁 Added namespace to context: ${droppedNs['namespace-name'] || droppedNs.name || droppedNs.id}`]);
+              addMessage({ 
+                role: 'assistant', 
+                content: `Added namespace "${droppedNs['namespace-name'] || droppedNs.name}" to context. You now have ${droppedNamespaces.length + 1} namespace(s) in context.` 
+              });
+            } else {
+              setConsoleOutput(prev => [...prev, `⚠️ Namespace "${droppedNs['namespace-name'] || droppedNs.name}" is already in context`]);
+              addMessage({ 
+                role: 'assistant', 
+                content: `Namespace "${droppedNs['namespace-name'] || droppedNs.name}" is already in context.` 
+              });
+            }
           } else {
-            setConsoleOutput(prev => [...prev, `⚠️ Namespace "${droppedNs['namespace-name'] || droppedNs.name}" is already in context`]);
-            addMessage({ 
-              role: 'assistant', 
-              content: `Namespace "${droppedNs['namespace-name'] || droppedNs.name}" is already in context.` 
-            });
+            setConsoleOutput(prev => [...prev, '⚠️ Dropped item is not a valid namespace']);
           }
+        }
+        // Handle schema drops
+        else if (item.type === 'SCHEMA' || item.schemaName || item.name) {
+          const schema = { ...item.data || item, source: 'workspace' };
+          setDroppedSchemas(prev => [...prev, schema]);
+          setConsoleOutput(prev => [...prev, `📋 Added schema context: ${schema.schemaName || schema.name || 'Unknown Schema'}`]);
+        addMessage({
+          role: 'user',
+            content: `Added schema context from namespace: ${schema.schemaName || schema.name || 'Unknown Schema'}`
+        });
         } else {
-          setConsoleOutput(prev => [...prev, '⚠️ Dropped item is not a valid namespace']);
+          setConsoleOutput(prev => [...prev, `⚠️ Unknown drop item type: ${JSON.stringify(item)}`]);
         }
       } catch (e: any) {
-        setConsoleOutput(prev => [...prev, `❌ Error adding namespace: ${e?.message || 'Unknown error'}`]);
+        setConsoleOutput(prev => [...prev, `❌ Error adding item: ${e?.message || 'Unknown error'}`]);
       }
     },
-    collect: (monitor) => ({ isOver: monitor.isOver() })
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+      isNamespaceDropOver: monitor.getItemType() === 'namespace' && monitor.isOver(),
+      isSchemaDropOver: monitor.getItemType() === 'SCHEMA' && monitor.isOver()
+    })
   });
 
 
@@ -669,7 +774,7 @@ What would you like to work on today?`,
     }
   };
 
-  const addScrapingLog = (message, type = 'info') => {
+  const addScrapingLog = (message: any, type = 'info') => {
     setScrapingLog(prev => [...prev, {
       message,
       type,
@@ -709,7 +814,7 @@ What would you like to work on today?`,
         addScrapingLog(`Preview failed: ${error.error}`, 'error');
       }
     } catch (error) {
-      addScrapingLog(`Preview error: ${error.message}`, 'error');
+      addScrapingLog(`Preview error: ${error instanceof Error ? error.message : String(error)}`, 'error');
     } finally {
       setIsScraping(false);
     }
@@ -786,7 +891,7 @@ What would you like to work on today?`,
         addScrapingLog(`Scrape and save failed: ${error.error}`, 'error');
       }
     } catch (error) {
-      addScrapingLog(`Scrape and save error: ${error.message}`, 'error');
+      addScrapingLog(`Scrape and save error: ${error instanceof Error ? error.message : String(error)}`, 'error');
     } finally {
       setIsScraping(false);
     }
@@ -819,7 +924,7 @@ What would you like to work on today?`,
       
       // Add a welcome message with context if workspace state exists
       setTimeout(() => {
-        if (workspaceState && (workspaceState.schemas.length > 0 || workspaceState.apis.length > 0)) {
+        if (workspaceState && workspaceState.schemas && workspaceState.apis && (workspaceState.schemas.length > 0 || workspaceState.apis.length > 0)) {
           addMessage({
             role: 'assistant',
             content: `Welcome back! I can see you have ${workspaceState.schemas.length} schemas and ${workspaceState.apis.length} APIs in your workspace. I'll help you continue building on your previous work.`
@@ -981,21 +1086,13 @@ What would you like to work on today?`,
   };
 
   // Test function to debug chat UI
-  const testChatUI = () => {
-    console.log('[Frontend] 🧪 Testing chat UI...');
-    addMessage({
-      role: 'assistant',
-      content: 'This is a test message to verify the chat UI is working!'
-    });
-  };
-
   // Function to handle Lambda generation using the dedicated endpoint
   const handleLambdaGeneration = async (message: string, selectedSchema: any = null) => {
     try {
       setConsoleOutput(prev => [...prev, `🔄 Generating Lambda function...`]);
-      
-      const response = await fetch(`${API_BASE_URL}/ai-agent/lambda-codegen`, {
-        method: 'POST',
+        
+        const response = await fetch(`${API_BASE_URL}/ai-agent/lambda-codegen`, {
+          method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -1020,7 +1117,7 @@ What would you like to work on today?`,
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const reader = response.body?.getReader();
+          const reader = response.body?.getReader();
       if (!reader) {
         // Fallback for non-streaming responses
         try {
@@ -1046,20 +1143,20 @@ What would you like to work on today?`,
         }
       }
 
-      let generatedCode = '';
+            let generatedCode = '';
       let functionName = (lambdaForm.functionName && lambdaForm.functionName.trim()) 
         ? lambdaForm.functionName.trim() 
         : (selectedSchema ? `${selectedSchema.schemaName || selectedSchema.name}Handler` : 'GeneratedHandler');
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
+            
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              const chunk = new TextDecoder().decode(value);
+              const lines = chunk.split('\n');
+              
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
             const dataContent = line.slice(6);
             
             if (dataContent.trim() === '[DONE]' || dataContent.trim().includes('[DONE]')) {
@@ -1084,14 +1181,28 @@ What would you like to work on today?`,
               if (data.content) {
                 generatedCode += data.content;
               }
-            } catch (e) {
+              // Additional fallback: check for code in different fields
+              if (data.code) {
+                generatedCode += data.code;
+              }
+              if (data.message) {
+                generatedCode += data.message;
+                      }
+                    } catch (e) {
               console.log('Failed to parse streaming data:', e);
+              // Try to extract code from raw content
+              if (dataContent.includes('```')) {
+                const match = dataContent.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
+                if (match && match[1]) {
+                  generatedCode += match[1];
+                    }
+                  }
+                }
+              }
             }
           }
-        }
-      }
 
-      if (generatedCode) {
+      if (generatedCode && generatedCode.trim()) {
         // Set the generated Lambda code in the Lambda tab's code box
         setGeneratedLambdaCode(generatedCode);
         
@@ -1104,20 +1215,26 @@ What would you like to work on today?`,
         // Add success message to chat
         addMessage({
           role: 'assistant',
-          content: `✅ Generated Lambda function: **${functionName}**\n\nCheck the Lambda tab to see the generated code!`,
-          timestamp: new Date()
+          content: `✅ Generated Lambda function: **${functionName}**\n\nCheck the Lambda tab to see the generated code!`
         });
         
         setConsoleOutput(prev => [...prev, `✅ Lambda function generated: ${functionName}`]);
-      } else {
-        throw new Error('No Lambda code was generated');
-      }
-    } catch (error) {
+        } else {
+        console.log('Debug: generatedCode is empty or whitespace:', generatedCode);
+        setConsoleOutput(prev => [...prev, `⚠️ No Lambda code was generated. Raw response: ${generatedCode}`]);
+          
+        // Add helpful message to user
+          addMessage({
+            role: 'assistant',
+          content: `⚠️ No Lambda code was generated. Please try:\n\n• Being more specific about what you want to build\n• Including the programming language (Node.js, Python, etc.)\n• Describing the function's purpose clearly\n\nExample: "Create a Node.js Lambda function that processes user data and saves it to DynamoDB"`
+          });
+        }
+      } catch (error) {
       console.error('Error in schema Lambda generation:', error);
       setConsoleOutput(prev => [...prev, `❌ Error generating Lambda: ${error instanceof Error ? error.message : 'Unknown error'}`]);
-      
-      addMessage({
-        role: 'assistant',
+        
+        addMessage({
+          role: 'assistant',
         content: `❌ Failed to generate Lambda function: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
@@ -1162,7 +1279,7 @@ What would you like to work on today?`,
       }
       
       const response = await fetch(`${API_BASE_URL}/ai-agent/generate-documents`, {
-        method: 'POST',
+          method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -1183,7 +1300,7 @@ What would you like to work on today?`,
         setConsoleOutput(prev => [...prev, `✅ Generated ${Object.keys(result.documents).length} documents`]);
         
         // Create downloadable files for each document
-        const documentFiles = [];
+        const documentFiles: Array<{name: string, content: string, type: string, id: string, size: number}> = [];
         for (const [docType, docContent] of Object.entries(result.documents)) {
           const fileName = `${namespace?.['namespace-name'] || 'namespace'}_${docType.toUpperCase()}.json`;
           const fileContent = JSON.stringify(docContent, null, 2);
@@ -1192,6 +1309,7 @@ What would you like to work on today?`,
             name: fileName,
             content: fileContent,
             type: 'application/json',
+            id: getNowId(),
             size: fileContent.length
           });
         }
@@ -1206,20 +1324,19 @@ What would you like to work on today?`,
         
         addMessage({
           role: 'assistant',
-          content: `📋 **Generated Documents for ${namespace?.['namespace-name']}:**\n\n${downloadLinks}\n\n**Available Documents:**\n${Object.keys(result.documents).map(doc => `• **${doc.toUpperCase()}** - ${result.documents[doc].type || 'Document'}`).join('\n')}\n\n💡 **Tip:** Click the download links above to save the documents to your computer.`,
-          timestamp: new Date()
+          content: `📋 **Generated Documents for ${namespace?.['namespace-name']}:**\n\n${downloadLinks}\n\n**Available Documents:**\n${Object.keys(result.documents).map(doc => `• **${doc.toUpperCase()}** - ${result.documents[doc].type || 'Document'}`).join('\n')}\n\n💡 **Tip:** Click the download links above to save the documents to your computer.`
         });
         
         setConsoleOutput(prev => [...prev, `📄 Documents ready for download: ${Object.keys(result.documents).join(', ')}`]);
-      } else {
+                        } else {
         throw new Error(result.error || 'Failed to generate documents');
       }
     } catch (error) {
       console.error('Error in document generation:', error);
       setConsoleOutput(prev => [...prev, `❌ Error generating documents: ${error instanceof Error ? error.message : 'Unknown error'}`]);
-      
-      addMessage({
-        role: 'assistant',
+                        
+                        addMessage({
+                          role: 'assistant',
         content: `❌ Failed to generate documents: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
@@ -1266,8 +1383,7 @@ What would you like to work on today?`,
       // First, create a namespace from the prompt
       addMessage({
         role: 'assistant',
-        content: `🚀 I'll create a namespace for your project and then generate the requested documents. This may take a moment...`,
-        timestamp: new Date()
+        content: `🚀 I'll create a namespace for your project and then generate the requested documents. This may take a moment...`
       });
       
       const namespaceResponse = await fetch(`${API_BASE_URL}/ai-agent/generate-namespace-smart`, {
@@ -1318,7 +1434,7 @@ What would you like to work on today?`,
         setConsoleOutput(prev => [...prev, `✅ Generated ${Object.keys(documentResult.documents).length} documents`]);
         
         // Create downloadable files for each document
-        const documentFiles = [];
+        const documentFiles: Array<{name: string, content: string, type: string, id: string, size: number}> = [];
         for (const [docType, docContent] of Object.entries(documentResult.documents)) {
           const fileName = `project_${docType.toUpperCase()}.json`;
           const fileContent = JSON.stringify(docContent, null, 2);
@@ -1327,6 +1443,7 @@ What would you like to work on today?`,
             name: fileName,
             content: fileContent,
             type: 'application/json',
+            id: getNowId(),
             size: fileContent.length
           });
         }
@@ -1338,23 +1455,22 @@ What would you like to work on today?`,
         const downloadLinks = documentFiles.map(file => 
           `[📄 Download ${file.name}](#download:${file.name})`
         ).join('\n');
-        
-        addMessage({
-          role: 'assistant',
-          content: `📋 **Generated Documents for your project:**\n\n${downloadLinks}\n\n**Available Documents:**\n${Object.keys(documentResult.documents).map(doc => `• **${doc.toUpperCase()}** - ${documentResult.documents[doc].type || 'Document'}`).join('\n')}\n\n💡 **Tip:** Click the download links above to save the documents to your computer.\n\n🎯 **Namespace Created:** You can view and manage the generated namespace [here](/namespace/${namespaceResult.namespaceId}).`,
-          timestamp: new Date()
-        });
+          
+          addMessage({
+            role: 'assistant',
+          content: `📋 **Generated Documents for your project:**\n\n${downloadLinks}\n\n**Available Documents:**\n${Object.keys(documentResult.documents).map(doc => `• **${doc.toUpperCase()}** - ${documentResult.documents[doc].type || 'Document'}`).join('\n')}\n\n💡 **Tip:** Click the download links above to save the documents to your computer.\n\n🎯 **Namespace Created:** You can view and manage the generated namespace [here](/namespace/${namespaceResult.namespaceId}).`
+          });
         
         setConsoleOutput(prev => [...prev, `📄 Documents ready for download: ${Object.keys(documentResult.documents).join(', ')}`]);
       } else {
         throw new Error(documentResult.error || 'Failed to generate documents');
-      }
-    } catch (error) {
+        }
+      } catch (error) {
       console.error('Error in document generation from prompt:', error);
       setConsoleOutput(prev => [...prev, `❌ Error generating documents: ${error instanceof Error ? error.message : 'Unknown error'}`]);
-      
-      addMessage({
-        role: 'assistant',
+        
+        addMessage({
+          role: 'assistant',
         content: `❌ Failed to generate documents: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
@@ -1382,7 +1498,7 @@ What would you like to work on today?`,
         addMessage({ role: 'assistant', content: `Using schema: ${chosenName}` });
         const schemaObj = match.schema || match;
         await handleLambdaGeneration(pendingSchemaSelection.prompt, schemaObj);
-        return;
+      return;
       }
       addMessage({ role: 'assistant', content: 'I did not recognize that schema name. Please reply with the exact schema name as shown in the list (e.g., "Use Users").' });
       return;
@@ -1394,7 +1510,7 @@ What would you like to work on today?`,
     console.log('[Frontend] 🏠 Current namespace:', localNamespace?.['namespace-id']);
     
     // Add user message to chat
-    addMessage({
+        addMessage({
       role: 'user',
       content: userMessage
     });
@@ -1405,9 +1521,9 @@ What would you like to work on today?`,
     // If no namespace context and intent is namespace generation, call smart endpoint
     if (!localNamespace?.['namespace-id'] && isNamespaceGenerationIntent(userMessage)) {
       await generateNamespaceSmart(userMessage);
-      return;
-    }
-
+        return;
+      }
+      
     // If user explicitly asks to generate a lambda, call dedicated endpoint directly
     const lowerUM = userMessage.toLowerCase();
     const lambdaIntent =
@@ -1432,14 +1548,48 @@ What would you like to work on today?`,
           return;
         }
 
-        const allSchemasData = await getAllSchemasFromContext();
-        const allSchemas = allSchemasData.flatMap(data => 
-          data.schemas.map(schema => ({
-            ...schema,
-            namespaceName: data.namespace['namespace-name'] || data.namespace.name,
-            namespaceId: data.namespace['namespace-id'] || data.namespace.id
-          }))
-        );
+        let allSchemas: any[] = [];
+        let allSchemasData: {namespace: any, schemas: any[]}[] = [];
+        
+        try {
+          allSchemasData = await getAllSchemasFromContext();
+          allSchemas = allSchemasData.flatMap(data => 
+            data.schemas.map(schema => ({
+              ...schema,
+              namespaceName: data.namespace['namespace-name'] || data.namespace.name,
+              namespaceId: data.namespace['namespace-id'] || data.namespace.id
+            }))
+          );
+
+          // Fallback: if nothing returned, retry per-namespace fetch using legacy helper
+          if (allSchemas.length === 0) {
+            const retryResults = await Promise.all(
+              [localNamespace, ...droppedNamespaces].filter(Boolean).map(async (ns) => {
+                const nsId = ns['namespace-id'] || ns.id;
+                try {
+                  const schemas = await listSchemas(nsId);
+                  return {
+                    namespace: ns,
+                    schemas: schemas.map(s => ({
+                      ...s,
+                      namespaceName: ns['namespace-name'] || ns.name,
+                      namespaceId: nsId
+                    }))
+                  };
+                } catch (error) {
+                  console.warn(`Failed to fetch schemas for namespace ${nsId}:`, error);
+                  return { namespace: ns, schemas: [] };
+                }
+              })
+            );
+            allSchemasData = retryResults;
+            allSchemas = retryResults.flatMap(r => r.schemas);
+          }
+        } catch (error) {
+          console.error('Error fetching schemas:', error);
+          // Don't show error message - just continue with empty schemas
+          allSchemas = [];
+        }
 
         if (allSchemas.length > 0) {
           // Group schemas by namespace for better display
@@ -1504,7 +1654,7 @@ What would you like to work on today?`,
     
     // Debug logging for document intent detection
     console.log('[Frontend] 🔍 Intent detection:', {
-      message: userMessage,
+            message: userMessage,
       lowerMessage: lowerUM,
       documentIntent: documentIntent,
       namespaceContextIntent: namespaceContextIntent,
@@ -1543,14 +1693,14 @@ What would you like to work on today?`,
         .filter(file => file.name.endsWith('.json') && file.content)
         .map(file => {
           try {
-            const schemaData = JSON.parse(file.content);
+            const schemaData = JSON.parse(file.content || '{}');
             return {
               name: file.name.replace('.json', ''),
               type: 'JSON',
               content: schemaData,
               originalFile: file.name
             };
-          } catch (e) {
+                    } catch (e) {
             return null;
           }
         })
@@ -1590,12 +1740,12 @@ What would you like to work on today?`,
 
     try {
       await handleStreamingResponse(userMessage);
-    } catch (error) {
+      } catch (error) {
       console.error('Error handling streaming response:', error);
       setConsoleOutput(prev => [...prev, `❌ Error processing message: ${error instanceof Error ? error.message : 'Unknown error'}`]);
       
-      addMessage({
-        role: 'assistant',
+        addMessage({
+          role: 'assistant',
         content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
@@ -1614,7 +1764,7 @@ What would you like to work on today?`,
       setConsoleOutput(prev => [...prev, `💬 Processing message: ${userMessage}`]);
         
         const requestBody = {
-        message: userMessage,
+      message: userMessage,
         namespace: localNamespace?.['namespace-id'] || null, // Pass null for general context to enable namespace generation
         allNamespaces: [localNamespace, ...droppedNamespaces].filter(Boolean), // Pass all namespaces in context
         history: messages.slice(-10), // Send last 10 messages for context
@@ -1639,20 +1789,20 @@ What would you like to work on today?`,
 
         if (response.ok) {
         setConsoleOutput(prev => [...prev, `✅ Connected to backend, starting streaming...`]);
-          const reader = response.body?.getReader();
+    const reader = response.body?.getReader();
           if (reader) {
-            let chunkCount = 0;
-            
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                chunkCount++;
-                const chunk = new TextDecoder().decode(value);
-                const lines = chunk.split('\n');
-                
-                for (const line of lines) {
-                  if (line.startsWith('data: ')) {
+    let chunkCount = 0;
+    
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        chunkCount++;
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
                     const dataContent = line.slice(6);
                     
                     console.log('[Frontend Debug] Processing data line:', { line, dataContent });
@@ -1681,11 +1831,11 @@ What would you like to work on today?`,
                           actionCount: data.actions.length,
                           actions: data.actions
                         });
-                        actions = data.actions;
+                actions = data.actions;
                         setConsoleOutput(prev => [...prev, `📋 Received ${data.actions.length} action(s) from AI agent (route: ${data.route})`]);
-                      }
-                      
-                      if (data.route === 'schema') {
+              }
+              
+              if (data.route === 'schema') {
                     // Handle schema-specific messages - stream JSON schema content live
                     console.log('[Frontend Debug] ⚠️ SCHEMA ROUTE MESSAGE:', data);
                     console.log('[Frontend Debug] ⚠️ Type:', data.type, 'Content:', data.content?.substring(0, 200));
@@ -1693,8 +1843,8 @@ What would you like to work on today?`,
                       // Stream JSON schema content progressively in the live box
                       console.log('[Frontend Debug] ✅ Adding to live schema box:', data.content?.substring(0, 100));
                       if (data.content) {
-                        setLiveSchema(prev => prev + data.content);
-                            setIsStreamingSchema(true);
+                  setLiveSchema(prev => prev + data.content);
+                  setIsStreamingSchema(true);
                         setConsoleOutput(prev => [...prev, `🔄 Live schema streaming...`]);
                           }
                         } else if (data.type === 'live_schema_complete') {
@@ -1702,7 +1852,7 @@ What would you like to work on today?`,
                       console.log('[Frontend Debug] ✅ Schema generation completed');
                           setIsStreamingSchema(false);
                           setConsoleOutput(prev => [...prev, `✅ Live schema generation completed`]);
-                        } else {
+                  } else {
                       console.log('[Frontend Debug] ⚠️ UNEXPECTED MESSAGE TYPE IN SCHEMA ROUTE:', data.type, data.content?.substring(0, 100));
                         }
                       } else if (data.route === 'lambda') {
@@ -1750,13 +1900,10 @@ What would you like to work on today?`,
                           } catch (e) {
                             console.warn('Failed to generate lambda file structure:', e);
                           }
-                          const successMessage = {
-                            id: getNowId(),
+                          addMessage({
                             role: 'assistant',
-                            content: `✅ Generated Lambda function${data.schemaName ? ` for schema: **${data.schemaName}**` : ''}.\n\nCheck the Lambda tab to see the generated code!`,
-                            timestamp: new Date()
-                          };
-                          setMessages(prev => [...prev, successMessage]);
+                            content: `✅ Generated Lambda function${data.schemaName ? ` for schema: **${data.schemaName}**` : ''}.\n\nCheck the Lambda tab to see the generated code!`
+                          });
                           setConsoleOutput(prev => [...prev, `✅ Lambda function generated${data.schemaName ? ` for schema: ${data.schemaName}` : ''}`]);
                           continue; // Continue processing instead of returning
                         }
@@ -1775,13 +1922,10 @@ What would you like to work on today?`,
                           console.log('[Frontend Debug] ✅ Namespace generated:', data.namespaceId);
                           
                           // Add the success message to chat
-                          const successMessage = {
-                            id: getNowId(),
+                          addMessage({
                             role: 'assistant',
-                            content: data.content,
-                            timestamp: new Date()
-                          };
-                          setMessages(prev => [...prev, successMessage]);
+                            content: data.content
+                          });
                           
                           // Show success notification
                           setConsoleOutput(prev => [...prev, `✅ Complete namespace generated: ${data.namespaceData.namespace['namespace-name']}`]);
@@ -1811,22 +1955,9 @@ What would you like to work on today?`,
                               messageCount: messages.length + 1
                             });
                             
-                            setMessages(prev => {
-                              const newMessages = [
-                                ...prev,
-                                {
-                                  id: lastAssistantMessageId || getNowId(),
-                                  role: 'assistant',
-                                  content: assistantMessage,
-                                  timestamp: new Date()
-                                }
-                              ];
-                              console.log('[Frontend Debug] 📋 UPDATED MESSAGES ARRAY:', {
-                                oldLength: prev.length,
-                                newLength: newMessages.length,
-                                lastMessage: newMessages[newMessages.length - 1]
-                              });
-                              return newMessages;
+                            addMessage({
+                              role: 'assistant',
+                              content: assistantMessage
                             });
                           } else {
                             // Update the existing assistant message
@@ -1854,7 +1985,7 @@ What would you like to work on today?`,
                             actionCount: data.actions?.length || 0,
                             actions: data.actions
                           });
-                        } else {
+                  } else {
                           // This might be an unexpected message type
                           console.log('[Frontend Debug] ⚠️ UNEXPECTED CHAT ROUTE MESSAGE TYPE:', {
                             type: data.type,
@@ -1866,7 +1997,7 @@ What would you like to work on today?`,
                       }
                     } catch (e) {
                       console.log('[Frontend Debug] Failed to parse streaming data:', {
-                        error: e.message,
+                        error: e instanceof Error ? e.message : String(e),
                         dataContent: dataContent,
                         line: line
                       });
@@ -1893,15 +2024,15 @@ What would you like to work on today?`,
         if (action.type === 'generate_schema' && action.status === 'complete') {
           const schemaData = action.data;
           if (schemaData) {
-              const newSchema = {
+        const newSchema = {
               id: getNowId(),
               schemaName: `Generated Schema ${schemas.length + 1}`,
-              schema: schemaData,
+          schema: schemaData,
               content: schemaData,
               saved: false,
-              timestamp: new Date()
-            };
-            setSchemas(prev => [...prev, newSchema]);
+          timestamp: new Date()
+        };
+        setSchemas(prev => [...prev, newSchema]);
             setSchemaNames(prev => ({ ...prev, [newSchema.id]: newSchema.schemaName }));
               setLiveSchema('');
               setIsStreamingSchema(false);
@@ -1928,14 +2059,10 @@ What would you like to work on today?`,
           let errorType = action.errorType || 'unknown_error';
           
           // Add user-friendly error message to chat
-          const errorChatMessage = {
-            id: getNowId(),
+          addMessage({
             role: 'assistant',
-            content: `❌ **Error**: ${errorMessage}\n\n${getErrorSuggestions(errorType)}`,
-            timestamp: new Date()
-          };
-          
-          setMessages(prev => [...prev, errorChatMessage]);
+            content: `❌ **Error**: ${errorMessage}\n\n${getErrorSuggestions(errorType)}`
+          });
           setConsoleOutput(prev => [...prev, `❌ Error: ${errorMessage} (Type: ${errorType})`]);
         }
       }
@@ -2117,6 +2244,81 @@ What would you like to work on today?`,
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  // Handle namespace autocomplete
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setInputMessage(value);
+    
+    // Check for @ symbol
+    const cursorPosition = e.target.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      // Check if there's a space or newline before @ (meaning it's a new mention)
+      const charBeforeAt = lastAtIndex > 0 ? textBeforeCursor[lastAtIndex - 1] : ' ';
+      if (charBeforeAt === ' ' || charBeforeAt === '\n' || lastAtIndex === 0) {
+        const query = textBeforeCursor.substring(lastAtIndex + 1);
+        
+        // Filter namespaces based on query
+        const filtered = availableNamespaces.filter(ns => 
+          ns['namespace-name']?.toLowerCase().includes(query.toLowerCase())
+        );
+        
+        setNamespaceSuggestions(filtered);
+        setShowNamespaceSuggestions(filtered.length > 0);
+        setAtSymbolPosition(lastAtIndex);
+        setSelectedSuggestionIndex(0);
+      } else {
+        setShowNamespaceSuggestions(false);
+      }
+    } else {
+      setShowNamespaceSuggestions(false);
+    }
+  };
+
+  // Handle keyboard navigation for suggestions
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showNamespaceSuggestions) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev < namespaceSuggestions.length - 1 ? prev + 1 : 0
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : namespaceSuggestions.length - 1
+        );
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        selectNamespace(namespaceSuggestions[selectedSuggestionIndex]);
+      } else if (e.key === 'Escape') {
+        setShowNamespaceSuggestions(false);
+      }
+    }
+  };
+
+  // Select a namespace from suggestions
+  const selectNamespace = (namespace: any) => {
+    if (!namespace) return;
+    
+    // Remove the @ symbol and query from input
+    const beforeAt = inputMessage.substring(0, atSymbolPosition);
+    const afterQuery = inputMessage.substring(atSymbolPosition + 1 + 
+      inputMessage.substring(atSymbolPosition + 1).split(' ')[0].length
+    );
+    
+    const newMessage = `${beforeAt}${afterQuery}`;
+    setInputMessage(newMessage);
+    setShowNamespaceSuggestions(false);
+    
+    // Add the namespace to context as a chip
+    if (!droppedNamespaces.find(ns => ns['namespace-id'] === namespace['namespace-id'])) {
+      setDroppedNamespaces(prev => [...prev, namespace]);
     }
   };
 
@@ -2517,8 +2719,7 @@ What would you like to work on today?`,
           'timers': '^0.1.1',
           'tty': '^1.0.1',
           'v8': '^0.1.0',
-          'vm': '^0.1.0',
-          'zlib': '^1.0.5'
+          'vm': '^0.1.0'
         };
         
         // Skip built-in Node.js modules
@@ -2527,7 +2728,7 @@ What would you like to work on today?`,
           'stream', 'buffer', 'events', 'http', 'https', 'net', 'tls',
           'child_process', 'cluster', 'dgram', 'dns', 'domain', 'os',
           'punycode', 'readline', 'repl', 'string_decoder', 'sys',
-          'timers', 'tty', 'v8', 'vm', 'zlib'
+          'timers', 'tty', 'vm', 'zlib'
         ];
         
         if (!builtInModules.includes(packageName)) {
@@ -2888,7 +3089,7 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
           // API Gateway is now created automatically during deployment
           if (deployResult.apiGatewayUrl) {
             setConsoleOutput(prev => [...prev, `✅ API Gateway created automatically!`]);
-              setConsoleOutput(prev => [...prev, `🌐 API Gateway URL: ${deployResult.apiGatewayUrl}`]);
+            setConsoleOutput(prev => [...prev, `🌐 API Gateway URL: ${deployResult.apiGatewayUrl}`]);
               setConsoleOutput(prev => [...prev, `   Endpoint: ${deployResult.apiGatewayUrl}/${deployResult.functionName || func.name}`]);
             setConsoleOutput(prev => [...prev, `   API ID: ${deployResult.apiId}`]);
             
@@ -3304,10 +3505,28 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
     } finally {
       setIsSavingLambda(false);
     }
-  }
+  };
 
   return (
-    <div className="fixed top-0 right-0 h-full w-[800px] flex flex-col bg-white shadow-2xl border-l border-gray-200 z-50 transform transition-transform duration-300 ease-in-out">
+    <div 
+      ref={namespaceDropRef as any}
+      className={`fixed top-0 right-0 h-full flex flex-col bg-white shadow-2xl border-l border-gray-200 z-[60] pointer-events-auto transform transition-all duration-500 ease-out animate-slide-in-right ${
+        isNamespaceDropOver ? 'bg-blue-50 border-2 border-blue-400' : 
+        isSchemaDropOver ? 'bg-purple-50 border-2 border-purple-400' : ''
+      }`}
+      style={{ 
+        width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : `${workspaceWidth}px`,
+        maxWidth: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : `${workspaceWidth}px`
+      }}
+    >
+      {/* Resize Handle - Hidden on mobile */}
+      <div 
+        className={`hidden md:block absolute left-0 top-0 h-full w-1 cursor-ew-resize hover:bg-blue-400 transition-colors z-10 ${isResizing ? 'bg-blue-500' : 'bg-transparent hover:bg-blue-300'}`}
+        onMouseDown={handleResizeStart}
+        title="Drag to resize workspace width"
+      >
+        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-2 h-8 bg-blue-400 rounded-r opacity-0 hover:opacity-100 transition-opacity"></div>
+      </div>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
         <div className="flex items-center gap-3">
@@ -3321,9 +3540,9 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="text-blue-600 font-medium">Working with:</span>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                      {1 + droppedNamespaces.length} Namespace(s)
-                    </span>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                      {(localNamespace ? 1 : 0) + droppedNamespaces.length} Namespace(s)
+                  </span>
                   </div>
                   {localNamespace && (
                     <div className="text-xs text-gray-600 ml-2">
@@ -3361,130 +3580,154 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200 bg-white px-4 pt-2">
+        <div className="flex border-b border-gray-200 bg-white px-2 md:px-4 pt-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('lambda')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'lambda'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Code size={16} /> Lambda
+            <Code size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Lambda</span>
         </button>
         <button
           onClick={() => setActiveTab('api')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'api'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Database size={16} /> API
+            <Database size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">API</span>
         </button>
         <button
           onClick={() => setActiveTab('web-scraping')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'web-scraping'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <FileText size={16} /> Web Scraping
+            <FileText size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Web Scraping</span>
         </button>
         <button
           onClick={() => setActiveTab('files')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'files'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Folder size={16} /> Files
+            <Folder size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Files</span>
         </button>
         <button
           onClick={() => setActiveTab('schema')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'schema'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Database size={16} /> Schema
+            <Database size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Schema</span>
         </button>
         <button
           onClick={() => setActiveTab('deployment')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'deployment'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Play size={16} /> Deployment
+            <Play size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Deployment</span>
         </button>
         <button
           onClick={() => setActiveTab('console')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
             activeTab === 'console'
               ? 'border-blue-500 text-blue-600 bg-white'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Play size={16} /> Console
+            <Play size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Console</span>
         </button>
       </div>
 
-      {/* Tab Content */}
-      <div className="flex-1 overflow-auto p-4 bg-[#f8f9fb]">
-        {activeTab === 'lambda' && (
-          <div className="h-full overflow-y-auto">
+      {/* Generated Code Dropdown */}
+      {generatedLambdaCode && (
+        <div className="border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between p-3 border-b border-gray-100">
+            <h3 className="font-medium text-gray-900">Generated Code</h3>
+            <button
+              onClick={() => setShowGeneratedCode(!showGeneratedCode)}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              {showGeneratedCode ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          {showGeneratedCode && (
+            <div className="p-4 bg-gray-50 max-h-64 overflow-y-auto">
             <div className="mb-4">
-              <h3 className="font-medium text-lg mb-2">Lambda Function Generation</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Use the chat below to describe the Lambda function you want to generate. 
-                Make sure to select a schema first, then describe your Lambda handler requirements.
-              </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-800 mb-2">Instructions:</h4>
-                <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• First, ask the AI to generate or select a schema</li>
-                  <li>• Then describe your Lambda function requirements in the chat</li>
-                  <li>• The AI will generate the Lambda code based on your description</li>
-                  <li>• Generated code will appear in the Files tab</li>
-                </ul>
+                <h4 className="font-medium text-sm mb-2">Lambda Code:</h4>
+                <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
+                  {generatedLambdaCode}
+                </pre>
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+        {/* Main Content Area - Takes remaining space */}
+        <div className={`flex-1 overflow-auto p-4 bg-[#f8f9fb] ${activeTab === 'lambda' ? 'hidden' : ''}`}>
+        {activeTab === 'lambda' && (
+          <div className="h-full overflow-y-auto hidden">
+            <h3 className="font-medium text-lg mb-2">Lambda Code Generation</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Generate AWS Lambda function code using AI. Describe what you want to build and get ready-to-use code.
+            </p>
             
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium">Generated Lambda Code</h4>
+            {/* Lambda Code Display */}
                 {generatedLambdaCode && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-gray-900">Generated Lambda Code</h4>
+                  <div className="flex gap-2">
                   <button
-                    onClick={saveLambdaToNamespace}
-                    disabled={isSavingLambda}
-                    className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSavingLambda ? 'Saving...' : 'Save Lambda'}
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedLambdaCode);
+                        setConsoleOutput(prev => [...prev, '📋 Lambda code copied to clipboard']);
+                      }}
+                      className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                    >
+                      Copy Code
                   </button>
-                )}
+                    <button
+                      onClick={() => setGeneratedLambdaCode('')}
+                      className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                    >
+                      Clear
+                    </button>
               </div>
-              <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto" style={{ minHeight: 120 }}>
-                {generatedLambdaCode || '// Lambda code will appear here after generation'}
-              </pre>
+                </div>
+                <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+                  <pre className="whitespace-pre-wrap">{generatedLambdaCode}</pre>
             </div>
           </div>
         )}
+            
+          </div>
+        )}
+        
         {activeTab === 'api' && (
           <div className="h-full overflow-y-auto">
-            <div className="mb-4">
-              <h3 className="font-medium text-lg mb-2">API Method Creation & Management</h3>
+            <h3 className="font-medium text-lg mb-2">API Method Creation & Management</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Create reusable API methods from API Gateway URLs with OpenAPI specifications. 
-                Generate methods that can be overridden with different URLs and saved to your namespace.
+              Create reusable API methods from API Gateway URLs with OpenAPI specifications. 
+              Generate methods that can be overridden with different URLs and saved to your namespace.
                 <br />
-                <span className="text-blue-600 font-medium">💡 Tip:</span> Use deployed Lambda endpoints or any API Gateway URL to create methods!
-              </p>
-            </div>
+              <span className="text-blue-600 font-medium">💡 Tip:</span> Use deployed Lambda endpoints or any API Gateway URL to create methods!
+            </p>
             
             {/* API Method Creation Agent */}
             <APIMethodCreationAgent 
@@ -3536,7 +3779,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                 >
                   Test: Set Custom URL
                 </button>
-              </div>>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Service or URL</label>
@@ -3871,7 +4114,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             ) : (
               <div className="space-y-4">
                 {schemas.map((schema: any, index: number) => (
-                  <div
+                  <div 
                     key={schema.id} 
                     className={`border border-gray-200 rounded-lg p-4 ${isEditingSchema && index === 0 ? 'bg-blue-50 border-blue-200' : 'bg-white'} hover:shadow-md transition-shadow`}
                   >
@@ -3933,7 +4176,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                                       const schemasResponse = await fetch(`/unified/schema?namespaceId=${namespace?.['namespace-id']}`);
                                       if (schemasResponse.ok) {
                                         const updatedSchemas = await schemasResponse.json();
-                                        setSavedSchemas(updatedSchemas);
+                                        setSchemas(updatedSchemas);
                                         setConsoleOutput(prev => [...prev, `🔄 Updated saved schemas list (${updatedSchemas.length} schemas available)`]);
                                       }
                                     } catch (refreshError) {
@@ -3992,47 +4235,48 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           </div>
         )}
         {activeTab === 'files' && (
-          <div className="h-full flex">
+          <div className="h-full flex flex-col md:flex-row">
             {/* File Tree Panel */}
-            <div className="w-1/3 border-r border-gray-200 bg-white p-4">
+            <div className="w-full md:w-1/3 border-r border-gray-200 bg-white p-2 md:p-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium">Project Files</h3>
-                <div className="flex gap-2">
+                <h3 className="font-medium text-sm md:text-base">Files</h3>
+                <div className="flex gap-1 md:gap-2">
                   <button
                     onClick={saveFilesToS3}
                     disabled={projectFiles.length === 0 || isSavingToS3}
-                    className={`px-2 py-1 text-xs rounded ${
+                    className={`p-1.5 md:p-2 rounded-lg transition-colors ${
                       projectFiles.length === 0 || isSavingToS3
-                        ? 'bg-gray-300 cursor-not-allowed'
+                        ? 'bg-gray-300 cursor-not-allowed text-gray-500'
                         : 'bg-purple-500 hover:bg-purple-600 text-white'
                     }`}
-                    title="Save all project files to S3 cloud bucket"
+                    title={isSavingToS3 ? 'Saving to S3...' : 'Save all project files to S3 cloud bucket'}
                   >
-                    {isSavingToS3 ? 'Saving to S3...' : 'Save to S3 Cloud Bucket'}
+                    <Cloud className="w-3 h-3 md:w-4 md:h-4" />
                   </button>
                   <button
                     onClick={downloadProjectFiles}
                     disabled={projectFiles.length === 0 || isDownloading}
-                    className={`px-2 py-1 text-xs rounded ${
+                    className={`p-1.5 md:p-2 rounded-lg transition-colors ${
                       projectFiles.length === 0 || isDownloading
-                        ? 'bg-gray-300 cursor-not-allowed'
+                        ? 'bg-gray-300 cursor-not-allowed text-gray-500'
                         : 'bg-green-500 hover:bg-green-600 text-white'
                     }`}
-                    title="Download all project files as ZIP"
+                    title={isDownloading ? 'Downloading...' : 'Download all project files as ZIP'}
                   >
-                    {isDownloading ? 'Downloading...' : 'Download ZIP'}
+                    <Download className="w-3 h-3 md:w-4 md:h-4" />
                   </button>
                   <button
                     onClick={refreshFileTree}
-                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                    className="p-1.5 md:p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                    title="Refresh file tree"
                   >
-                    Refresh
+                    <RefreshCw className="w-3 h-3 md:w-4 md:h-4" />
                   </button>
                 </div>
               </div>
-              <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
+              <div className="overflow-y-auto max-h-[200px] md:max-h-[calc(100vh-300px)]">
                 {projectFiles.length === 0 ? (
-                  <div className="text-gray-500 text-sm">No files found...</div>
+                  <div className="text-gray-500 text-xs md:text-sm">No files found...</div>
                 ) : (
                   renderFileTree(projectFiles)
                 )}
@@ -4040,14 +4284,14 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             </div>
             
             {/* File Content Panel */}
-            <div className="flex-1 p-4">
+            <div className="flex-1 p-2 md:p-4">
               {selectedFile ? (
                 <div className="h-full flex flex-col">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-medium">{selectedFile.name}</h3>
-                    <span className="text-sm text-gray-500">{selectedFile.path}</span>
+                  <div className="flex items-center justify-between mb-2 md:mb-4">
+                    <h3 className="font-medium text-sm md:text-base truncate">{selectedFile.name}</h3>
+                    <span className="text-xs md:text-sm text-gray-500 hidden md:inline">{selectedFile.path}</span>
                   </div>
-                  <div className="flex-1 overflow-auto bg-gray-900 text-green-400 font-mono text-sm rounded-lg p-4">
+                  <div className="flex-1 overflow-auto bg-gray-900 text-green-400 font-mono text-xs md:text-sm rounded-lg p-2 md:p-4">
                     {selectedFile.content || fileContent ? (
                       <pre className="whitespace-pre-wrap">{selectedFile.content || fileContent}</pre>
                     ) : (
@@ -4058,8 +4302,8 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
               ) : (
                 <div className="h-full flex items-center justify-center text-gray-500">
                   <div className="text-center">
-                    <Folder size={48} className="mx-auto mb-4 text-gray-300" />
-                    <p>Select a file from the tree to view its content</p>
+                    <Folder size={32} className="mx-auto mb-2 md:mb-4 text-gray-300 md:w-12 md:h-12" />
+                    <p className="text-sm md:text-base">Select a file from the tree to view its content</p>
                   </div>
                 </div>
               )}
@@ -4281,21 +4525,23 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         )}
       </div>
 
-      {/* Chat Area */}
+
+      {/* Chat Messages Area - Show only for lambda tab */}
+      {activeTab === 'lambda' && (
       <div 
-        ref={sidebarSchemaDropRef as any}
+          ref={sidebarSchemaDropRef as any}
         className={`flex-1 overflow-y-auto p-4 space-y-4 bg-white transition-colors ${
-          isSidebarSchemaDropOver ? 'bg-purple-50 border-2 border-dashed border-purple-300' : ''
+            isSidebarSchemaDropOver ? 'bg-purple-50 border-2 border-dashed border-purple-300' : ''
         }`}
       >
-        {isSidebarSchemaDropOver && (
+        {activeTab === 'lambda' && isSidebarSchemaDropOver && (
           <div className="text-center py-8 text-purple-600 font-medium">
             Drop schema here to add context
           </div>
         )}
         
         {/* Namespace Generation Mode Hint */}
-        {!namespace && messages.length === 0 && !isSidebarSchemaDropOver && (
+        {activeTab === 'lambda' && !namespace && messages.length === 0 && !isSidebarSchemaDropOver && (
           <div className="text-center py-8">
             <div className="max-w-md mx-auto bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
               <div className="flex items-center justify-center mb-4">
@@ -4324,7 +4570,20 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           </div>
         )}
         
-        {messages.map((message) => (
+        {/* Code Generation Tips - Only show for Lambda tab */}
+        {activeTab === 'lambda' && (
+          <div className="bg-blue-50 rounded-lg border border-blue-200 p-4 mb-4">
+            <h4 className="font-medium text-blue-900 mb-2">💡 Code Generation Tips</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• Describe the function's purpose clearly</li>
+              <li>• Specify the programming language (Node.js, Python, etc.)</li>
+              <li>• Mention any AWS services you want to integrate with</li>
+              <li>• Include error handling requirements</li>
+            </ul>
+          </div>
+        )}
+        
+        {activeTab === 'lambda' && messages.map((message) => (
           <div
             key={message.id}
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -4366,9 +4625,10 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         ))}
         <div ref={messagesEndRef} />
       </div>
+      )}
 
       {/* File Upload and Context Area */}
-      {(uploadedFiles.length > 0 || droppedSchemas.length > 0) && (
+      {activeTab === 'lambda' && (uploadedFiles.length > 0 || droppedSchemas.length > 0) && (
         <div className="border-t border-gray-200 p-4 bg-gray-50">
           <div className="space-y-3">
             {/* Uploaded Files */}
@@ -4439,108 +4699,6 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           </div>
         </div>
       )}
-
-      {/* Namespace Context Drop Target */}
-      <div
-        ref={namespaceDropRef as any}
-        className={`mb-2 p-3 text-sm border-2 border-dashed rounded-lg transition-colors ${
-          isNamespaceDropOver 
-            ? 'bg-blue-50 border-blue-400 text-blue-700' 
-            : 'border-blue-300 text-gray-600'
-        }`}
-        title="Drop namespaces here to add to context"
-      >
-        <div className="font-medium mb-2">
-          {isNamespaceDropOver ? 'Drop namespace here' : 'Drop namespaces here to add to context'}
-        </div>
-        
-        {(localNamespace || droppedNamespaces.length > 0) && (
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-gray-700">Current Context:</div>
-            {localNamespace && (
-              <div className="text-xs text-gray-600 flex items-center justify-between">
-                <span>• {localNamespace['namespace-name']} (current)</span>
-              </div>
-            )}
-            {droppedNamespaces.map((ns, index) => (
-              <div key={ns['namespace-id'] || ns.id || index} className="text-xs text-gray-600 flex items-center justify-between">
-                <span>• {ns['namespace-name'] || ns.name || 'Unknown Namespace'}</span>
-                <button
-                  onClick={() => {
-                    setDroppedNamespaces(prev => prev.filter((_, i) => i !== index));
-                    addMessage({ 
-                      role: 'assistant', 
-                      content: `Removed namespace "${ns['namespace-name'] || ns.name}" from context.` 
-                    });
-                  }}
-                  className="text-red-500 hover:text-red-700 ml-2"
-                  title="Remove this namespace"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-            {droppedNamespaces.length > 0 && (
-              <button
-                onClick={() => {
-                  setDroppedNamespaces([]);
-                  addMessage({ 
-                    role: 'assistant', 
-                    content: 'Cleared all dropped namespaces from context.' 
-                  });
-                }}
-                className="text-xs text-red-600 hover:text-red-800 mt-2"
-              >
-                Clear all
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Schema Drop Zone */}
-      <div
-        ref={schemaDropRef as any}
-        className={`mb-2 p-3 text-sm text-gray-600 border-2 border-dashed rounded-lg transition-colors ${
-          isSchemaDropOver ? 'bg-purple-50 border-purple-400 text-purple-700' : 'border-purple-300'
-        }`}
-        title="Drop schemas from namespace sidebar here for context"
-      >
-        {isSchemaDropOver ? 'Drop schema here for context' : 'Drop schemas from namespace here'}
-      </div>
-
-
-      {/* Chat Input */}
-      <div className="border-t border-gray-200 p-4 bg-white">
-        <div className="flex gap-2">
-          <textarea
-            ref={inputRef}
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={namespace ? "Type your message... (Upload files or drag schemas for context)" : "Type your message... (Try: 'Create a namespace for...' to generate a new project)"}
-            className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            rows={1}
-            disabled={isLoading}
-          />
-          <div className="flex flex-col gap-1">
-            <button
-              onClick={handleSendMessage}
-              disabled={isLoading || !inputMessage.trim()}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-            <button
-              onClick={testChatUI}
-              className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
-              title="Test Chat UI"
-            >
-              Test
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* All Scraped Data Modal */}
       {showAllScrapedData && scrapedData && (
@@ -4692,8 +4850,103 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         </div>
       )}
 
+
+        {/* Chat Input - Always at bottom */}
+        <div className="border-t border-gray-200 p-2 md:p-4 bg-white relative">
+          {/* Selected Namespace Chips */}
+          {droppedNamespaces.length > 0 && (
+            <div className="mb-2 md:mb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-wrap gap-1 md:gap-2">
+                  {droppedNamespaces.map((ns, index) => (
+                    <div
+                      key={ns['namespace-id'] || index}
+                      className="inline-flex items-center gap-1 bg-blue-100/80 text-blue-700 px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-xs font-medium border border-blue-200"
+                    >
+                      <span className="truncate max-w-[80px] md:max-w-none">@{ns['namespace-name']}</span>
+                      <button
+                        onClick={() => {
+                          setDroppedNamespaces(prev => prev.filter((_, i) => i !== index));
+                        }}
+                        className="ml-1 hover:bg-blue-200 rounded-full p-0.5 transition-colors"
+                        title="Remove namespace"
+                      >
+                        <X className="w-2.5 h-2.5 md:w-3 md:h-3 text-blue-600" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => {
+                    setDroppedNamespaces([]);
+                    addMessage({ 
+                      role: 'assistant', 
+                      content: 'Cleared all dropped namespaces from context.' 
+                    });
+                  }}
+                  className="text-xs text-red-600 hover:text-red-800"
+                >
+                  Clear all
+                </button>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex gap-1 md:gap-2">
+            <div className="flex-1 relative">
+              <textarea
+                ref={inputRef}
+                value={inputMessage}
+                onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyDown}
+                placeholder={namespace ? "Type your message..." : "Type your message... (Try: 'Create a namespace for...' to generate a new project)"}
+                className="w-full resize-none border border-gray-300 rounded-lg px-2 md:px-3 py-1.5 md:py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                rows={1}
+                disabled={isLoading}
+              />
+              
+              {/* Namespace Suggestions Dropdown */}
+              {showNamespaceSuggestions && namespaceSuggestions.length > 0 && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-32 md:max-h-48 overflow-y-auto z-50">
+                  {namespaceSuggestions.map((ns, index) => (
+                    <div
+                      key={ns['namespace-id']}
+                      className={`px-2 md:px-3 py-1.5 md:py-2 cursor-pointer flex items-center gap-2 ${
+                        index === selectedSuggestionIndex 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : 'hover:bg-gray-100'
+                      }`}
+                      onClick={() => selectNamespace(ns)}
+                    >
+                      <div className="w-4 h-4 md:w-6 md:h-6 bg-blue-100 rounded flex items-center justify-center">
+                        <Database className="w-2 h-2 md:w-3 md:h-3 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-xs md:text-sm truncate">{ns['namespace-name']}</div>
+                        {ns['namespace-url'] && (
+                          <div className="text-xs text-gray-500 truncate hidden md:block">{ns['namespace-url']}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={handleSendMessage}
+              disabled={isLoading || !inputMessage.trim()}
+              className="px-2 md:px-4 py-1.5 md:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Send className="w-3 h-3 md:w-4 md:h-4" />
+            </button>
+          </div>
+        </div>
     </div>
   );
 };
 
 export default AIAgentWorkspace;
+
+                                                          
+                                                          

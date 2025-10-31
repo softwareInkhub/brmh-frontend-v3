@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState } from "react";
 interface SidePanelContextType {
   isCollapsed: boolean;
   toggle: () => void;
+  setIsCollapsed: (value: boolean) => void;
 }
 
 const SidePanelContext = createContext<SidePanelContextType | undefined>(undefined);
@@ -12,7 +13,7 @@ export const SidePanelProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const toggle = () => setIsCollapsed((prev) => !prev);
 
   return (
-    <SidePanelContext.Provider value={{ isCollapsed, toggle }}>
+    <SidePanelContext.Provider value={{ isCollapsed, toggle, setIsCollapsed }}>
       {children}
     </SidePanelContext.Provider>
   );

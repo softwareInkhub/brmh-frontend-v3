@@ -73,15 +73,15 @@ export default function HomePage() {
   };
 
   return (
-    <div className="space-y-4 ml-20 px-8 pt-8 pb-24">
+    <div className="space-y-4 px-2 md:px-8 pt-4 md:pt-8 pb-24" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
       {/* Header Section */}
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-gray-900">Dashboard Overview</h1>
         <p className="text-sm text-gray-500">Monitor your platform's performance and metrics</p>
       </div>
 
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
+      {/* Key Metrics Grid - 2x2 layout */}
+      <div className="grid grid-cols-2 gap-2 md:gap-4">
         <Card className="p-3 hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between">
             <div>
@@ -378,7 +378,7 @@ export default function HomePage() {
 
           {activeTab === 'history' && (
             <div className="overflow-hidden">
-              <div className="grid grid-cols-4 gap-2 px-4 py-2 text-xs font-medium text-gray-500 border-b border-gray-200">
+              <div className="hidden md:grid grid-cols-4 gap-2 px-4 py-2 text-xs font-medium text-gray-500 border-b border-gray-200">
                 <div>WEBHOOK</div>
                 <div>STATUS</div>
                 <div>TIME</div>
@@ -386,11 +386,13 @@ export default function HomePage() {
               </div>
               <div className="divide-y divide-gray-100">
                 {stats.webhooks.history.map((event) => (
-                  <div key={event.id} className="grid grid-cols-4 gap-2 px-4 py-3 text-sm hover:bg-gray-50">
+                  <div key={event.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 px-4 py-3 text-sm hover:bg-gray-50">
                     <div className="text-gray-900 font-medium text-xs">
+                      <span className="md:hidden text-gray-500 mr-2">Webhook:</span>
                       {event.webhook}
                     </div>
                     <div>
+                      <span className="md:hidden text-gray-500 mr-2">Status:</span>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${
                         event.status === 'success' 
                           ? 'bg-green-50 text-green-700'
@@ -400,6 +402,7 @@ export default function HomePage() {
                       </span>
                     </div>
                     <div className="text-gray-500 text-xs">
+                      <span className="md:hidden text-gray-500 mr-2">Time:</span>
                       {new Date(event.timestamp).toLocaleString('en-GB', {
                         month: 'numeric',
                         day: 'numeric',
@@ -410,6 +413,7 @@ export default function HomePage() {
                       })}
                     </div>
                     <div className="text-gray-500 text-xs">
+                      <span className="md:hidden text-gray-500 mr-2">Response:</span>
                       {event.responseTime}
                     </div>
                   </div>
@@ -554,7 +558,7 @@ export default function HomePage() {
       </div>
 
       {/* Quick Actions Section */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
         <Link href="/users" className="group">
           <Card className="p-3 md:p-4 hover:shadow-md transition-all group-hover:border-indigo-200">
             <div className="flex items-center gap-2 md:gap-3">

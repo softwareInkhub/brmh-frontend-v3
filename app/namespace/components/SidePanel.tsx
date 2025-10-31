@@ -187,7 +187,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
     : [];
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-100 h-full flex flex-col shadow-sm p-0 pb-8 overflow-y-auto select-none scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 custom-scrollbar">
+    <aside className="w-64 bg-white border-r border-gray-100 h-full flex flex-col shadow-sm p-1 pb-8 overflow-y-auto select-none scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 custom-scrollbar">
       {/* Header */}
       <div className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 rounded-lg px-3 py-2 mb-2">
         <LayoutDashboard className="text-blue-600" size={20} />
@@ -195,20 +195,21 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
       </div>
       {/* Search/Filter/Add Row */}
       <div className="flex items-center px-3 py-2 space-x-2 border-b border-gray-100 bg-white">
-        <div className="flex-1 flex items-center bg-gray-50 rounded-md px-2">
-          <Search size={16} className="text-gray-400" />
+        <div className="flex-1 flex items-center bg-white border border-gray-300 rounded-lg px-2 py-1.5 focus-within:border-blue-500 focus-within:shadow-sm transition-all">
+          <Search size={14} className="text-gray-400" />
           <input
-            className="flex-1 bg-transparent px-2 py-1 text-sm outline-none"
+            className="flex-1 bg-transparent px-1.5 py-0.5 text-sm outline-none placeholder-gray-500"
             placeholder="Search..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <button className="p-2 rounded hover:bg-gray-100" title="Filter (coming soon)"><Filter size={16} className="text-gray-400" /></button>
+        <button className="p-1 rounded hover:bg-gray-100" title="Filter (coming soon)"><Filter size={14} className="text-gray-400" /></button>
       </div>
       {/* Overview
       <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 w-full text-sm">
         <Globe size={16} className="text-gray-400" /> Overview
+         
       </button> */}
       {/* Endpoints Section */}
       <div>

@@ -9,6 +9,7 @@ import SchemaPreviewModal from '../Modals/SchemaPreviewModal';
 import CreateDataModal from '../Modals/CreateDataModal';
 import NamespaceModal from '../Modals/NamespaceModal';
 import { useSidePanel } from "@/app/components/SidePanelContext";
+import { useAIAgent } from "@/app/components/AIAgentContext";
 import { toast } from 'react-hot-toast';
 
 // --- Types ---
@@ -296,6 +297,26 @@ export interface UnifiedNamespaceProps {
 
 const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigger, onModalClose, fetchNamespaceDetails, namespaceDetailsMap, setNamespaceDetailsMap, refreshData, onViewAccount, onViewMethod, onViewSchema, onOpenNamespaceTab }) => {
   const { isCollapsed } = useSidePanel();
+  const { panelWidth, isOpen: aiAgentIsOpen } = useAIAgent();
+  
+  // State for responsive behavior
+  const [shouldHideActionButtons, setShouldHideActionButtons] = useState(false);
+  
+  // Calculate available width for namespace cards
+  useEffect(() => {
+    const calculateAvailableWidth = () => {
+      const availableWidth = aiAgentIsOpen 
+        ? window.innerWidth - panelWidth - (isCollapsed ? 80 : 336) 
+        : window.innerWidth - (isCollapsed ? 80 : 336);
+      setShouldHideActionButtons(availableWidth < 1200);
+    };
+    
+    calculateAvailableWidth();
+    window.addEventListener('resize', calculateAvailableWidth);
+    
+    return () => window.removeEventListener('resize', calculateAvailableWidth);
+  }, [aiAgentIsOpen, panelWidth, isCollapsed]);
+  
   // --- State ---
   const [namespaces, setNamespaces] = useState<UnifiedNamespace[]>([]);
   const [schemas, setSchemas] = useState<UnifiedSchema[]>([]);
@@ -316,7 +337,8 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
   const [collapsedSections, setCollapsedSections] = useState({
     accounts: false,
     methods: false,
-    schemas: false
+    schemas: false,
+    webhooks: false
   });
   const [panelHeight, setPanelHeight] = useState(60); // Height as percentage of viewport
   const [isDragging, setIsDragging] = useState(false);
@@ -761,10 +783,15 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
       setShowAccountModal(true);
     } else if (type === 'method') {
       setShowMethodModal(true);
+    } else if (type === 'schema') {
+      setShowModal({ type: 'schema', data: null });
+    } else if (type === 'webhook') {
+      // TODO: Implement webhook modal
+      alert('Webhook creation coming soon!');
     }
   };
 
-  const toggleSectionCollapse = (section: 'accounts' | 'methods' | 'schemas') => {
+  const toggleSectionCollapse = (section: 'accounts' | 'methods' | 'schemas' | 'webhooks') => {
     setCollapsedSections(prev => ({
       ...prev,
       [section]: !prev[section]
@@ -1050,7 +1077,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
 
   return (
     <div 
-      className={`p-0 ${!isDragging ? 'transition-all duration-300 ease-out' : ''} ${isCollapsed ? 'ml-10' : 'ml-10'}`}
+      className={`p-0 ${!isDragging ? 'transition-all duration-300 ease-out' : ''} ${isCollapsed ? 'ml-0' : 'ml-0'}`}
       style={{ paddingBottom: showFloatingDetails ? `${panelHeight + 5}vh` : '0px' }}
       onClick={(e) => {
         // Clear selection when clicking on the background
@@ -1061,9 +1088,9 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 max-w-7xl mx-auto px-4">
         <div className="flex items-center gap-3">
-          <div>
+          <div className="hidden md:block">
             <h2 className="text-xl font-semibold">Namespace</h2>
             <p className="text-sm text-gray-500">Select a namespace to view details</p>
           </div>
@@ -1073,7 +1100,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
             <input
               type="text"
               placeholder="Search..."
-              className="pl-10 pr-4 py-[4px] border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="pl-10 pr-4 py-[4px] border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-50 max-w-xs"
               value={search.text}
               onChange={e => setSearch(prev => ({ ...prev, text: e.target.value }))}
             />
@@ -1097,9 +1124,10 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
             
             <button
               onClick={() => { setEditingNamespace(null); setShowNamespaceModal(true); }}
-              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              className="inline-flex items-center px-2 md:px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
             >
-              <Plus size={14} className="mr-1" /> Add Namespace
+              <Plus size={14} className="md:mr-1" />
+              <span className="hidden md:inline">Add Namespace</span>
             </button>
         
           </div>
@@ -1107,7 +1135,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
       </div>
 
       {/* Content */}
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-7xl mx-auto px-4">
         {/* Namespaces Section */}
         <div>
           
@@ -1133,7 +1161,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                       : expandedNamespaceId === ns["namespace-id"] 
                         ? 'ring-2 ring-green-500 border-green-300' 
                         : 'hover:border-gray-300'
-                  }`}
+                  } ${shouldHideActionButtons ? 'p-3' : 'p-4'}`}
                   onClick={() => handleNamespaceClick(ns)}
                   onMouseEnter={() => {
                     if (!namespaceDetailsMap[ns["namespace-id"]]) {
@@ -1166,13 +1194,13 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                   
                   {/* Name */}
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-medium text-gray-900 truncate">{ns["namespace-name"]}</h4>
+                    <h4 className={`font-medium text-gray-900 truncate ${shouldHideActionButtons ? 'text-xs' : 'text-sm'}`}>{ns["namespace-name"]}</h4>
                     {viewMode === 'list' && (
                       <div className="mt-1 flex items-center gap-3 min-w-0">
                         {ns["namespace-url"] && (
-                          <span className="text-xs text-gray-500 truncate max-w-[280px]">{ns["namespace-url"]}</span>
+                          <span className={`text-gray-500 truncate ${shouldHideActionButtons ? 'text-[10px] max-w-[200px]' : 'text-xs max-w-[280px]'}`}>{ns["namespace-url"]}</span>
                         )}
-                        {Array.isArray(ns.tags) && ns.tags.length > 0 && (
+                        {Array.isArray(ns.tags) && ns.tags.length > 0 && !shouldHideActionButtons && (
                           <div className="hidden md:flex flex-wrap gap-1">
                             {ns.tags.slice(0, 3).map((tag: string) => (
                               <span key={`${ns["namespace-id"]}-${tag}`} className="px-2 py-0.5 bg-gray-50 text-gray-700 text-[11px] rounded-full border border-gray-200">
@@ -1186,6 +1214,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                             )}
                           </div>
                         )}
+                        {!shouldHideActionButtons && (
                         <div className="hidden md:flex items-center gap-2 ml-auto">
                           <span className="px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200 text-[11px] text-gray-700">
                             Accounts {namespaceDetailsMap[ns["namespace-id"]]?.accounts?.length ?? '—'}
@@ -1194,11 +1223,13 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                             Methods {namespaceDetailsMap[ns["namespace-id"]]?.methods?.length ?? '—'}
                           </span>
                         </div>
+                        )}
                       </div>
                     )}
                   </div>
 
-                  {/* Action Buttons */}
+                  {/* Action Buttons - Hidden when space is limited */}
+                  {!shouldHideActionButtons && (
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={e => { e.stopPropagation(); setEditingNamespace(ns); setShowNamespaceModal(true); }}
@@ -1215,6 +1246,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                       <Trash2 size={14} />
                     </button>
                   </div>
+                  )}
                 </div>
               </React.Fragment>
             );
@@ -1226,13 +1258,19 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
       {/* Bottom Sliding Namespace Details */}
       {showFloatingDetails && floatingNamespaceDetails && (
         <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0  bg-opacity-25 z-30"
+            onClick={closeFloatingDetails}
+          />
+          
           {/* Panel */}
           <div className={`fixed bottom-0 z-40 bg-white border-t-2 border-blue-200 shadow-2xl rounded-t-2xl ${!isDragging ? 'transition-all duration-300 ease-out' : ''}`} 
                style={{
-                 left: isCollapsed ? '80px' : '336px', // Align with content area
+                 left: typeof window !== 'undefined' && window.innerWidth < 768 ? '0px' : (isCollapsed ? '80px' : '336px'), // Full width on mobile
                  right: '0px', // Remove empty space on right
-                 maxWidth: isCollapsed ? 'calc(100vw - 80px)' : 'calc(100vw - 336px)', // Fill to edge
-                 minWidth: '400px', // Minimum width for content readability
+                 maxWidth: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : (isCollapsed ? 'calc(100vw - 80px)' : 'calc(100vw - 336px)'), // Full width on mobile
+                 minWidth: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : '400px', // Full width on mobile
                  height: `${panelHeight}vh`, // Dynamic height based on drag
                  transform: isPanelAnimating && !showContent ? 'translateY(100%)' : 'translateY(0)',
                  opacity: isPanelAnimating && !showContent ? '0' : '1'
@@ -1247,59 +1285,59 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                               </div>
             
             {/* Header */}
-            <div className={`flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 transition-all duration-500 ease-out ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-              <div className="flex items-center gap-4">
+            <div className={`flex items-start md:items-center justify-between p-4 md:p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 transition-all duration-500 ease-out ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+              <div className="flex items-start md:items-center gap-3 md:gap-4 flex-1 min-w-0">
                 {/* Namespace Icon */}
                 <button
                   onClick={() => onOpenNamespaceTab && onOpenNamespaceTab(floatingNamespaceDetails)}
-                  className="hover:scale-105 transition-transform duration-200"
+                  className="hover:scale-105 transition-transform duration-200 flex-shrink-0"
                   title="Open in tab"
                 >
                   {floatingNamespaceDetails["icon-url"] ? (
                     <img 
                       src={floatingNamespaceDetails["icon-url"]} 
                       alt={floatingNamespaceDetails["namespace-name"]}
-                      className="w-12 h-12 rounded-xl object-cover"
+                      className="w-10 h-10 md:w-12 md:h-12 rounded-xl object-cover"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                       }}
                     />
                   ) : (
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                      <Database className="w-7 h-7 text-white" />
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                      <Database className="w-5 h-5 md:w-7 md:h-7 text-white" />
                     </div>
                   )}
                 </button>
                 
                 {/* Namespace Info */}
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">{floatingNamespaceDetails["namespace-name"]}</h2>
-                  <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                    <span>{floatingNamespaceDetails["namespace-url"]}</span>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg md:text-2xl font-bold text-gray-900 truncate">{floatingNamespaceDetails["namespace-name"]}</h2>
+                  <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 text-xs md:text-sm text-gray-600 mt-1">
+                    <span className="truncate">{floatingNamespaceDetails["namespace-url"]}</span>
                     {namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]] && (
-                      <>
-                        <span>•</span>
+                      <div className="flex items-center gap-2 md:gap-4">
+                        <span className="hidden md:inline">•</span>
                         <span>{namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]].accounts.length} accounts</span>
-                        <span>•</span>
+                        <span className="hidden md:inline">•</span>
                         <span>{namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]].methods.length} methods</span>
-                      </>
+                              </div>
                     )}
                     {floatingNamespaceDetails.tags && floatingNamespaceDetails.tags.length > 0 && (
-                      <>
-                        <span>•</span>
-                        <div className="flex items-center gap-1">
-                            {floatingNamespaceDetails.tags.slice(0, 3).map((tag: string, index: number) => (
+                      <div className="flex items-center gap-1 mt-1 md:mt-0">
+                        <span className="hidden md:inline">•</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                            {floatingNamespaceDetails.tags.slice(0, 2).map((tag: string, index: number) => (
                             <span key={index} className="px-2 py-1 bg-white text-gray-700 rounded-full text-xs border border-blue-200">
                               {tag}
                             </span>
                           ))}
-                          {floatingNamespaceDetails.tags.length > 3 && (
-                            <span key="floating-namespace-more" className="text-xs text-gray-500">+{floatingNamespaceDetails.tags.length - 3}</span>
+                          {floatingNamespaceDetails.tags.length > 2 && (
+                            <span key="floating-namespace-more" className="text-xs text-gray-500">+{floatingNamespaceDetails.tags.length - 2}</span>
                           )}
-                              </div>
-                      </>
+                        </div>
+                    </div>
                     )}
-                            </div>
+                      </div>
                         </div>
                     </div>
               
@@ -1311,17 +1349,17 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
               >
                 <X size={24} />
               </button>
-                      </div>
+                              </div>
             
             {/* Content */}
-            <div className={`p-6 overflow-y-auto pb-20 ${!isDragging ? 'transition-all duration-300 ease-out' : ''} transition-all duration-500 ease-out ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ height: `calc(${panelHeight}vh - 120px)` }}>
+            <div className={`p-4 md:p-6 overflow-y-auto pb-20 ${!isDragging ? 'transition-all duration-300 ease-out' : ''} transition-all duration-500 ease-out ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ height: `calc(${panelHeight}vh - 120px)` }}>
               {loadingDetails && !namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]] ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                     <p className="text-gray-500">Loading namespace details...</p>
-                                </div>
-                              </div>
+                            </div>
+                        </div>
               ) : (
                 <div className="space-y-6">
                   {/* Accounts Section */}
@@ -1329,24 +1367,27 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                     <div className="flex items-center justify-between mb-4">
                       <button 
                         onClick={() => toggleSectionCollapse('accounts')}
-                        className="flex items-center gap-2 text-lg font-semibold text-gray-800 hover:text-blue-600 transition-colors"
+                        className="flex items-center gap-2 text-base md:text-lg font-semibold text-gray-800 hover:text-blue-600 transition-colors"
                       >
                         {collapsedSections.accounts ? (
-                          <ChevronRight className="w-5 h-5 text-blue-600" />
+                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
                         ) : (
-                          <ChevronDown className="w-5 h-5 text-blue-600" />
+                          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
                         )}
-                        <Users className="w-5 h-5 text-blue-600" />
-                        Accounts ({namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.accounts?.length || 0})
+                        <Users className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+                        <span className="hidden sm:inline">Accounts ({namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.accounts?.length || 0})</span>
+                        <span className="sm:hidden">({namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.accounts?.length || 0})</span>
                       </button>
                       <button 
                         onClick={() => handleSidePanelAdd('account', floatingNamespaceDetails)}
-                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-1"
+                        className="px-2 md:px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs md:text-sm flex items-center gap-1"
                       >
-                        <UserPlus size={14} />
-                        Add Account
+                        <UserPlus size={12} className="md:hidden" />
+                        <UserPlus size={14} className="hidden md:block" />
+                        <span className="hidden sm:inline">Add Account</span>
+                        <span className="sm:hidden">Add</span>
                       </button>
-                                </div>
+                    </div>
                     
                     {!collapsedSections.accounts && (
                       <>
@@ -1354,18 +1395,18 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                           <div className="text-center py-8 text-gray-500">
                             <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                             <p>No accounts found</p>
-                              </div>
+                      </div>
                         ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.accounts?.map(account => (
-                              <div key={account["namespace-account-id"]} className="p-4 bg-blue-50 rounded-lg border border-blue-200 hover:shadow-md transition-shadow">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-blue-200">
-                                    <User className="w-4 h-4 text-blue-600" />
+                              <div key={account["namespace-account-id"]} className="p-3 md:p-4 bg-blue-50 rounded-lg border border-blue-200 hover:shadow-md transition-shadow">
+                                <div className="flex items-center gap-2 md:gap-3">
+                                  <div className="w-6 h-6 md:w-8 md:h-8 bg-white rounded-lg flex items-center justify-center border border-blue-200 flex-shrink-0">
+                                    <User className="w-3 h-3 md:w-4 md:h-4 text-blue-600" />
                             </div>
                                   <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-gray-900 truncate">{account["namespace-account-name"]}</h4>
-                                    <p className="text-sm text-gray-500 truncate">{account["namespace-account-url-override"]}</p>
+                                    <h4 className="font-medium text-gray-900 truncate text-sm md:text-base">{account["namespace-account-name"]}</h4>
+                                    <p className="text-xs md:text-sm text-gray-500 truncate">{account["namespace-account-url-override"]}</p>
                                   </div>
                                 </div>
                                 {account.tags && account.tags.length > 0 && (
@@ -1377,10 +1418,10 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                                     ))}
                                     {account.tags.length > 2 && (
                                       <span key={`${account["namespace-account-id"]}-more`} className="px-2 py-0.5 bg-white text-blue-700 rounded-full text-xs">+{account.tags.length - 2}</span>
-                                    )}
-                                  </div>
+                                  )}
+                                </div>
                                 )}
-                        </div>
+                              </div>
                       ))}
                     </div>
                         )}
@@ -1393,24 +1434,27 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                     <div className="flex items-center justify-between mb-4">
                   <button
                         onClick={() => toggleSectionCollapse('methods')}
-                        className="flex items-center gap-2 text-lg font-semibold text-gray-800 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 text-base md:text-lg font-semibold text-gray-800 hover:text-green-600 transition-colors"
                       >
                         {collapsedSections.methods ? (
-                          <ChevronRight className="w-5 h-5 text-green-600" />
+                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
                         ) : (
-                          <ChevronDown className="w-5 h-5 text-green-600" />
+                          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
                         )}
-                        <Terminal className="w-5 h-5 text-green-600" />
-                        Methods ({namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.methods?.length || 0})
+                        <Terminal className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
+                        <span className="hidden sm:inline">Methods ({namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.methods?.length || 0})</span>
+                        <span className="sm:hidden">({namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.methods?.length || 0})</span>
                       </button>
                       <button
                         onClick={() => handleSidePanelAdd('method', floatingNamespaceDetails)}
-                        className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-1"
+                        className="px-2 md:px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs md:text-sm flex items-center gap-1"
                       >
-                        <Plus size={14} />
-                        Add Method
+                        <Plus size={12} className="md:hidden" />
+                        <Plus size={14} className="hidden md:block" />
+                        <span className="hidden sm:inline">Add Method</span>
+                        <span className="sm:hidden">Add</span>
                   </button>
-                </div>
+                              </div>
                     
                     {!collapsedSections.methods && (
                       <>
@@ -1418,19 +1462,19 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                       <div className="text-center py-8 text-gray-500">
                         <Terminal className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p>No methods found</p>
-                              </div>
+                            </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.methods?.map(method => (
-                          <div key={method["namespace-method-id"]} className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-gray-200">
-                                <Terminal className="w-4 h-4 text-gray-600" />
+                          <div key={method["namespace-method-id"]} className="p-3 md:p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-2 md:gap-3">
+                              <div className="w-6 h-6 md:w-8 md:h-8 bg-white rounded-lg flex items-center justify-center border border-gray-200 flex-shrink-0">
+                                <Terminal className="w-3 h-3 md:w-4 md:h-4 text-gray-600" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-gray-900 truncate">{method["namespace-method-name"]}</h4>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                <h4 className="font-medium text-gray-900 truncate text-sm md:text-base">{method["namespace-method-name"]}</h4>
+                                <div className="flex items-center gap-1 md:gap-2 mt-1">
+                                  <span className={`px-1.5 md:px-2 py-0.5 rounded-full text-xs font-medium ${
                                     method["namespace-method-type"] === 'GET' ? 'bg-green-100 text-green-700' :
                                     method["namespace-method-type"] === 'POST' ? 'bg-blue-100 text-blue-700' :
                                     method["namespace-method-type"] === 'PUT' ? 'bg-yellow-100 text-yellow-700' :
@@ -1454,14 +1498,117 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                                 )}
                 </div>
                             )}
+                        </div>
+                      ))}
+                    </div>
+                        )}
+                      </>
+          )}
+                  </div>
+                  
+                  {/* Schemas Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                  <button
+                        onClick={() => toggleSectionCollapse('schemas')}
+                        className="flex items-center gap-2 text-base md:text-lg font-semibold text-gray-800 hover:text-purple-600 transition-colors"
+                      >
+                        {collapsedSections.schemas ? (
+                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
+                        )}
+                        <FileCode className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
+                        <span className="hidden sm:inline">Schemas ({schemas.filter(s => s.namespaceId === floatingNamespaceDetails["namespace-id"]).length})</span>
+                        <span className="sm:hidden">({schemas.filter(s => s.namespaceId === floatingNamespaceDetails["namespace-id"]).length})</span>
+                      </button>
+                      <button 
+                        onClick={() => handleSidePanelAdd('schema', floatingNamespaceDetails)}
+                        className="px-2 md:px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs md:text-sm flex items-center gap-1"
+                      >
+                        <FilePlus size={12} className="md:hidden" />
+                        <FilePlus size={14} className="hidden md:block" />
+                        <span className="hidden sm:inline">Add Schema</span>
+                        <span className="sm:hidden">Add</span>
+                  </button>
+                </div>
+                    
+                    {!collapsedSections.schemas && (
+                      <>
+                        {!schemas.filter(s => s.namespaceId === floatingNamespaceDetails["namespace-id"]).length ? (
+                          <div className="text-center py-8 text-gray-500">
+                            <FileCode className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                            <p>No schemas found</p>
+                              </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {schemas.filter(s => s.namespaceId === floatingNamespaceDetails["namespace-id"]).map(schema => (
+                              <div key={schema.id} className="p-3 md:p-4 bg-purple-50 rounded-lg border border-purple-200 hover:shadow-md transition-shadow">
+                                <div className="flex items-center gap-2 md:gap-3">
+                                  <div className="w-6 h-6 md:w-8 md:h-8 bg-white rounded-lg flex items-center justify-center border border-purple-200 flex-shrink-0">
+                                    <FileCode className="w-3 h-3 md:w-4 md:h-4 text-purple-600" />
+                              </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-gray-900 truncate text-sm md:text-base">{schema.schemaName}</h4>
+                                    <p className="text-xs md:text-sm text-gray-500 truncate">{schema.originalType || 'object'}</p>
+                            </div>
+                          </div>
+                                {schema.tags && schema.tags.length > 0 && (
+                                  <div className="mt-2 flex flex-wrap gap-1">
+                                    {schema.tags.slice(0, 2).map((tag: string, index: number) => (
+                                      <span key={index} className="px-1.5 py-0.5 bg-white text-purple-700 rounded-full text-xs">
+                                        {tag}
+                                      </span>
+                                    ))}
+                                    {schema.tags.length > 2 && (
+                                      <span className="text-xs text-gray-500">+{schema.tags.length - 2}</span>
+                                    )}
+                </div>
+                                )}
           </div>
-                        ))}
+                            ))}
             </div>
                         )}
                       </>
           )}
         </div>
+                  
+                  {/* Webhooks Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <button 
+                        onClick={() => toggleSectionCollapse('webhooks')}
+                        className="flex items-center gap-2 text-base md:text-lg font-semibold text-gray-800 hover:text-orange-600 transition-colors"
+                      >
+                        {collapsedSections.webhooks ? (
+                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
+                        )}
+                        <Globe className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
+                        <span className="hidden sm:inline">Webhooks (0)</span>
+                        <span className="sm:hidden">(0)</span>
+                      </button>
+                      <button 
+                        onClick={() => handleSidePanelAdd('webhook', floatingNamespaceDetails)}
+                        className="px-2 md:px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-xs md:text-sm flex items-center gap-1"
+                      >
+                        <Globe size={12} className="md:hidden" />
+                        <Globe size={14} className="hidden md:block" />
+                        <span className="hidden sm:inline">Add Webhook</span>
+                        <span className="sm:hidden">Add</span>
+                      </button>
       </div>
+                    
+                    {!collapsedSections.webhooks && (
+                      <div className="text-center py-8 text-gray-500">
+                        <Globe className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p>No webhooks configured</p>
+                        <p className="text-xs mt-1">Webhooks will appear here when configured for this namespace</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>
