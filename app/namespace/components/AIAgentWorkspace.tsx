@@ -177,6 +177,41 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
     fetchNamespaces();
   }, []);
   
+  // Fetch deployed Lambda functions for current namespace context on mount
+  useEffect(() => {
+    const fetchDeployedLambdas = async () => {
+      const allNamespaces = [localNamespace, ...droppedNamespaces].filter(Boolean);
+      if (allNamespaces.length === 0) return;
+      
+      const namespaceIds = allNamespaces.map(ns => ns['namespace-id'] || ns.id).filter(Boolean);
+      if (namespaceIds.length === 0) return;
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/lambda/deployments?namespaceIds=${namespaceIds.join(',')}`);
+        if (response.ok) {
+          const data = await response.json();
+          const deployments = data.deployments || [];
+          
+          // Update deployed endpoints state
+          const endpoints = deployments.map((d: any) => ({
+            functionName: d.functionName,
+            apiGatewayUrl: d.apiGatewayUrl,
+            functionArn: d.functionArn,
+            deployedAt: new Date(d.deployedAt),
+            namespaceId: d.namespaceId
+          }));
+          
+          setDeployedEndpoints(endpoints);
+          setConsoleOutput(prev => [...prev, `📋 Loaded ${deployments.length} deployed Lambda(s) for current namespace(s)`]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch deployed Lambdas:', error);
+      }
+    };
+    
+    fetchDeployedLambdas();
+  }, [localNamespace, droppedNamespaces]);
+  
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>(() => [
     {
       id: '1',
@@ -3013,7 +3048,8 @@ To test locally, you can use AWS SAM or the AWS Lambda runtime interface emulato
           timeout: func.timeout,
           dependencies: func.dependencies || {},
           environment: lambdaForm.environment || '',
-          createApiGateway: true
+          createApiGateway: true,
+          namespaceId: localNamespace?.['namespace-id'] || null
         };
         
         console.log('Deploying with payload:', deployPayload);
