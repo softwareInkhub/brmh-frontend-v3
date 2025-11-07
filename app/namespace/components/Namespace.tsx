@@ -154,7 +154,18 @@ export default function NamespacePage() {
                   style={{ minHeight: 70 }}
                 >
                   <div className="font-bold text-sm mb-0.5 truncate">{ns['namespace-name']}</div>
-                  <div className="text-gray-700 mb-0.5 break-all truncate">URL: <span className="text-gray-500">{ns['namespace-url']}</span></div>
+                  {ns['namespace-url'] && (
+                    <a 
+                      href={ns['namespace-url']} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 mb-0.5 flex items-center gap-1 group"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Globe size={10} />
+                      <span className="truncate group-hover:underline text-xs">{ns['namespace-url']}</span>
+                    </a>
+                  )}
                   {ns.tags && ns.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {ns.tags.map((tag: string, tagIdx: number) => (
@@ -180,7 +191,18 @@ export default function NamespacePage() {
                   onClick={() => { setSelectedNamespace(ns); setShowPanel(true); }}
                 >
                   <div className="font-bold text-sm truncate w-32">{ns['namespace-name']}</div>
-                  <div className="text-gray-700 break-all truncate flex-1">URL: <span className="text-gray-500">{ns['namespace-url']}</span></div>
+                  {ns['namespace-url'] && (
+                    <a 
+                      href={ns['namespace-url']} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 truncate flex-1 flex items-center gap-1 group"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Globe size={12} />
+                      <span className="truncate group-hover:underline">{ns['namespace-url']}</span>
+                    </a>
+                  )}
                   {ns.tags && ns.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {ns.tags.map((tag: string, tagIdx: number) => (

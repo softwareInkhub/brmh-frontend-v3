@@ -376,7 +376,16 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-bold text-gray-900 truncate">{namespace['namespace-name']}</h2>
               {namespace['namespace-url'] && (
-                <p className="text-xs text-gray-500 truncate mt-0.5">{namespace['namespace-url']}</p>
+                <a 
+                  href={namespace['namespace-url']} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:text-blue-800 truncate mt-0.5 flex items-center gap-1 group"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Globe size={12} />
+                  <span className="truncate group-hover:underline">{namespace['namespace-url']}</span>
+                </a>
               )}
             </div>
             {/* Settings Button */}
@@ -484,7 +493,16 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
               <div className="min-w-0">
                 <h2 className="text-2xl font-bold text-gray-900 truncate">{namespace['namespace-name']}</h2>
                 {namespace['namespace-url'] && (
-                  <p className="text-sm text-gray-500 truncate mt-1">{namespace['namespace-url']}</p>
+                  <a 
+                    href={namespace['namespace-url']} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 truncate mt-1 flex items-center gap-1 group"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Globe size={14} />
+                    <span className="truncate group-hover:underline">{namespace['namespace-url']}</span>
+                  </a>
                 )}
               </div>
             </div>
