@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Folder } from 'react-feather';
+import { X, Folder, Globe } from 'react-feather';
 
 interface NamespacePreviewModalProps {
   isOpen: boolean;
@@ -39,7 +39,18 @@ const NamespacePreviewModal: React.FC<NamespacePreviewModalProps> = ({
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-2xl font-bold text-gray-900 truncate">{namespace['namespace-name']}</h2>
-            <div className="text-xs text-gray-500 truncate">{namespace['namespace-url']}</div>
+            {namespace['namespace-url'] && (
+              <a 
+                href={namespace['namespace-url']} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:text-blue-800 truncate flex items-center gap-1 group"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Globe size={12} />
+                <span className="truncate group-hover:underline">{namespace['namespace-url']}</span>
+              </a>
+            )}
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X className="w-6 h-6 text-gray-500" />
