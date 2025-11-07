@@ -1277,20 +1277,7 @@ const Page = () => {
                   </div>
                 </div>
               </div>
-              <div>
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <div>Tests send a synthetic payload to the backend `/notify/test` for the selected event type and your active triggers will execute (in test mode if your connection is test mode).</div>
-                    <div className="font-medium">Manual Trigger Firing:</div>
-                    <div>You can manually fire any trigger by making a request to: <code className="bg-gray-100 px-1 rounded">brmh.in/notify/{'{triggerId}'}</code></div>
-                    <div>Example: <code className="bg-gray-100 px-1 rounded">GET brmh.in/notify/abc123</code> or <code className="bg-gray-100 px-1 rounded">POST brmh.in/notify/abc123</code> with custom event data in body.</div>
-                    <div className="text-blue-600">Local development: <code className="bg-gray-100 px-1 rounded">localhost:5001/notify/{'{triggerId}'}</code></div>
-                    <div className="text-orange-600">⚠️ Triggers with "None (Manual Only)" event type will only fire when manually called via URL, never automatically.</div>
-                    <div className="font-medium">Custom Message Override:</div>
-                    <div>You can override the message template by including a custom message in the request body:</div>
-                    <div><code className="bg-gray-100 px-1 rounded">POST brmh.in/notify/abc123</code> with body: <code className="bg-gray-100 px-1 rounded">{"{message: \"Your custom message here\"}"}</code></div>
-                    <div className="text-green-600">✓ Custom messages will override the trigger's default message template</div>
-                  </div>
-              </div>
+              
             </section>
           )}
 

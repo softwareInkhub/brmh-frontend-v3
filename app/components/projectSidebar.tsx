@@ -50,7 +50,7 @@ const sidebarItems = [
   },
   {
     name: 'Notification',
-    path: '/notification-service',
+    path: '/notification-terminal',
     icon: <Bell size={20} />,
   },
 ];
