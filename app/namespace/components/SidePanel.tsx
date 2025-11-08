@@ -177,13 +177,25 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
     }));
   };
 
-  // Robust filter logic
+  // Robust filter logic with alphabetical sorting
   const filteredNamespaces = Array.isArray(namespaces)
-    ? namespaces.filter(ns => (ns['namespace-name'] || '').toLowerCase().includes(search.toLowerCase()))
+    ? namespaces
+        .filter(ns => (ns['namespace-name'] || '').toLowerCase().includes(search.toLowerCase()))
+        .sort((a, b) => {
+          const nameA = (a['namespace-name'] || '').toLowerCase();
+          const nameB = (b['namespace-name'] || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        })
     : [];
 
   const filteredSchemas = Array.isArray(schemas)
-    ? schemas.filter(s => (s.schemaName || '').toLowerCase().includes(search.toLowerCase()))
+    ? schemas
+        .filter(s => (s.schemaName || '').toLowerCase().includes(search.toLowerCase()))
+        .sort((a, b) => {
+          const nameA = (a.schemaName || '').toLowerCase();
+          const nameB = (b.schemaName || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        })
     : [];
 
   return (
