@@ -28,12 +28,12 @@ const Page = () => {
   
   // Trigger state
   const [triggers, setTriggers] = useState<any[]>([])
-  const [trigName, setTrigName] = useState('Namespace Created Alert')
+  const [trigName, setTrigName] = useState('')
   const [trigEvent, setTrigEvent] = useState('namespace_created')
-  const [trigTo, setTrigTo] = useState('10000000000')
+  const [trigTo, setTrigTo] = useState('')
   const [countryCode, setCountryCode] = useState('91')
-  const [phoneNumber, setPhoneNumber] = useState('10000000000')
-  const [trigTemplate, setTrigTemplate] = useState("Namespace created at {{event.data.response.timestamp}}")
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [trigTemplate, setTrigTemplate] = useState('')
   const [trigConnectionId, setTrigConnectionId] = useState<string>('')
   
   // Filter state
@@ -63,6 +63,7 @@ const Page = () => {
   const [availableNamespaces, setAvailableNamespaces] = useState<any[]>([])
   const [loadingNamespaces, setLoadingNamespaces] = useState(false)
   const [customTag, setCustomTag] = useState<string>('')
+  const [namespaceSearchTerm, setNamespaceSearchTerm] = useState<string>('')
   
   // Logs state
   const [logs, setLogs] = useState<any[]>([])
@@ -72,6 +73,29 @@ const Page = () => {
   // CRUD triggers state
   const [tables, setTables] = useState<string[]>([])
   const [selectedTable, setSelectedTable] = useState<string>('')
+  const [tableSearchTerm, setTableSearchTerm] = useState<string>('')
+  const [s3Folders, setS3Folders] = useState<string[]>([])
+  const [selectedS3Folder, setSelectedS3Folder] = useState<string>('')
+  const [s3FolderSearchTerm, setS3FolderSearchTerm] = useState<string>('')
+  const [crudDataSource, setCrudDataSource] = useState<'dynamodb' | 's3'>('dynamodb')
+  const [crudOperations, setCrudOperations] = useState<{[key: string]: {
+    enabled: boolean, 
+    connectionId: string, 
+    recipient: string, 
+    template: string,
+    recipientType: 'users' | 'community' | 'group',
+    contactMode: 'manual' | 'contact',
+    countryCode: string,
+    phoneNumber: string,
+    selectedContact: string,
+    selectedCommunity: string,
+    selectedGroups: string[]
+  }}>({
+    CREATE: { enabled: false, connectionId: '', recipient: '', template: '', recipientType: 'users', contactMode: 'manual', countryCode: '91', phoneNumber: '', selectedContact: '', selectedCommunity: '', selectedGroups: [] },
+    READ: { enabled: false, connectionId: '', recipient: '', template: '', recipientType: 'users', contactMode: 'manual', countryCode: '91', phoneNumber: '', selectedContact: '', selectedCommunity: '', selectedGroups: [] },
+    UPDATE: { enabled: false, connectionId: '', recipient: '', template: '', recipientType: 'users', contactMode: 'manual', countryCode: '91', phoneNumber: '', selectedContact: '', selectedCommunity: '', selectedGroups: [] },
+    DELETE: { enabled: false, connectionId: '', recipient: '', template: '', recipientType: 'users', contactMode: 'manual', countryCode: '91', phoneNumber: '', selectedContact: '', selectedCommunity: '', selectedGroups: [] }
+  })
   
   // Stats
   const [liveStats, setLiveStats] = useState({
@@ -133,6 +157,16 @@ const Page = () => {
       if (data?.tables) setTables(data.tables)
     } catch (e) {
       console.error('Failed to fetch tables:', e)
+    }
+  }
+
+  async function fetchS3Folders() {
+    try {
+      const res = await fetch(`${apiBase}/s3/folders`, { cache: 'no-store' })
+      const data = await res.json()
+      if (data?.folders) setS3Folders(data.folders)
+    } catch (e) {
+      console.error('Failed to fetch S3 folders:', e)
     }
   }
 
@@ -308,6 +342,7 @@ const Page = () => {
     fetchTriggers()
     fetchLogs()
     fetchTables()
+    fetchS3Folders()
     fetchNamespaces()
   }, [])
 
@@ -546,7 +581,6 @@ const Page = () => {
           <div className="flex items-center gap-3">
             <Terminal size={24} className="text-gray-900" />
             <h1 className="text-lg font-semibold text-gray-900">BRMH Notification System</h1>
-            <span className="text-xs text-gray-500 px-2 py-1 border border-gray-200 rounded">v2.0.0</span>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -768,14 +802,107 @@ const Page = () => {
               <div className="bg-white border border-gray-200 rounded p-6 space-y-6">
                 <h3 className="text-sm font-semibold text-gray-900">Create New Trigger</h3>
                 
-                {/* Trigger Type Selection */}
-                <div className="grid grid-cols-3 gap-4">
+                {/* 1. Trigger Name */}
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Trigger Name</label>
+                  <input value={trigName} onChange={e=>setTrigName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="Enter trigger name" />
+                </div>
+
+                {/* 2. Namespace Tags */}
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Namespace Tags {selectedNamespaces.length > 0 && <span className="text-gray-900">({selectedNamespaces.length} selected)</span>}
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <div className="flex-1 relative">
+                        <input
+                          value={namespaceSearchTerm}
+                          onChange={e => setNamespaceSearchTerm(e.target.value)}
+                          placeholder="Search namespaces..."
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none pr-8"
+                        />
+                        {namespaceSearchTerm && (
+                          <button
+                            onClick={() => setNamespaceSearchTerm('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                      <button onClick={fetchNamespaces} disabled={loadingNamespaces} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors disabled:opacity-50">
+                        {loadingNamespaces ? '...' : 'Refresh'}
+                      </button>
+                    </div>
+                    
+                    {/* Filtered Results Display */}
+                    {namespaceSearchTerm && (
+                      <div className="max-h-40 overflow-y-auto border border-gray-200 rounded bg-white">
+                        {availableNamespaces
+                          .filter(ns => !selectedNamespaces.includes(ns.id))
+                          .filter(ns => (ns.name || ns.id).toLowerCase().includes(namespaceSearchTerm.toLowerCase()))
+                          .length > 0 ? (
+                            availableNamespaces
+                              .filter(ns => !selectedNamespaces.includes(ns.id))
+                              .filter(ns => (ns.name || ns.id).toLowerCase().includes(namespaceSearchTerm.toLowerCase()))
+                              .map(ns => (
+                                <button
+                                  key={ns.id}
+                                  onClick={() => {
+                                    setSelectedNamespaces([...selectedNamespaces, ns.id]);
+                                    setNamespaceSearchTerm('');
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                                >
+                                  {ns.name || ns.id}
+                                </button>
+                              ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">No matches found</div>
+                          )
+                        }
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <select value="" onChange={e => { if (e.target.value && !selectedNamespaces.includes(e.target.value)) { setSelectedNamespaces([...selectedNamespaces, e.target.value]); }}} className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" disabled={loadingNamespaces}>
+                        <option value="">Select namespace...</option>
+                        {availableNamespaces
+                          .filter(ns => !selectedNamespaces.includes(ns.id))
+                          .map(ns => (
+                            <option key={ns.id} value={ns.id}>{ns.name || ns.id}</option>
+                          ))}
+                      </select>
+                      <span className="flex items-center text-xs text-gray-500">or</span>
+                      <input value={customTag} onChange={e => setCustomTag(e.target.value)} placeholder="Enter custom tag..." className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" onKeyPress={e => { if (e.key === 'Enter' && customTag.trim() && !selectedNamespaces.includes(customTag.trim())) { setSelectedNamespaces([...selectedNamespaces, customTag.trim()]); setCustomTag('') }}} />
+                      <button onClick={() => { if (customTag.trim() && !selectedNamespaces.includes(customTag.trim())) { setSelectedNamespaces([...selectedNamespaces, customTag.trim()]); setCustomTag('') }}} disabled={!customTag.trim() || selectedNamespaces.includes(customTag.trim())} className="px-4 py-2 bg-gray-900 text-white rounded text-sm hover:bg-gray-800 transition-colors disabled:opacity-50">
+                        Add
+                      </button>
+                    </div>
+                    {selectedNamespaces.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedNamespaces.map(tag => {
+                          const ns = availableNamespaces.find(n => n.id === tag)
+                          return (
+                            <span key={tag} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                              {ns?.name || tag}
+                              <button onClick={() => setSelectedNamespaces(selectedNamespaces.filter(t => t !== tag))} className="text-blue-600 hover:text-blue-800">×</button>
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Connection & Event Type */}
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Trigger Type</label>
-                    <select value={triggerType} onChange={e=>setTriggerType(e.target.value as any)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none">
-                      <option value="users">Users (Direct Message)</option>
-                      <option value="community">Community (Subgroups)</option>
-                      <option value="group">Group (WhatsApp Groups)</option>
+                    <label className="block text-xs text-gray-600 mb-1">Connection</label>
+                    <select value={trigConnectionId} onChange={e=>setTrigConnectionId(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none">
+                      <option value="">Select connection</option>
+                      {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                   <div>
@@ -791,12 +918,45 @@ const Page = () => {
                       <option value="crud_read">CRUD Read</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Connection</label>
-                    <select value={trigConnectionId} onChange={e=>setTrigConnectionId(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none">
-                      <option value="">Select connection</option>
-                      {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
+                </div>
+
+                {/* 4. Trigger Type - Single Row with Icons */}
+                <div>
+                  <label className="block text-xs text-gray-600 mb-2">Trigger Type</label>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setTriggerType('users')}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 rounded transition-colors ${
+                        triggerType === 'users' 
+                          ? 'border-gray-900 bg-gray-900 text-white' 
+                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      <Users size={18} />
+                      <span className="text-sm font-medium">Users</span>
+                    </button>
+                    <button
+                      onClick={() => setTriggerType('community')}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 rounded transition-colors ${
+                        triggerType === 'community' 
+                          ? 'border-gray-900 bg-gray-900 text-white' 
+                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      <Globe size={18} />
+                      <span className="text-sm font-medium">Community</span>
+                    </button>
+                    <button
+                      onClick={() => setTriggerType('group')}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 rounded transition-colors ${
+                        triggerType === 'group' 
+                          ? 'border-gray-900 bg-gray-900 text-white' 
+                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      <MessageSquare size={18} />
+                      <span className="text-sm font-medium">Groups</span>
+                    </button>
                   </div>
                 </div>
 
@@ -923,70 +1083,29 @@ const Page = () => {
                   </div>
                 )}
 
-                {/* Filters */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Filter: HTTP Method</label>
-                    <input value={filterMethod} onChange={e=>setFilterMethod(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="e.g. POST, PUT" />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Filter: Table Name</label>
-                    <input value={filterTableName} onChange={e=>setFilterTableName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="e.g. shopify-orders" />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Filter: Path Contains</label>
-                    <input value={filterPathContains} onChange={e=>setFilterPathContains(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="e.g. /unified/namespaces" />
-                  </div>
-                </div>
-
-                {/* Namespace Tags */}
+                {/* 5. Filters */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">
-                    Namespace Tags {selectedNamespaces.length > 0 && <span className="text-gray-900">({selectedNamespaces.length} selected)</span>}
-                  </label>
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <select value="" onChange={e => { if (e.target.value && !selectedNamespaces.includes(e.target.value)) { setSelectedNamespaces([...selectedNamespaces, e.target.value]) }}} className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" disabled={loadingNamespaces}>
-                        <option value="">Select namespace...</option>
-                        {availableNamespaces.filter(ns => !selectedNamespaces.includes(ns.id)).map(ns => (
-                          <option key={ns.id} value={ns.id}>{ns.name || ns.id}</option>
-                        ))}
-                      </select>
-                      <button onClick={fetchNamespaces} disabled={loadingNamespaces} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors disabled:opacity-50">
-                        {loadingNamespaces ? '...' : 'Refresh'}
-                      </button>
+                  <label className="block text-xs text-gray-600 mb-2">Filters (Optional)</label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">HTTP Method</label>
+                      <input value={filterMethod} onChange={e=>setFilterMethod(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="e.g. POST, PUT" />
                     </div>
-                    <div className="flex gap-2">
-                      <input value={customTag} onChange={e => setCustomTag(e.target.value)} placeholder="Or enter custom tag..." className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" onKeyPress={e => { if (e.key === 'Enter' && customTag.trim() && !selectedNamespaces.includes(customTag.trim())) { setSelectedNamespaces([...selectedNamespaces, customTag.trim()]); setCustomTag('') }}} />
-                      <button onClick={() => { if (customTag.trim() && !selectedNamespaces.includes(customTag.trim())) { setSelectedNamespaces([...selectedNamespaces, customTag.trim()]); setCustomTag('') }}} disabled={!customTag.trim() || selectedNamespaces.includes(customTag.trim())} className="px-4 py-2 bg-gray-900 text-white rounded text-sm hover:bg-gray-800 transition-colors disabled:opacity-50">
-                        Add
-                      </button>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Table Name</label>
+                      <input value={filterTableName} onChange={e=>setFilterTableName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="e.g. shopify-orders" />
                     </div>
-                    {selectedNamespaces.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {selectedNamespaces.map(tag => {
-                          const ns = availableNamespaces.find(n => n.id === tag)
-                          return (
-                            <span key={tag} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                              {ns?.name || tag}
-                              <button onClick={() => setSelectedNamespaces(selectedNamespaces.filter(t => t !== tag))} className="text-blue-600 hover:text-blue-800">×</button>
-                            </span>
-                          )
-                        })}
-                      </div>
-                    )}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Path Contains</label>
+                      <input value={filterPathContains} onChange={e=>setFilterPathContains(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="e.g. /unified/namespaces" />
+                    </div>
                   </div>
                 </div>
 
-                {/* Trigger Name & Template */}
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Trigger Name</label>
-                  <input value={trigName} onChange={e=>setTrigName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="My Trigger" />
-                </div>
-
+                {/* 6. Message Template */}
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Message Template</label>
-                  <textarea value={trigTemplate} onChange={e=>setTrigTemplate(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm min-h-[100px] focus:border-gray-900 focus:outline-none" placeholder="Message template using {{trigger}} and {{event}} context" />
+                  <textarea value={trigTemplate} onChange={e=>setTrigTemplate(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm min-h-[100px] focus:border-gray-900 focus:outline-none" placeholder="Enter message template using {{trigger}} and {{event}} context variables" />
                   <div className="text-xs text-gray-500 mt-1">
                     Available variables: {'{'}{'{'} event.type {'}'}{'}'}, {'{'}{'{'} event.tableName {'}'}{'}'}, {'{'}{'{'} event.data.body {'}'}{'}'}, {'{'}{'{'} trigger.name {'}'}{'}'}
                   </div>
@@ -1052,80 +1171,423 @@ const Page = () => {
                 <h2 className="text-xl font-semibold text-gray-900 mb-1">CRUD Operation Triggers</h2>
                 <p className="text-sm text-gray-600">Monitor and trigger on database operations</p>
               </div>
-              
-              <div className="flex gap-4 mb-6">
-                <div className="flex-1">
-                  <label className="block text-xs text-gray-600 mb-1">Select Table</label>
-                  <select value={selectedTable} onChange={e => setSelectedTable(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none">
-                    <option value="">-- Select DynamoDB Table --</option>
-                    {tables.map(table => (
-                      <option key={table} value={table}>{table}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <button onClick={() => fetchTables()} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
-                    <RefreshCw size={14} />
-                    Refresh Tables
-                  </button>
-                </div>
-              </div>
 
-              {selectedTable && (
-                <div className="bg-white border border-gray-200 rounded overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                    <h3 className="text-sm font-semibold text-gray-900">Configure: {selectedTable}</h3>
+              <div className="bg-white border border-gray-200 rounded p-6 space-y-6">
+                <h3 className="text-sm font-semibold text-gray-900">Configure CRUD Triggers</h3>
+                
+                {/* Data Source Toggle */}
+                <div>
+                  <label className="block text-xs text-gray-600 mb-2">Data Source</label>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setCrudDataSource('dynamodb')}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 rounded transition-colors ${
+                        crudDataSource === 'dynamodb' 
+                          ? 'border-gray-900 bg-gray-900 text-white' 
+                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      <Database size={18} />
+                      <span className="text-sm font-medium">DynamoDB Tables</span>
+                    </button>
+                    <button
+                      onClick={() => setCrudDataSource('s3')}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 rounded transition-colors ${
+                        crudDataSource === 's3' 
+                          ? 'border-gray-900 bg-gray-900 text-white' 
+                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      <Box size={18} />
+                      <span className="text-sm font-medium">S3 Folders</span>
+                    </button>
                   </div>
-                  
-                  <div className="p-6 grid grid-cols-2 gap-6">
-                    {['CREATE', 'READ', 'UPDATE', 'DELETE'].map(op => (
-                      <div key={op} className="border border-gray-200 rounded p-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-2">
-                            <Code size={16} className="text-gray-900" />
-                            <span className="text-sm font-semibold text-gray-900">{op}</span>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" className="sr-only peer" />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
-                          </label>
-                        </div>
-                        
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-xs text-gray-600 mb-1">Connection</label>
-                            <select className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1.5 text-xs focus:border-gray-900 focus:outline-none">
-                              <option>Select connection...</option>
-                              {connections.map(conn => (
-                                <option key={conn.id} value={conn.id}>{conn.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                          
-                          <div>
-                            <label className="block text-xs text-gray-600 mb-1">Recipient</label>
-                            <input placeholder="Phone number or group ID" className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1.5 text-xs focus:border-gray-900 focus:outline-none" />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-xs text-gray-600 mb-1">Template</label>
-                            <textarea rows={3} placeholder={`${op} operation on ${selectedTable}`} className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1.5 text-xs focus:border-gray-900 focus:outline-none resize-none" />
-                          </div>
-                        </div>
+                </div>
+
+                {/* Select Table with Search - DynamoDB */}
+                {crudDataSource === 'dynamodb' && (
+                  <div className="flex gap-4">
+                    <div className="flex-1 space-y-2">
+                      <label className="block text-xs text-gray-600 mb-1">Select Table</label>
+                    <div className="relative">
+                      <input
+                        value={tableSearchTerm}
+                        onChange={e => setTableSearchTerm(e.target.value)}
+                        placeholder="Search tables..."
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none pr-8"
+                      />
+                      {tableSearchTerm && (
+                        <button
+                          onClick={() => setTableSearchTerm('')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Filtered Results Display */}
+                    {tableSearchTerm && (
+                      <div className="max-h-40 overflow-y-auto border border-gray-200 rounded bg-white">
+                        {tables
+                          .filter(table => table.toLowerCase().includes(tableSearchTerm.toLowerCase()))
+                          .length > 0 ? (
+                            tables
+                              .filter(table => table.toLowerCase().includes(tableSearchTerm.toLowerCase()))
+                              .map(table => (
+                                <button
+                                  key={table}
+                                  onClick={() => {
+                                    setSelectedTable(table);
+                                    setTableSearchTerm('');
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                                >
+                                  {table}
+                                </button>
+                              ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">No matches found</div>
+                          )
+                        }
                       </div>
-                    ))}
-                  </div>
+                    )}
 
-                  <div className="border-t border-gray-200 px-4 py-3 flex justify-end gap-3 bg-gray-50">
-                    <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-white transition-colors">
-                      Test Configuration
-                    </button>
-                    <button className="px-4 py-2 bg-gray-900 text-white rounded text-sm hover:bg-gray-800 transition-colors">
-                      Save & Deploy
+                    <select 
+                      value={selectedTable} 
+                      onChange={e => setSelectedTable(e.target.value)} 
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+                    >
+                      <option value="">Select DynamoDB Table...</option>
+                      {tables.map(table => (
+                        <option key={table} value={table}>{table}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <button onClick={() => fetchTables()} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
+                      <RefreshCw size={14} />
+                      Refresh
                     </button>
                   </div>
                 </div>
-              )}
+                )}
+
+                {/* Select S3 Folder with Search */}
+                {crudDataSource === 's3' && (
+                  <div className="flex gap-4">
+                    <div className="flex-1 space-y-2">
+                      <label className="block text-xs text-gray-600 mb-1">Select S3 Folder</label>
+                      <div className="relative">
+                        <input
+                          value={s3FolderSearchTerm}
+                          onChange={e => setS3FolderSearchTerm(e.target.value)}
+                          placeholder="Search S3 folders..."
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none pr-8"
+                        />
+                        {s3FolderSearchTerm && (
+                          <button
+                            onClick={() => setS3FolderSearchTerm('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Filtered Results Display */}
+                      {s3FolderSearchTerm && (
+                        <div className="max-h-40 overflow-y-auto border border-gray-200 rounded bg-white">
+                          {s3Folders
+                            .filter(folder => folder.toLowerCase().includes(s3FolderSearchTerm.toLowerCase()))
+                            .length > 0 ? (
+                              s3Folders
+                                .filter(folder => folder.toLowerCase().includes(s3FolderSearchTerm.toLowerCase()))
+                                .map(folder => (
+                                  <button
+                                    key={folder}
+                                    onClick={() => {
+                                      setSelectedS3Folder(folder);
+                                      setS3FolderSearchTerm('');
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                                  >
+                                    {folder}
+                                  </button>
+                                ))
+                            ) : (
+                              <div className="px-3 py-2 text-sm text-gray-500">No matches found</div>
+                            )
+                          }
+                        </div>
+                      )}
+
+                      <select 
+                        value={selectedS3Folder} 
+                        onChange={e => setSelectedS3Folder(e.target.value)} 
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+                      >
+                        <option value="">Select S3 Folder...</option>
+                        {s3Folders.map(folder => (
+                          <option key={folder} value={folder}>{folder}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-end">
+                      <button onClick={() => fetchS3Folders()} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
+                        <RefreshCw size={14} />
+                        Refresh
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {(selectedTable || selectedS3Folder) && (
+                  <>
+                    {/* Select for All Button */}
+                    <div className="flex justify-end">
+                      <button 
+                        onClick={() => {
+                          const firstOp = crudOperations['CREATE'];
+                          setCrudOperations({
+                            CREATE: crudOperations['CREATE'],
+                            READ: { ...crudOperations['READ'], ...firstOp, template: crudOperations['READ'].template },
+                            UPDATE: { ...crudOperations['UPDATE'], ...firstOp, template: crudOperations['UPDATE'].template },
+                            DELETE: { ...crudOperations['DELETE'], ...firstOp, template: crudOperations['DELETE'].template }
+                          });
+                          alert('CREATE configuration copied to all operations!');
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      >
+                        <Layers size={14} />
+                        Apply CREATE Config to All
+                      </button>
+                    </div>
+
+                    {/* CRUD Operations Grid */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-2">
+                        Configure Operations for: {crudDataSource === 'dynamodb' ? selectedTable : selectedS3Folder}
+                      </label>
+                      <div className="grid grid-cols-2 gap-6">
+                        {['CREATE', 'READ', 'UPDATE', 'DELETE'].map(op => {
+                          const opConfig = crudOperations[op];
+                          return (
+                            <div key={op} className="border border-gray-200 rounded p-3">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <Code size={14} className="text-gray-900" />
+                                  <span className="text-sm font-semibold text-gray-900">{op}</span>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input 
+                                    type="checkbox" 
+                                    className="sr-only peer" 
+                                    checked={opConfig?.enabled || false}
+                                    onChange={(e) => setCrudOperations({
+                                      ...crudOperations,
+                                      [op]: { ...opConfig, enabled: e.target.checked }
+                                    })}
+                                  />
+                                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gray-900"></div>
+                                </label>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                {/* Recipient Type - Smaller Icons */}
+                                <div>
+                                  <label className="block text-[10px] text-gray-600 mb-1 uppercase tracking-wide">Recipient Type</label>
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => setCrudOperations({
+                                        ...crudOperations,
+                                        [op]: { ...opConfig, recipientType: 'users' }
+                                      })}
+                                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border rounded transition-colors ${
+                                        opConfig?.recipientType === 'users' 
+                                          ? 'border-gray-900 bg-gray-900 text-white' 
+                                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                      }`}
+                                    >
+                                      <Users size={12} />
+                                      <span className="text-[10px] font-medium">Users</span>
+                                    </button>
+                                    <button
+                                      onClick={() => setCrudOperations({
+                                        ...crudOperations,
+                                        [op]: { ...opConfig, recipientType: 'community' }
+                                      })}
+                                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border rounded transition-colors ${
+                                        opConfig?.recipientType === 'community' 
+                                          ? 'border-gray-900 bg-gray-900 text-white' 
+                                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                      }`}
+                                    >
+                                      <Globe size={12} />
+                                      <span className="text-[10px] font-medium">Comm</span>
+                                    </button>
+                                    <button
+                                      onClick={() => setCrudOperations({
+                                        ...crudOperations,
+                                        [op]: { ...opConfig, recipientType: 'group' }
+                                      })}
+                                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border rounded transition-colors ${
+                                        opConfig?.recipientType === 'group' 
+                                          ? 'border-gray-900 bg-gray-900 text-white' 
+                                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                      }`}
+                                    >
+                                      <MessageSquare size={12} />
+                                      <span className="text-[10px] font-medium">Group</span>
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Recipient Configuration Based on Type */}
+                                {opConfig?.recipientType === 'users' && (
+                                  <div className="space-y-2">
+                                    <div className="flex gap-2 text-[10px]">
+                                      <label className="flex items-center gap-1">
+                                        <input 
+                                          type="radio" 
+                                          checked={opConfig?.contactMode === 'manual'} 
+                                          onChange={() => setCrudOperations({
+                                            ...crudOperations,
+                                            [op]: { ...opConfig, contactMode: 'manual' }
+                                          })} 
+                                          className="w-3 h-3"
+                                        />
+                                        <span>Manual</span>
+                                      </label>
+                                      <label className="flex items-center gap-1">
+                                        <input 
+                                          type="radio" 
+                                          checked={opConfig?.contactMode === 'contact'} 
+                                          onChange={() => setCrudOperations({
+                                            ...crudOperations,
+                                            [op]: { ...opConfig, contactMode: 'contact' }
+                                          })} 
+                                          className="w-3 h-3"
+                                        />
+                                        <span>Contact</span>
+                                      </label>
+                                    </div>
+                                    {opConfig?.contactMode === 'manual' ? (
+                                      <input 
+                                        placeholder="Phone number"
+                                        className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-[10px] focus:border-gray-900 focus:outline-none"
+                                        value={opConfig?.phoneNumber || ''}
+                                        onChange={(e) => setCrudOperations({
+                                          ...crudOperations,
+                                          [op]: { ...opConfig, phoneNumber: e.target.value }
+                                        })}
+                                      />
+                                    ) : (
+                                      <select 
+                                        className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-[10px] focus:border-gray-900 focus:outline-none"
+                                        value={opConfig?.selectedContact || ''}
+                                        onChange={(e) => setCrudOperations({
+                                          ...crudOperations,
+                                          [op]: { ...opConfig, selectedContact: e.target.value }
+                                        })}
+                                      >
+                                        <option value="">Select contact...</option>
+                                        {contacts.map(c => (
+                                          <option key={c.id} value={c.id}>{c.pushname || c.name || c.id}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                  </div>
+                                )}
+
+                                {opConfig?.recipientType === 'community' && (
+                                  <div className="space-y-2">
+                                    <select 
+                                      className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-[10px] focus:border-gray-900 focus:outline-none"
+                                      value={opConfig?.selectedCommunity || ''}
+                                      onChange={(e) => setCrudOperations({
+                                        ...crudOperations,
+                                        [op]: { ...opConfig, selectedCommunity: e.target.value }
+                                      })}
+                                    >
+                                      <option value="">Select community...</option>
+                                      {communities.map(c => (
+                                        <option key={c.id} value={c.id}>{c.title || c.name || c.id}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
+
+                                {opConfig?.recipientType === 'group' && (
+                                  <select 
+                                    className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-[10px] focus:border-gray-900 focus:outline-none"
+                                    value={opConfig?.selectedGroups?.[0] || ''}
+                                    onChange={(e) => setCrudOperations({
+                                      ...crudOperations,
+                                      [op]: { ...opConfig, selectedGroups: e.target.value ? [e.target.value] : [] }
+                                    })}
+                                  >
+                                    <option value="">Select group...</option>
+                                    {groups.map(g => (
+                                      <option key={g.id} value={g.id}>{g.title || g.name || g.id}</option>
+                                    ))}
+                                  </select>
+                                )}
+
+                                <div>
+                                  <label className="block text-[10px] text-gray-600 mb-1">Connection</label>
+                                  <select 
+                                    className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-[10px] focus:border-gray-900 focus:outline-none"
+                                    value={opConfig?.connectionId || ''}
+                                    onChange={(e) => setCrudOperations({
+                                      ...crudOperations,
+                                      [op]: { ...opConfig, connectionId: e.target.value }
+                                    })}
+                                  >
+                                    <option value="">Select connection...</option>
+                                    {connections.map(conn => (
+                                      <option key={conn.id} value={conn.id}>{conn.name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                
+                                <div>
+                                  <label className="block text-[10px] text-gray-600 mb-1">Template</label>
+                                  <textarea 
+                                    rows={2} 
+                                    placeholder={`Template for ${op}...`}
+                                    className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-[10px] focus:border-gray-900 focus:outline-none resize-none"
+                                    value={opConfig?.template || ''}
+                                    onChange={(e) => setCrudOperations({
+                                      ...crudOperations,
+                                      [op]: { ...opConfig, template: e.target.value }
+                                    })}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
+                      <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors">
+                        Test Configuration
+                      </button>
+                      <button className="px-4 py-2 bg-gray-900 text-white rounded text-sm hover:bg-gray-800 transition-colors">
+                        Save & Deploy
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {!selectedTable && !selectedS3Folder && (
+                  <div className="text-center py-8 text-sm text-gray-500">
+                    Select a {crudDataSource === 'dynamodb' ? 'table' : 'folder'} above to configure CRUD triggers
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
