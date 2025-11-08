@@ -42,7 +42,6 @@ const SIDEPANEL_WIDTH = 256; // px, w-64
 
 const initialTabs = [
   { key: 'overview', label: 'Overview', pinned: false },
-  { key: 'new', label: 'New Tab', italic: true, bold: true, pinned: false },
 ];
 
 function fieldsToSchema(fields: any[]): Record<string, any> {
@@ -1053,12 +1052,6 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                     </button>
                 </div>
               ))}
-              <button
-                className="px-2 py-2 text-gray-500 hover:bg-gray-100 rounded-full"
-                onClick={handleAddTab}
-              >
-                <Plus size={16} />
-              </button>
               <button className="px-2 py-2 text-gray-500 hover:bg-gray-100 rounded-full">
                 <MoreHorizontal size={16} />
               </button>
@@ -1504,12 +1497,6 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           )}
             </div>
                       ))}
-                      <button
-                        className="mt-2 px-2 py-2 text-gray-500 hover:bg-gray-100 rounded-full"
-                        onClick={handleAddTab}
-                      >
-                        <Plus size={16} />
-                      </button>
           </div>
                     {/* Tab Content */}
                     <div className="flex-1 min-h-0 overflow-y-auto transition-all duration-200 pl-4 pr-8 pt-4">
