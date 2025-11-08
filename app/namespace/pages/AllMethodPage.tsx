@@ -3,7 +3,7 @@ import { Eye, Pencil, Trash2, Zap, Send, Database, Plus, X } from 'lucide-react'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
-export default function AllMethodPage({ namespace, onViewMethod, openCreate = false, refreshSidePanelData }: { namespace?: any, onViewMethod?: (method: any, ns?: any) => void, openCreate?: boolean, refreshSidePanelData?: () => Promise<void> }) {
+export default function AllMethodPage({ namespace, onViewMethod, openCreate = false, refreshSidePanelData, timestamp }: { namespace?: any, onViewMethod?: (method: any, ns?: any) => void, openCreate?: boolean, refreshSidePanelData?: () => Promise<void>, timestamp?: number }) {
   const [methods, setMethods] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidePanel, setSidePanel] = useState<'create' | { method: any } | null>(null);
@@ -25,6 +25,7 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
   const [search, setSearch] = useState('');
   const pageRef = useRef<HTMLDivElement>(null);
   const [sheetBounds, setSheetBounds] = useState<{ left: number; width: number }>({ left: 0, width: 0 });
+  const [panelTopPosition, setPanelTopPosition] = useState(0); // Panel top position in pixels
 
   const updateSheetBounds = () => {
     if (!pageRef.current) return;
@@ -67,8 +68,38 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
   useEffect(() => {
     if (openCreate) {
       setSidePanel('create');
+      // Calculate panel top position from namespace tab bar
+      if (typeof window !== 'undefined') {
+        const tabBar = document.querySelector('.namespace-tab-bar');
+        if (tabBar) {
+          const rect = tabBar.getBoundingClientRect();
+          setPanelTopPosition(rect.bottom);
+        }
+      }
     }
-  }, [openCreate]);
+  }, [openCreate, timestamp]); // timestamp ensures re-trigger even if openCreate stays true
+
+  // Calculate panel top position on window resize/scroll
+  useEffect(() => {
+    const calculatePanelTop = () => {
+      if (typeof window !== 'undefined' && sidePanel) {
+        const tabBar = document.querySelector('.namespace-tab-bar');
+        if (tabBar) {
+          const rect = tabBar.getBoundingClientRect();
+          setPanelTopPosition(rect.bottom);
+        }
+      }
+    };
+
+    calculatePanelTop();
+    window.addEventListener('resize', calculatePanelTop);
+    window.addEventListener('scroll', calculatePanelTop);
+    
+    return () => {
+      window.removeEventListener('resize', calculatePanelTop);
+      window.removeEventListener('scroll', calculatePanelTop);
+    };
+  }, [sidePanel]);
 
   // Support query param create=1
   useEffect(() => {
@@ -244,9 +275,12 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
     if (sidePanel === 'create') {
       return (
         <form onSubmit={handleCreate} className="flex flex-col gap-4 h-full p-6 ">
+          <div className="mb-4 text-lg font-bold text-green-700 text-center">
+            {namespace?.['namespace-name']}
+          </div>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-bold text-blue-700 flex items-center gap-2">
-              <span className="inline-block w-6 h-6 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mr-2">→</span>
+            <h3 className="text-lg font-bold text-green-700 flex items-center gap-2">
+              <span className="inline-block w-6 h-6 bg-green-100 text-green-500 rounded-full flex items-center justify-center mr-2">→</span>
               Create Method
             </h3>
             <button type="button" onClick={() => setSidePanel(null)} className="text-gray-400 hover:text-gray-700"><X size={22} /></button>
@@ -357,7 +391,7 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
             </button>
             <button
               type="submit"
-              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg px-6 py-2 font-bold text-base shadow-lg hover:from-blue-600 hover:to-purple-600 transition"
+              className="bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg px-6 py-2 font-bold text-base shadow-lg hover:from-green-600 hover:to-emerald-600 transition"
             >
               Create Method
             </button>
@@ -574,8 +608,17 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
       {sidePanel === 'create' && (
         <div
           ref={panelRef}
-          className={`fixed top-0 right-0 h-full bg-white border-l border-gray-200 shadow-2xl z-50 transition-transform duration-300 flex flex-col`}
-          style={{ minHeight: '100vh', width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : (sidePanel ? sidePanelWidth : 0), transform: sidePanel ? 'translateX(0)' : `translateX(${sidePanelWidth}px)`, boxShadow: sidePanel ? '0 0 32px 0 rgba(0,0,0,0.10)' : 'none', borderTopLeftRadius: 16, borderBottomLeftRadius: 16, overflow: 'auto' }}
+          className={`fixed right-0 bg-white border-l border-gray-200 shadow-2xl z-50 transition-transform duration-300 flex flex-col`}
+          style={{ 
+            top: `${panelTopPosition}px`,
+            bottom: 0,
+            width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : (sidePanel ? sidePanelWidth : 0), 
+            transform: sidePanel ? 'translateX(0)' : `translateX(${sidePanelWidth}px)`, 
+            boxShadow: sidePanel ? '0 0 32px 0 rgba(0,0,0,0.10)' : 'none', 
+            borderTopLeftRadius: 16, 
+            borderBottomLeftRadius: 16, 
+            overflow: 'auto' 
+          }}
         >
           <div
             className="hidden sm:block"

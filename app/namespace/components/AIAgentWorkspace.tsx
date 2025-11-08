@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bot, Send, File, Folder, Play, Database, Code, X, Upload, FileText, Image, Archive, Cloud, Download, RefreshCw } from 'lucide-react';
+import { Bot, Send, File, Folder, Play, Database, Code, X, Upload, FileText, Image, Archive, Cloud, Download, RefreshCw, Minimize2, Maximize2 } from 'lucide-react';
 import { useDrop } from 'react-dnd';
 import { useNamespaceContext } from '../../components/NamespaceContext';
 import APIMethodCreationAgent from './APIMethodCreationAgent';
@@ -92,11 +92,9 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
   // State for collapsible generated code
   const [showGeneratedCode, setShowGeneratedCode] = useState(false);
   
-  // State for resizable workspace
-  const [workspaceWidth, setWorkspaceWidth] = useState(typeof window !== 'undefined' && window.innerWidth < 768 ? window.innerWidth : 600);
-  const [isResizing, setIsResizing] = useState(false);
-  const [dragStartX, setDragStartX] = useState(0);
-  const [dragStartWidth, setDragStartWidth] = useState(0);
+  // State for workspace
+  const [workspaceWidth] = useState(typeof window !== 'undefined' && window.innerWidth < 768 ? window.innerWidth : 600);
+  const [isMinimized, setIsMinimized] = useState(true); // By default minimized (45% width)
   console.log('AIAgentWorkspace rendered with props:', { namespace, onClose });
   // Force rebuild to ensure latest changes are applied
   
@@ -105,40 +103,6 @@ const AIAgentWorkspace: React.FC<AIAgentWorkspaceProps> = ({ namespace, onClose 
     console.log('Namespace changed:', namespace);
   }, [namespace]);
 
-  // Resize handlers
-  const handleResizeStart = (e: React.MouseEvent) => {
-    // Disable resize on mobile
-    if (typeof window !== 'undefined' && window.innerWidth < 768) return;
-    
-    e.preventDefault();
-    setIsResizing(true);
-    setDragStartX(e.clientX);
-    setDragStartWidth(workspaceWidth);
-  };
-
-  const handleResizeMove = (e: MouseEvent) => {
-    if (!isResizing) return;
-    const deltaX = e.clientX - dragStartX;
-    const maxWidth = typeof window !== 'undefined' && window.innerWidth < 768 ? window.innerWidth : 900;
-    const newWidth = Math.max(300, Math.min(maxWidth, dragStartWidth - deltaX));
-    setWorkspaceWidth(newWidth);
-  };
-
-  const handleResizeEnd = () => {
-    setIsResizing(false);
-  };
-
-  // Add event listeners for resize
-  useEffect(() => {
-    if (isResizing) {
-      document.addEventListener('mousemove', handleResizeMove);
-      document.addEventListener('mouseup', handleResizeEnd);
-      return () => {
-        document.removeEventListener('mousemove', handleResizeMove);
-        document.removeEventListener('mouseup', handleResizeEnd);
-      };
-    }
-  }, [isResizing, dragStartX, dragStartWidth]);
   // 1. Change activeTab state to use 'lambda' instead of 'api'
   const [activeTab, setActiveTab] = useState<'chat' | 'console' | 'lambda' | 'schema' | 'api' | 'files' | 'deployment' | 'web-scraping'>('lambda');
   const [messages, setMessages] = useState<Message[]>([
@@ -3546,146 +3510,175 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
   return (
     <div 
       ref={namespaceDropRef as any}
-      className={`fixed top-0 right-0 h-full flex flex-col bg-white shadow-2xl border-l border-gray-200 z-[60] pointer-events-auto transform transition-all duration-500 ease-out animate-slide-in-right ${
-        isNamespaceDropOver ? 'bg-blue-50 border-2 border-blue-400' : 
-        isSchemaDropOver ? 'bg-purple-50 border-2 border-purple-400' : ''
+      className={`fixed top-0 right-0 h-full flex flex-col bg-white shadow-2xl border-l-2 z-[60] pointer-events-auto transition-all duration-500 ease-in-out ${
+        isNamespaceDropOver ? 'bg-blue-50 border-blue-400 shadow-blue-200' : 
+        isSchemaDropOver ? 'bg-purple-50 border-purple-400 shadow-purple-200' : 'border-indigo-200'
       }`}
       style={{ 
-        width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : `${workspaceWidth}px`,
-        maxWidth: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : `${workspaceWidth}px`
+        width: typeof window !== 'undefined' && window.innerWidth < 768 
+          ? '100vw' 
+          : isMinimized 
+            ? '45vw'  // 45% when minimized
+            : '75vw', // 75% when maximized
+        maxWidth: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : '100vw'
       }}
     >
-      {/* Resize Handle - Hidden on mobile */}
-      <div 
-        className={`hidden md:block absolute left-0 top-0 h-full w-1 cursor-ew-resize hover:bg-blue-400 transition-colors z-10 ${isResizing ? 'bg-blue-500' : 'bg-transparent hover:bg-blue-300'}`}
-        onMouseDown={handleResizeStart}
-        title="Drag to resize workspace width"
-      >
-        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-2 h-8 bg-blue-400 rounded-r opacity-0 hover:opacity-100 transition-opacity"></div>
-      </div>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+      <div className="flex items-center justify-between p-4 md:p-5 border-b-2 border-indigo-100 bg-indigo-600 shadow-lg">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-100">
-            <Bot className="w-5 h-5 text-blue-600" />
+          <div className="p-2.5 rounded-xl bg-white shadow-md">
+            <Bot className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
           </div>
           <div>
-            <h2 className="font-semibold text-gray-900">AI Assistant</h2>
-            <div className="text-sm text-gray-500">
+            <h2 className="font-bold text-lg md:text-xl text-white tracking-tight">AI Assistant</h2>
+            <div className="text-xs md:text-sm text-white/90">
               {(localNamespace || droppedNamespaces.length > 0) ? (
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-blue-600 font-medium">Working with:</span>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                      {(localNamespace ? 1 : 0) + droppedNamespaces.length} Namespace(s)
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-white/95">Context:</span>
+                  <span className="text-xs bg-white text-indigo-700 px-2.5 py-1 rounded-full font-medium shadow-sm">
+                      {(localNamespace ? 1 : 0) + droppedNamespaces.length} Namespace{(localNamespace ? 1 : 0) + droppedNamespaces.length > 1 ? 's' : ''}
                   </span>
+                  {sessionId && (
+                    <span className="text-xs bg-green-500 text-white px-2.5 py-1 rounded-full font-medium shadow-sm">
+                      💾 Memory Active
+                    </span>
+                  )}
                   </div>
                   {localNamespace && (
-                    <div className="text-xs text-gray-600 ml-2">
-                      • {localNamespace['namespace-name']} (current)
+                    <div className="text-xs text-white/80 ml-2 font-medium">
+                      • {localNamespace['namespace-name']} <span className="text-white/60">(primary)</span>
                     </div>
                   )}
                   {droppedNamespaces.map((ns, index) => (
-                    <div key={ns['namespace-id'] || ns.id || index} className="text-xs text-gray-600 ml-2">
+                    <div key={ns['namespace-id'] || ns.id || index} className="text-xs text-white/80 ml-2">
                       • {ns['namespace-name'] || ns.name || 'Unknown Namespace'}
                     </div>
                   ))}
                 </div>
               ) : (
-                <span className="flex items-center gap-2">
-                  <span>General Development</span>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                    Namespace Generation Mode
+                <span className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium text-white/95">General Development</span>
+                  <span className="text-xs bg-green-500 text-white px-2.5 py-1 rounded-full font-medium shadow-sm">
+                    ✨ Namespace Generation Mode
                   </span>
-                </span>
-              )}
-              {sessionId && (
-                <span className="ml-2 text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                  Memory Active
+                  {sessionId && (
+                    <span className="text-xs bg-white text-indigo-700 px-2.5 py-1 rounded-full font-medium shadow-sm">
+                      💾 Memory Active
+                    </span>
+                  )}
                 </span>
               )}
             </div>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-        >
-          <X className="w-5 h-5 text-gray-500" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="p-2 md:p-2.5 rounded-xl bg-white hover:bg-gray-100 transition-all shadow-md hover:shadow-lg"
+            title={isMinimized ? 'Expand AI Agent' : 'Minimize AI Agent'}
+          >
+            {isMinimized ? (
+              <Maximize2 className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
+            ) : (
+              <Minimize2 className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
+            )}
+          </button>
+          <button
+            onClick={onClose}
+            className="p-2 md:p-2.5 rounded-xl bg-white hover:bg-gray-100 transition-all shadow-md hover:shadow-lg"
+            title="Close AI Assistant"
+          >
+            <X className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
+          </button>
+        </div>
       </div>
 
       {/* Tab Navigation */}
-        <div className="flex border-b border-gray-200 bg-white px-2 md:px-4 pt-2 overflow-x-auto">
+        <div className="flex border-b-2 border-gray-200 bg-white px-2 md:px-4 pt-2 overflow-x-auto shadow-sm">
         <button
           onClick={() => setActiveTab('lambda')}
-            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
+            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
             activeTab === 'lambda'
-              ? 'border-blue-500 text-blue-600 bg-white'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <Code size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Lambda</span>
+            <Code size={16} className="md:w-5 md:h-5" /> 
+            <span className="hidden sm:inline">Lambda</span>
+            {activeTab === 'lambda' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('api')}
-            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
+            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
             activeTab === 'api'
-              ? 'border-blue-500 text-blue-600 bg-white'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <Database size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">API</span>
+            <Database size={16} className="md:w-5 md:h-5" /> 
+            <span className="hidden sm:inline">API</span>
+            {activeTab === 'api' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('web-scraping')}
-            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
+            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
             activeTab === 'web-scraping'
-              ? 'border-blue-500 text-blue-600 bg-white'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <FileText size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Web Scraping</span>
+            <FileText size={16} className="md:w-5 md:h-5" /> 
+            <span className="hidden sm:inline">Web Scraping</span>
+            {activeTab === 'web-scraping' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('files')}
-            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
+            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
             activeTab === 'files'
-              ? 'border-blue-500 text-blue-600 bg-white'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <Folder size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Files</span>
+            <Folder size={16} className="md:w-5 md:h-5" /> 
+            <span className="hidden sm:inline">Files</span>
+            {activeTab === 'files' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('schema')}
-            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
+            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
             activeTab === 'schema'
-              ? 'border-blue-500 text-blue-600 bg-white'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <Database size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Schema</span>
+            <Database size={16} className="md:w-5 md:h-5" /> 
+            <span className="hidden sm:inline">Schema</span>
+            {activeTab === 'schema' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('deployment')}
-            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
+            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
             activeTab === 'deployment'
-              ? 'border-blue-500 text-blue-600 bg-white'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <Play size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Deployment</span>
+            <Play size={16} className="md:w-5 md:h-5" /> 
+            <span className="hidden sm:inline">Deploy</span>
+            {activeTab === 'deployment' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('console')}
-            className={`px-2 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 transition-colors flex items-center gap-1 whitespace-nowrap ${
+            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
             activeTab === 'console'
-              ? 'border-blue-500 text-blue-600 bg-white'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <Play size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Console</span>
+            <Play size={16} className="md:w-5 md:h-5" /> 
+            <span className="hidden sm:inline">Console</span>
+            {activeTab === 'console' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
       </div>
 
@@ -3756,16 +3749,19 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         )}
         
         {activeTab === 'api' && (
-          <div className="h-full overflow-y-auto">
-            <h3 className="font-medium text-lg mb-2">API Method Creation & Management</h3>
+          <div className="h-full overflow-hidden flex flex-col">
+            <div className="p-4">
+              <h3 className="font-bold text-xl mb-2 text-indigo-900">API Method Creation & Management</h3>
               <p className="text-sm text-gray-600 mb-4">
-              Create reusable API methods from API Gateway URLs with OpenAPI specifications. 
-              Generate methods that can be overridden with different URLs and saved to your namespace.
+                Create reusable API methods from API Gateway URLs with OpenAPI specifications. 
+                Generate methods that can be overridden with different URLs and saved to your namespace.
                 <br />
-              <span className="text-blue-600 font-medium">💡 Tip:</span> Use deployed Lambda endpoints or any API Gateway URL to create methods!
-            </p>
+                <span className="text-indigo-600 font-semibold">💡 Tip:</span> Use deployed Lambda endpoints or any API Gateway URL to create methods!
+              </p>
+            </div>
             
             {/* API Method Creation Agent */}
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
             <APIMethodCreationAgent 
               namespace={localNamespace}
               deployedEndpoints={deployedEndpoints}
@@ -3774,6 +3770,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                 // Optionally refresh namespace data or show success message
               }}
             />
+            </div>
           </div>
         )}
         {activeTab === 'web-scraping' && (
@@ -4566,7 +4563,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
       {activeTab === 'lambda' && (
       <div 
           ref={sidebarSchemaDropRef as any}
-        className={`flex-1 overflow-y-auto p-4 space-y-4 bg-white transition-colors ${
+        className={`flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 transition-colors scrollbar-thin ${
             isSidebarSchemaDropOver ? 'bg-purple-50 border-2 border-dashed border-purple-300' : ''
         }`}
       >
@@ -4578,29 +4575,25 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         
         {/* Namespace Generation Mode Hint */}
         {activeTab === 'lambda' && !namespace && messages.length === 0 && !isSidebarSchemaDropOver && (
-          <div className="text-center py-8">
-            <div className="max-w-md mx-auto bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
-              <div className="flex items-center justify-center mb-4">
-                <div className="p-3 rounded-full bg-blue-100">
-                  <Bot className="w-6 h-6 text-blue-600" />
+          <div className="text-center py-4">
+            <div className="max-w-xs mx-auto bg-indigo-50 border border-indigo-200 rounded-lg p-4 shadow-sm">
+              <div className="flex items-center justify-center mb-2">
+                <div className="p-2 rounded-full bg-indigo-100">
+                  <Bot className="w-5 h-5 text-indigo-600" />
                 </div>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">🚀 Namespace Generation Mode</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Create complete namespaces from scratch! Describe what you want to build and I'll generate:
+              <h3 className="text-sm font-bold text-indigo-900 mb-2">🚀 Namespace Generation Mode</h3>
+              <p className="text-xs text-gray-600 mb-3">
+                Create complete namespaces from scratch!
               </p>
-              <div className="text-left text-xs text-gray-500 space-y-1">
-                <div>• <strong>Schemas</strong> - Data models and structures</div>
-                <div>• <strong>API Methods</strong> - REST endpoints</div>
-                <div>• <strong>Account Types</strong> - Authentication systems</div>
-                <div>• <strong>Webhooks</strong> - Event integrations</div>
-                <div>• <strong>Lambda Functions</strong> - Serverless logic</div>
+              <div className="text-left text-xs text-gray-600 space-y-0.5 mb-3">
+                <div>• <strong>Schemas</strong> & API Methods</div>
+                <div>• <strong>Webhooks</strong> & Lambda Functions</div>
+                <div>• <strong>Account Types</strong> & more</div>
               </div>
-              <div className="mt-4 p-3 bg-white rounded border border-blue-100">
-                <p className="text-xs text-gray-600 font-medium mb-1">Try prompts like:</p>
-                <p className="text-xs text-blue-600">"Create a complete e-commerce system"</p>
-                <p className="text-xs text-blue-600">"Generate a social media platform namespace"</p>
-                <p className="text-xs text-blue-600">"Build a project management tool"</p>
+              <div className="p-2 bg-white rounded border border-indigo-100">
+                <p className="text-xs text-gray-500 font-medium mb-0.5">Try:</p>
+                <p className="text-xs text-indigo-600">"Create an e-commerce system"</p>
               </div>
             </div>
           </div>
@@ -4608,13 +4601,30 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         
         {/* Code Generation Tips - Only show for Lambda tab */}
         {activeTab === 'lambda' && (
-          <div className="bg-blue-50 rounded-lg border border-blue-200 p-4 mb-4">
-            <h4 className="font-medium text-blue-900 mb-2">💡 Code Generation Tips</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Describe the function's purpose clearly</li>
-              <li>• Specify the programming language (Node.js, Python, etc.)</li>
-              <li>• Mention any AWS services you want to integrate with</li>
-              <li>• Include error handling requirements</li>
+          <div className="bg-indigo-50 rounded-xl border-2 border-indigo-200 p-4 mb-4 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1.5 bg-indigo-600 rounded-lg shadow-sm">
+                <span className="text-base">💡</span>
+              </div>
+              <h4 className="font-bold text-indigo-900">Code Generation Tips</h4>
+            </div>
+            <ul className="text-sm text-indigo-800 space-y-2 ml-1">
+              <li className="flex items-start gap-2">
+                <span className="text-indigo-400 font-bold">•</span>
+                <span>Describe the function's purpose clearly</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-indigo-400 font-bold">•</span>
+                <span>Specify the programming language (Node.js, Python, etc.)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-indigo-400 font-bold">•</span>
+                <span>Mention any AWS services you want to integrate with</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-indigo-400 font-bold">•</span>
+                <span>Include error handling requirements</span>
+              </li>
             </ul>
           </div>
         )}
@@ -4622,13 +4632,13 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         {activeTab === 'lambda' && messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
           >
             <div
-              className={`max-w-[80%] rounded-lg px-4 py-2 ${
+              className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm transition-all hover:shadow-md ${
                 message.role === 'user'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-900'
+                  ? 'bg-indigo-600 text-white rounded-br-sm'
+                  : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
               }`}
             >
               <div 
@@ -4888,7 +4898,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
 
 
         {/* Chat Input - Always at bottom */}
-        <div className="border-t border-gray-200 p-2 md:p-4 bg-white relative">
+        <div className="border-t-2 border-gray-200 p-3 md:p-4 bg-white shadow-inner relative">
           {/* Selected Namespace Chips */}
           {droppedNamespaces.length > 0 && (
             <div className="mb-2 md:mb-3">
@@ -4897,17 +4907,17 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                   {droppedNamespaces.map((ns, index) => (
                     <div
                       key={ns['namespace-id'] || index}
-                      className="inline-flex items-center gap-1 bg-blue-100/80 text-blue-700 px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-xs font-medium border border-blue-200"
+                      className="inline-flex items-center gap-1.5 bg-indigo-600 text-white px-2.5 md:px-3 py-1 md:py-1.5 rounded-full text-xs font-semibold shadow-md hover:shadow-lg transition-all"
                     >
                       <span className="truncate max-w-[80px] md:max-w-none">@{ns['namespace-name']}</span>
                       <button
                         onClick={() => {
                           setDroppedNamespaces(prev => prev.filter((_, i) => i !== index));
                         }}
-                        className="ml-1 hover:bg-blue-200 rounded-full p-0.5 transition-colors"
+                        className="ml-0.5 hover:bg-white/20 rounded-full p-0.5 transition-all hover:scale-110"
                         title="Remove namespace"
                       >
-                        <X className="w-2.5 h-2.5 md:w-3 md:h-3 text-blue-600" />
+                        <X className="w-3 h-3 md:w-3.5 md:h-3.5 text-white" />
                       </button>
                     </div>
                   ))}
@@ -4928,7 +4938,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             </div>
           )}
           
-          <div className="flex gap-1 md:gap-2">
+          <div className="flex gap-2 md:gap-3">
             <div className="flex-1 relative">
               <textarea
                 ref={inputRef}
@@ -4937,7 +4947,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                 onKeyPress={handleKeyPress}
                 onKeyDown={handleKeyDown}
                 placeholder={namespace ? "Type your message..." : "Type your message... (Try: 'Create a namespace for...' to generate a new project)"}
-                className="w-full resize-none border border-gray-300 rounded-lg px-2 md:px-3 py-1.5 md:py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full resize-none border-2 border-gray-200 rounded-xl px-3 md:px-4 py-2 md:py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm shadow-sm hover:border-indigo-300 transition-all bg-white"
                 rows={1}
                 disabled={isLoading}
               />
@@ -4972,9 +4982,18 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             <button
               onClick={handleSendMessage}
               disabled={isLoading || !inputMessage.trim()}
-              className="px-2 md:px-4 py-1.5 md:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`px-4 md:px-5 py-2.5 md:py-3 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg flex items-center justify-center ${
+                isLoading || !inputMessage.trim()
+                  ? 'bg-gray-300 cursor-not-allowed text-gray-500'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+              }`}
+              title={isLoading ? 'Sending...' : 'Send message'}
             >
-              <Send className="w-3 h-3 md:w-4 md:h-4" />
+              {isLoading ? (
+                <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <Send className="w-4 h-4 md:w-5 md:h-5" />
+              )}
             </button>
           </div>
         </div>

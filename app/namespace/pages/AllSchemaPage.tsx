@@ -7,7 +7,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:50
 
 
 
-export default function AllSchemaPage({ namespace, onViewSchema, onEditSchema, openCreate = false, onCreateNew, refreshSidePanelData }: { namespace?: any, onViewSchema?: (schema: any, ns?: any) => void, onEditSchema?: (schema: any, ns?: any) => void, openCreate?: boolean, onCreateNew?: () => void, refreshSidePanelData?: () => Promise<void> }) {
+export default function AllSchemaPage({ namespace, onViewSchema, onEditSchema, openCreate = false, onCreateNew, refreshSidePanelData, timestamp }: { namespace?: any, onViewSchema?: (schema: any, ns?: any) => void, onEditSchema?: (schema: any, ns?: any) => void, openCreate?: boolean, onCreateNew?: () => void, refreshSidePanelData?: () => Promise<void>, timestamp?: number }) {
   const [schemas, setSchemas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -81,26 +81,32 @@ export default function AllSchemaPage({ namespace, onViewSchema, onEditSchema, o
           {schemas.map(schema => (
             <div
               key={schema.id}
-              className="border border-gray-200 rounded-xl p-4 flex flex-col gap-2 min-w-0 bg-white shadow-sm hover:shadow-md transition-shadow"
+              className="border border-gray-200 rounded-xl p-4 flex flex-col gap-2 min-w-0 bg-white shadow-sm hover:shadow-md hover:border-purple-400 transition-all cursor-pointer"
               style={{ width: '260px', margin: '0' }}
+              onClick={() => onViewSchema && onViewSchema(schema, namespace)}
+              title="Click to view schema details"
             >
               <div className="flex items-center justify-between gap-2 mb-2">
                 <span className="text-base font-semibold text-gray-900 truncate">{schema.schemaName}</span>
                 <div className="flex gap-2">
-                  <button className="text-blue-600 hover:text-blue-800 p-1" title="View" onClick={() => onViewSchema && onViewSchema(schema, namespace)}>
+                  <button 
+                    className="text-blue-600 hover:text-blue-800 p-1" 
+                    title="View" 
+                    onClick={(e) => { e.stopPropagation(); onViewSchema && onViewSchema(schema, namespace); }}
+                  >
                     <Eye size={18} />
                   </button>
                   <button 
                     className="text-green-600 hover:text-green-800 p-1" 
                     title="Edit"
-                    onClick={() => onEditSchema && onEditSchema(schema, namespace)}
+                    onClick={(e) => { e.stopPropagation(); onEditSchema && onEditSchema(schema, namespace); }}
                   >
                     <Edit size={18} />
                   </button>
                   <button 
                     className="text-red-600 hover:text-red-800 p-1" 
                     title="Delete"
-                    onClick={() => handleDelete(schema.id)}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(schema.id); }}
                   >
                     <Trash2 size={18} />
                   </button>

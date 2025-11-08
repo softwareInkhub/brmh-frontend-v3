@@ -1,18 +1,23 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Plus, Eye, Code, Zap, Clock, Settings } from 'lucide-react';
+import { Plus, Eye, Code, Zap, Clock, Settings, X } from 'lucide-react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 interface AllLambdasPageProps {
   namespace: any;
   onViewLambda: (lambda: any, namespace: any) => void;
+  openCreate?: boolean;
+  timestamp?: number;
 }
 
-const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda }) => {
+const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda, openCreate = false, timestamp }) => {
   const [lambdas, setLambdas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidePanel, setSidePanel] = useState<'create' | { lambda: any } | null>(null);
+  const [panelTopPosition, setPanelTopPosition] = useState(0); // Panel top position in pixels
+  const [sidePanelWidth, setSidePanelWidth] = useState(400);
+  const [isResizing, setIsResizing] = useState(false);
 
   // Create form state
   const [createData, setCreateData] = useState({
@@ -49,6 +54,61 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
   useEffect(() => {
     if (namespace) fetchLambdas();
   }, [namespace]);
+
+  // Auto-open create panel when requested
+  useEffect(() => {
+    if (openCreate) {
+      setSidePanel('create');
+      // Calculate panel top position from namespace tab bar
+      if (typeof window !== 'undefined') {
+        const tabBar = document.querySelector('.namespace-tab-bar');
+        if (tabBar) {
+          const rect = tabBar.getBoundingClientRect();
+          setPanelTopPosition(rect.bottom);
+        }
+      }
+    }
+  }, [openCreate, timestamp]); // timestamp ensures re-trigger even if openCreate stays true
+
+  // Calculate panel top position on window resize/scroll
+  useEffect(() => {
+    const calculatePanelTop = () => {
+      if (typeof window !== 'undefined' && sidePanel) {
+        const tabBar = document.querySelector('.namespace-tab-bar');
+        if (tabBar) {
+          const rect = tabBar.getBoundingClientRect();
+          setPanelTopPosition(rect.bottom);
+        }
+      }
+    };
+
+    calculatePanelTop();
+    window.addEventListener('resize', calculatePanelTop);
+    window.addEventListener('scroll', calculatePanelTop);
+    
+    return () => {
+      window.removeEventListener('resize', calculatePanelTop);
+      window.removeEventListener('scroll', calculatePanelTop);
+    };
+  }, [sidePanel]);
+
+  // Handle mouse events for resizing
+  useEffect(() => {
+    if (!isResizing) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      const minWidth = 320;
+      const maxWidth = 700;
+      const newWidth = Math.min(Math.max(window.innerWidth - e.clientX, minWidth), maxWidth);
+      setSidePanelWidth(newWidth);
+    };
+    const handleMouseUp = () => setIsResizing(false);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   const handleCreateInput = (field: string, value: string | number) => {
     setCreateData(prev => ({ ...prev, [field]: value }));
@@ -123,17 +183,53 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
       </div>
 
       {/* Create Lambda Side Panel */}
-      {sidePanel === 'create' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-4">Create Lambda</h3>
+      {sidePanel && (
+        <div className="md:hidden fixed inset-0 bg-black/40 z-40" onClick={() => setSidePanel(null)} />
+      )}
+      <div
+        className={`fixed right-0 bg-white border-l border-gray-200 shadow-2xl z-50 transition-transform duration-300 flex flex-col`}
+        style={{ 
+          top: `${panelTopPosition}px`,
+          bottom: 0,
+          width: sidePanel ? (typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : sidePanelWidth) : 0, 
+          transform: sidePanel ? 'translateX(0)' : `translateX(${sidePanelWidth}px)`, 
+          boxShadow: sidePanel ? '0 0 32px 0 rgba(0,0,0,0.10)' : 'none', 
+          borderTopLeftRadius: 16, 
+          borderBottomLeftRadius: 16, 
+          overflow: 'auto' 
+        }}
+      >
+        {/* Draggable resizer */}
+        {sidePanel && (
+          <div
+            className="hidden md:block"
+            style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 8, cursor: 'ew-resize', zIndex: 10 }}
+            onMouseDown={() => setIsResizing(true)}
+          >
+            <div style={{ width: 4, height: 48, background: '#3b82f6', borderRadius: 2, margin: 'auto', marginTop: 24 }} />
+          </div>
+        )}
+        {sidePanel === 'create' && (
+          <div className="p-6 overflow-y-auto flex-1">
+            <div className="mb-4 text-lg font-bold text-indigo-700 text-center">
+              {namespace?.['namespace-name']}
+            </div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-bold text-indigo-700 flex items-center gap-2">
+                <span className="w-6 h-6 bg-indigo-100 text-indigo-500 rounded-full flex items-center justify-center mr-2">⚡</span>
+                Create Lambda
+              </h3>
+              <button onClick={() => setSidePanel(null)} className="text-gray-400 hover:text-gray-700">
+                <X size={22} />
+              </button>
+            </div>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Function Name *</label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-base focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition outline-none bg-indigo-50 placeholder-gray-400"
                   value={createData['function-name']}
                   onChange={e => handleCreateInput('function-name', e.target.value)}
                   placeholder="my-lambda-function"
@@ -143,7 +239,7 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
                 <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-base focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition outline-none bg-indigo-50 placeholder-gray-400"
                   value={createData['description']}
                   onChange={e => handleCreateInput('description', e.target.value)}
                   placeholder="Description of the lambda function"
@@ -155,7 +251,7 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Runtime</label>
                   <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-green-200 rounded-lg text-base focus:ring-2 focus:ring-green-400 focus:border-green-400 transition outline-none bg-green-50"
                     value={createData['runtime']}
                     onChange={e => handleCreateInput('runtime', e.target.value)}
                   >
@@ -170,7 +266,7 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
                   <label className="block text-xs font-medium text-gray-700 mb-1">Handler</label>
                   <input
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-blue-200 rounded-lg text-base focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition outline-none bg-blue-50 placeholder-gray-400"
                     value={createData['handler']}
                     onChange={e => handleCreateInput('handler', e.target.value)}
                     placeholder="index.handler"
@@ -183,7 +279,7 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
                   <label className="block text-xs font-medium text-gray-700 mb-1">Memory (MB)</label>
                   <input
                     type="number"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-purple-200 rounded-lg text-base focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition outline-none bg-purple-50 placeholder-gray-400"
                     value={createData['memory']}
                     onChange={e => handleCreateInput('memory', parseInt(e.target.value))}
                     min="128"
@@ -196,7 +292,7 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
                   <label className="block text-xs font-medium text-gray-700 mb-1">Timeout (s)</label>
                   <input
                     type="number"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-yellow-200 rounded-lg text-base focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition outline-none bg-yellow-50 placeholder-gray-400"
                     value={createData['timeout']}
                     onChange={e => handleCreateInput('timeout', parseInt(e.target.value))}
                     min="1"
@@ -213,22 +309,23 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
               
               <div className="flex gap-3 pt-4">
                 <button
-                  onClick={handleCreateLambda}
-                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Create Lambda
-                </button>
-                <button
+                  type="button"
                   onClick={() => setSidePanel(null)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md text-sm font-medium hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  className="bg-gray-200 text-gray-700 rounded-lg px-6 py-2 font-semibold text-base hover:bg-gray-300 transition"
                 >
                   Cancel
+                </button>
+                <button
+                  onClick={handleCreateLambda}
+                  className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg px-6 py-2 font-bold text-base shadow-lg hover:from-indigo-600 hover:to-purple-600 transition"
+                >
+                  Create Lambda
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Lambda Details Side Panel */}
       {sidePanel && typeof sidePanel === 'object' && sidePanel.lambda && (
@@ -291,7 +388,12 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
       <div className="space-y-3">
         {lambdas.length === 0 && <div className="text-gray-400">No lambdas found.</div>}
         {lambdas.map((lambda, idx) => (
-          <div key={lambda.id || idx} className="flex items-center justify-between bg-white border rounded px-4 py-2 shadow-sm">
+          <div 
+            key={lambda.id || idx} 
+            className="flex items-center justify-between bg-white border rounded px-4 py-2 shadow-sm hover:shadow-md hover:border-indigo-400 transition-all cursor-pointer"
+            onClick={() => setSidePanel({ lambda: lambda })}
+            title="Click to view lambda details"
+          >
             <div className="flex items-center gap-3">
               <Code className="w-5 h-5 text-blue-500" />
               <div>
@@ -315,7 +417,13 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
                 </div>
               </div>
             </div>
-            <button className="text-blue-600 hover:text-blue-800 p-1" title="View" onClick={() => setSidePanel({ lambda: lambda })}><Eye size={16} /></button>
+            <button 
+              className="text-blue-600 hover:text-blue-800 p-1" 
+              title="View" 
+              onClick={(e) => { e.stopPropagation(); setSidePanel({ lambda: lambda }); }}
+            >
+              <Eye size={16} />
+            </button>
           </div>
         ))}
       </div>

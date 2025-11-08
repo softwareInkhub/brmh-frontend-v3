@@ -191,6 +191,36 @@
   animation: slideInFromRight 0.5s ease-out;
 }
 
+/* Fade-in animation for messages */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Spin animation for refresh button */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
 /* Mobile-specific utilities */
 @media (max-width: 768px) {
   .mobile-full-width {

@@ -125,8 +125,8 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
   const [showSchemaModal, setShowSchemaModal] = useState(false);
 
   // Add state for all accounts/methods tabs
-  const [allAccountsTabs, setAllAccountsTabs] = useState<{ key: string; namespace?: any; openCreate?: boolean }[]>([]);
-  const [allMethodsTabs, setAllMethodsTabs] = useState<{ key: string; namespace?: any; openCreate?: boolean }[]>([]);
+  const [allAccountsTabs, setAllAccountsTabs] = useState<{ key: string; namespace?: any; openCreate?: boolean; timestamp?: number }[]>([]);
+  const [allMethodsTabs, setAllMethodsTabs] = useState<{ key: string; namespace?: any; openCreate?: boolean; timestamp?: number }[]>([]);
 
   // Add state for account/method tabs
   const [accountPageTabs, setAccountPageTabs] = useState<{ key: string; account: any; namespace: any; openEdit?: boolean }[]>([]);
@@ -135,10 +135,10 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
 
 
   // Add state for schema page tabs
-  const [schemaPageTabs, setSchemaPageTabs] = useState<{ key: string; schema?: any; mode: 'create' | 'preview' | 'edit'; initialSchemaName?: string; namespace?: any; methodId?: string }[]>([]);
+  const [schemaPageTabs, setSchemaPageTabs] = useState<{ key: string; schema?: any; mode: 'create' | 'preview' | 'edit'; initialSchemaName?: string; namespace?: any; methodId?: string; timestamp?: number }[]>([]);
 
   // Add state for all schemas tabs
-  const [allSchemasTabs, setAllSchemasTabs] = useState<{ key: string; namespace?: any }[]>([]);
+  const [allSchemasTabs, setAllSchemasTabs] = useState<{ key: string; namespace?: any; openCreate?: boolean; timestamp?: number }[]>([]);
 
   // Add state for single namespace tabs
   const [singleNamespaceTabs, setSingleNamespaceTabs] = useState<{ key: string; namespace: any }[]>([]);
@@ -155,7 +155,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
   const [tabLayout, setTabLayout] = useState<'horizontal' | 'vertical'>('horizontal');
 
   // Add state for all webhooks tabs
-  const [allWebhooksTabs, setAllWebhooksTabs] = useState<{ key: string; namespace?: any }[]>([]);
+  const [allWebhooksTabs, setAllWebhooksTabs] = useState<{ key: string; namespace?: any; openCreate?: boolean; timestamp?: number }[]>([]);
 
   // Add state for webhooks per namespace
   const [webhooksMap, setWebhooksMap] = useState<Record<string, any[]>>({});
@@ -167,7 +167,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
   const [lambdasMap, setLambdasMap] = useState<Record<string, any[]>>({});
   
   // Add state for all lambdas tabs
-  const [allLambdasTabs, setAllLambdasTabs] = useState<{ key: string; namespace?: any }[]>([]);
+  const [allLambdasTabs, setAllLambdasTabs] = useState<{ key: string; namespace?: any; openCreate?: boolean; timestamp?: number }[]>([]);
   
   // Add state for lambdaPage tabs
   const [lambdaPageTabs, setLambdaPageTabs] = useState<{ key: string; lambda: any; namespace: any }[]>([]);
@@ -391,10 +391,43 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
     if (type === 'namespace') {
       setNamespaceModal({ isOpen: true, namespace: null });
     } else if (type === 'account') {
-      setAccountModal({ isOpen: true, account: null });
+      // Open all accounts tab instead of modal
+      const ns = parentData || namespaces[0];
+      const key = ns ? `allAccounts-${ns['namespace-id']}` : 'allAccounts';
+      if (!tabs.find(tab => tab.key === key)) {
+        setTabs([...tabs, { key, label: ns ? `Accounts: ${ns['namespace-name']}` : 'All Accounts', pinned: false }]);
+      }
+      setActiveTab(key);
+      // Always set openCreate to true, whether tab exists or not
+      setAllAccountsTabs(prev => {
+        const exists = prev.find(t => t.key === key);
+        if (exists) {
+          // First set to false, then immediately to true to trigger re-render
+          return prev.map(t => t.key === key ? { ...t, openCreate: true, timestamp: Date.now() } : t);
+        }
+        return [...prev, { key, namespace: ns, openCreate: true, timestamp: Date.now() }];
+      });
+      return;
     } else if (type === 'method') {
-      setMethodModal({ isOpen: true, method: null });
+      // Open all methods tab instead of modal
+      const ns = parentData || namespaces[0];
+      const key = ns ? `allMethods-${ns['namespace-id']}` : 'allMethods';
+      if (!tabs.find(tab => tab.key === key)) {
+        setTabs([...tabs, { key, label: ns ? `Methods: ${ns['namespace-name']}` : 'All Methods', pinned: false }]);
+      }
+      setActiveTab(key);
+      // Always set openCreate to true, whether tab exists or not
+      setAllMethodsTabs(prev => {
+        const exists = prev.find(t => t.key === key);
+        if (exists) {
+          // Add timestamp to force re-render
+          return prev.map(t => t.key === key ? { ...t, openCreate: true, timestamp: Date.now() } : t);
+        }
+        return [...prev, { key, namespace: ns, openCreate: true, timestamp: Date.now() }];
+      });
+      return;
     } else if (type === 'schema') {
+      // Open schema creation interface (Visual Editor + JSON Editor)
       const ns = parentData || namespaces[0];
       const nsId = ns?.['namespace-id'] || '';
       const nsName = ns?.['namespace-name'] || '';
@@ -403,9 +436,50 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
         setTabs([...tabs, { key, label: nsName ? `New Schema: ${nsName}` : 'New Schema', pinned: false }]);
       }
       setActiveTab(key);
+      // Add timestamp support for re-opening
       setSchemaPageTabs(prev => {
-        if (prev.find(t => t.key === key)) return prev;
-        return [...prev, { key, mode: 'create', namespace: ns }];
+        const exists = prev.find(t => t.key === key);
+        if (exists) {
+          // Update timestamp to force refresh
+          return prev.map(t => t.key === key ? { ...t, mode: 'create', namespace: ns, timestamp: Date.now() } : t);
+        }
+        return [...prev, { key, mode: 'create', namespace: ns, timestamp: Date.now() }];
+      });
+      return;
+    } else if (type === 'webhook') {
+      // Open all webhooks tab instead of modal
+      const ns = parentData || namespaces[0];
+      const key = ns ? `allWebhooks-${ns['namespace-id']}` : 'allWebhooks';
+      if (!tabs.find(tab => tab.key === key)) {
+        setTabs([...tabs, { key, label: ns ? `Webhooks: ${ns['namespace-name']}` : 'All Webhooks', pinned: false }]);
+      }
+      setActiveTab(key);
+      // Always set openCreate to true, whether tab exists or not
+      setAllWebhooksTabs(prev => {
+        const exists = prev.find(t => t.key === key);
+        if (exists) {
+          // Add timestamp to force re-render
+          return prev.map(t => t.key === key ? { ...t, openCreate: true, timestamp: Date.now() } : t);
+        }
+        return [...prev, { key, namespace: ns, openCreate: true, timestamp: Date.now() }];
+      });
+      return;
+    } else if (type === 'lambda') {
+      // Open all lambdas tab instead of modal
+      const ns = parentData || namespaces[0];
+      const key = ns ? `allLambdas-${ns['namespace-id']}` : 'allLambdas';
+      if (!tabs.find(tab => tab.key === key)) {
+        setTabs([...tabs, { key, label: ns ? `Lambdas: ${ns['namespace-name']}` : 'All Lambdas', pinned: false }]);
+      }
+      setActiveTab(key);
+      // Always set openCreate to true, whether tab exists or not
+      setAllLambdasTabs(prev => {
+        const exists = prev.find(t => t.key === key);
+        if (exists) {
+          // Add timestamp to force re-render
+          return prev.map(t => t.key === key ? { ...t, openCreate: true, timestamp: Date.now() } : t);
+        }
+        return [...prev, { key, namespace: ns, openCreate: true, timestamp: Date.now() }];
       });
       return;
     } else if (type === 'allAccounts') {
@@ -945,7 +1019,11 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
         </div>
         {/* Main Content */}
         <div 
-          className="flex-1 min-h-0 overflow-y-auto transition-all duration-200 md:ml-0"
+          className="min-h-0 overflow-y-auto transition-all duration-200 md:ml-0"
+          style={{ 
+            width: isCollapsed ? 'calc(100vw - 80px)' : 'calc(100vw - 336px)',
+            flexShrink: 0
+          }}
         >
                
                 
@@ -955,7 +1033,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                 {/* Tab Layout: Horizontal or Vertical */}
                 {tabLayout === 'horizontal' ? (
                   <>
-                    <div className="border-b bg-white px-2 md:px-4 py-2 overflow-x-auto whitespace-nowrap relative scrollbar-thin-x">
+                    <div className="border-b bg-white px-2 md:px-4 py-2 overflow-x-auto whitespace-nowrap relative scrollbar-thin-x namespace-tab-bar">
                       <div className="flex items-center gap-1" style={{ minWidth: 'fit-content', width: 'fit-content', display: 'inline-flex' }}>
                         {/* Sticky container for view button and Overview tab */}
                         <div className="sticky left-0 z-10 bg-white flex items-center pr-2" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.04)' }}>
@@ -1072,6 +1150,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                             setNamespaceDetailsMap({});
                           }}
                           onOpenNamespaceTab={handleOpenNamespaceTab}
+                          onAddItem={handleSidePanelAdd}
                           onViewAccount={(account, ns) => {
                             const tabKey = `accountPage-${account['namespace-account-id']}`;
                             if (!tabs.find(tab => tab.key === tabKey)) {
@@ -1123,6 +1202,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                             setNamespaceDetailsMap({});
                           }}
                           onOpenNamespaceTab={handleOpenNamespaceTab}
+                          onAddItem={handleSidePanelAdd}
                           onViewAccount={(account, ns) => {
                             const tabKey = `accountPage-${account['namespace-account-id']}`;
                             if (!tabs.find(tab => tab.key === tabKey)) {
@@ -1173,7 +1253,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                       {(activeTab === 'new' || activeTab.startsWith('tab-')) && (
                         <NewTabContent onOpenTab={handleOpenTab} />
                       )}
-                      {allAccountsTabs.map(({ key, namespace, openCreate }) => (
+                      {allAccountsTabs.map(({ key, namespace, openCreate, timestamp }) => (
                         <div
                           key={key}
                           style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
@@ -1181,6 +1261,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           <AllAccountPage
                             namespace={namespace}
                             openCreate={!!openCreate}
+                            timestamp={timestamp}
                             refreshSidePanelData={fetchData}
                             onViewAccount={(account, ns) => {
                               const tabKey = `accountPage-${account['namespace-account-id']}`;
@@ -1196,7 +1277,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           />
                         </div>
                       ))}
-                      {allMethodsTabs.map(({ key, namespace, openCreate }) => (
+                      {allMethodsTabs.map(({ key, namespace, openCreate, timestamp }) => (
                         <div
                           key={key}
                           style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
@@ -1204,6 +1285,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           <AllMethodPage
                             namespace={namespace}
                             openCreate={!!openCreate}
+                            timestamp={timestamp}
                             refreshSidePanelData={fetchData}
                             onViewMethod={(method, ns) => {
                               const tabKey = `methodPage-${method['namespace-method-id']}`;
@@ -1264,9 +1346,9 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           />
                         </div>
                       ))}
-                      {schemaPageTabs.map(({ key, schema, mode, initialSchemaName, namespace, methodId }) => (
+                      {schemaPageTabs.map(({ key, schema, mode, initialSchemaName, namespace, methodId, timestamp }) => (
                         <div
-                          key={key}
+                          key={`${key}-${timestamp || 0}`}
                           style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
                         >
                           <SchemaCreatePage
@@ -1295,13 +1377,15 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           />
                         </div>
                       ))}
-                      {allSchemasTabs.map(({ key, namespace }) => (
+                      {allSchemasTabs.map(({ key, namespace, openCreate, timestamp }) => (
                         <div
                           key={key}
                           style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
                         >
                           <AllSchemaPage
                             namespace={namespace}
+                            openCreate={!!openCreate}
+                            timestamp={timestamp}
                             refreshSidePanelData={fetchData}
                             onViewSchema={(schema, ns) => {
                               const tabKey = `schema-preview-${schema.id}`;
@@ -1395,13 +1479,15 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           />
                         </div>
                       ))}
-                      {allWebhooksTabs.map(({ key, namespace }) => (
+                      {allWebhooksTabs.map(({ key, namespace, openCreate, timestamp }) => (
                         <div
                           key={key}
                           style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
                         >
                           <AllWebhookPage
                             namespace={namespace}
+                            openCreate={!!openCreate}
+                            timestamp={timestamp}
                             onViewWebhook={(webhook, ns) => {
                               // (Optional) Open single webhook tab here
                             }}
@@ -1416,13 +1502,15 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           <WebhookPage webhook={webhook} namespace={namespace} />
                         </div>
                       ))}
-                      {allLambdasTabs.map(({ key, namespace }) => (
+                      {allLambdasTabs.map(({ key, namespace, openCreate, timestamp }) => (
                         <div
                           key={key}
                           style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
                         >
                           <AllLambdasPage
                             namespace={namespace}
+                            openCreate={!!openCreate}
+                            timestamp={timestamp}
                             onViewLambda={(lambda, ns) => {
                               // (Optional) Open single lambda tab here
                             }}
@@ -1514,6 +1602,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                   setNamespaces([]);
                 }}
                 onOpenNamespaceTab={handleOpenNamespaceTab}
+                onAddItem={handleSidePanelAdd}
               />
             )}
             {activeTab === 'namespace' && <Namespace />}
@@ -1533,6 +1622,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                   setNamespaces([]);
                 }}
                 onOpenNamespaceTab={handleOpenNamespaceTab}
+                onAddItem={handleSidePanelAdd}
               />
             )}
             {activeTab === 'schema' && <SchemaCreatePage 
@@ -1550,13 +1640,15 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
             {(activeTab === 'new' || activeTab.startsWith('tab-')) && (
               <NewTabContent onOpenTab={handleOpenTab} />
             )}
-                      {allAccountsTabs.map(({ key, namespace }) => (
+                      {allAccountsTabs.map(({ key, namespace, openCreate, timestamp }) => (
               <div
                 key={key}
                 style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
               >
                 <AllAccountPage
                   namespace={namespace}
+                  openCreate={!!openCreate}
+                  timestamp={timestamp}
                   refreshSidePanelData={fetchData}
                   onViewAccount={(account, ns) => {
                     const tabKey = `accountPage-${account['namespace-account-id']}`;
@@ -1572,13 +1664,15 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                 />
               </div>
             ))}
-                      {allMethodsTabs.map(({ key, namespace }) => (
+                      {allMethodsTabs.map(({ key, namespace, openCreate, timestamp }) => (
               <div
                 key={key}
                 style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
               >
                 <AllMethodPage
                   namespace={namespace}
+                  openCreate={!!openCreate}
+                  timestamp={timestamp}
                   refreshSidePanelData={fetchData}
                   onViewMethod={(method, ns) => {
                     const tabKey = `methodPage-${method['namespace-method-id']}`;
@@ -1638,9 +1732,9 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                 />
               </div>
             ))}
-            {schemaPageTabs.map(({ key, schema, mode, initialSchemaName, namespace, methodId }) => (
+            {schemaPageTabs.map(({ key, schema, mode, initialSchemaName, namespace, methodId, timestamp }) => (
               <div
-                key={key}
+                key={`${key}-${timestamp || 0}`}
                 style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
               >
                 <SchemaCreatePage
@@ -1669,13 +1763,15 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                 />
               </div>
             ))}
-            {allSchemasTabs.map(({ key, namespace }) => (
+            {allSchemasTabs.map(({ key, namespace, openCreate, timestamp }) => (
               <div
                 key={key}
                 style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
               >
                 <AllSchemaPage
                   namespace={namespace}
+                  openCreate={!!openCreate}
+                  timestamp={timestamp}
                   refreshSidePanelData={fetchData}
                   onViewSchema={(schema, ns) => {
                     const tabKey = `schema-preview-${schema.id}`;
@@ -1721,13 +1817,15 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                 <SingleNamespacePage namespaceId={namespace['namespace-id']} initialNamespace={namespace} refreshSidePanelData={fetchData} />
               </div>
             ))}
-            {allWebhooksTabs.map(({ key, namespace }) => (
+            {allWebhooksTabs.map(({ key, namespace, openCreate, timestamp }) => (
               <div
                 key={key}
                 style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
               >
                 <AllWebhookPage
                   namespace={namespace}
+                  openCreate={!!openCreate}
+                  timestamp={timestamp}
                   onViewWebhook={(webhook, ns) => {
                     // (Optional) Open single webhook tab here
                   }}
@@ -1742,13 +1840,15 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                 <WebhookPage webhook={webhook} namespace={namespace} />
               </div>
             ))}
-            {allLambdasTabs.map(({ key, namespace }) => (
+            {allLambdasTabs.map(({ key, namespace, openCreate, timestamp }) => (
               <div
                 key={key}
                 style={{ display: activeTab === key ? 'block' : 'none', width: '100%', height: '100%' }}
               >
                 <AllLambdasPage
                   namespace={namespace}
+                  openCreate={!!openCreate}
+                  timestamp={timestamp}
                   onViewLambda={(lambda, ns) => {
                     // (Optional) Open single lambda tab here
                   }}

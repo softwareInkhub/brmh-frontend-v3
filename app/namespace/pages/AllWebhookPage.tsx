@@ -6,14 +6,17 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:50
 interface AllWebhookPageProps {
   namespace: any;
   onViewWebhook: (webhook: any, namespace: any) => void;
+  openCreate?: boolean;
+  timestamp?: number;
 }
 
-const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhook }) => {
+const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhook, openCreate = false, timestamp }) => {
   const [webhooks, setWebhooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidePanel, setSidePanel] = useState<'create' | { webhook: any } | null>(null);
   const [sidePanelWidth, setSidePanelWidth] = useState(400);
   const [isResizing, setIsResizing] = useState(false);
+  const [panelTopPosition, setPanelTopPosition] = useState(0); // Panel top position in pixels
   const [createData, setCreateData] = useState<any>({
     'webhook-name': '',
     'post-exec-url': '',
@@ -85,6 +88,43 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizing]);
+
+  // Auto-open create panel when requested
+  useEffect(() => {
+    if (openCreate) {
+      setSidePanel('create');
+      // Calculate panel top position from namespace tab bar
+      if (typeof window !== 'undefined') {
+        const tabBar = document.querySelector('.namespace-tab-bar');
+        if (tabBar) {
+          const rect = tabBar.getBoundingClientRect();
+          setPanelTopPosition(rect.bottom);
+        }
+      }
+    }
+  }, [openCreate, timestamp]); // timestamp ensures re-trigger even if openCreate stays true
+
+  // Calculate panel top position on window resize/scroll
+  useEffect(() => {
+    const calculatePanelTop = () => {
+      if (typeof window !== 'undefined' && sidePanel) {
+        const tabBar = document.querySelector('.namespace-tab-bar');
+        if (tabBar) {
+          const rect = tabBar.getBoundingClientRect();
+          setPanelTopPosition(rect.bottom);
+        }
+      }
+    };
+
+    calculatePanelTop();
+    window.addEventListener('resize', calculatePanelTop);
+    window.addEventListener('scroll', calculatePanelTop);
+    
+    return () => {
+      window.removeEventListener('resize', calculatePanelTop);
+      window.removeEventListener('scroll', calculatePanelTop);
+    };
+  }, [sidePanel]);
 
   const handleCreateInput = (field: string, value: any) => {
     setCreateData((prev: any) => ({ ...prev, [field]: value }));
@@ -299,12 +339,23 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
           <div className="space-y-2">
             {webhooks.length === 0 && <div className="text-gray-400">No webhooks found.</div>}
             {webhooks.map((wh, idx) => (
-              <div key={wh['webhook-id'] || idx} className="flex items-center justify-between bg-white border rounded px-4 py-2 shadow-sm">
+              <div 
+                key={wh['webhook-id'] || idx} 
+                className="flex items-center justify-between bg-white border rounded px-4 py-2 shadow-sm hover:shadow-md hover:border-pink-400 transition-all cursor-pointer"
+                onClick={() => setSidePanel({ webhook: wh })}
+                title="Click to view webhook details"
+              >
                 <div className="flex flex-col">
                   <span className="font-semibold text-gray-900">{wh['webhook-name']}</span>
                   <span className="text-xs text-gray-500">{wh['post-exec-url']}</span>
                 </div>
-                <button className="text-pink-600 hover:text-pink-800 p-1" title="View" onClick={() => setSidePanel({ webhook: wh })}><Eye size={16} /></button>
+                <button 
+                  className="text-pink-600 hover:text-pink-800 p-1" 
+                  title="View" 
+                  onClick={(e) => { e.stopPropagation(); setSidePanel({ webhook: wh }); }}
+                >
+                  <Eye size={16} />
+                </button>
               </div>
             ))}
           </div>
@@ -312,8 +363,17 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
       </div>
       {/* Side Panel with draggable resizer */}
       <div
-        className={`fixed top-0 right-0 h-full bg-white border-l border-gray-200 shadow-2xl z-50 transition-transform duration-300 flex flex-col`}
-        style={{ minHeight: '100vh', width: sidePanel ? sidePanelWidth : 0, transform: sidePanel ? 'translateX(0)' : `translateX(${sidePanelWidth}px)`, boxShadow: sidePanel ? '0 0 32px 0 rgba(0,0,0,0.10)' : 'none', borderTopLeftRadius: 16, borderBottomLeftRadius: 16, overflow: 'auto' }}
+        className={`fixed right-0 bg-white border-l border-gray-200 shadow-2xl z-50 transition-transform duration-300 flex flex-col`}
+        style={{ 
+          top: `${panelTopPosition}px`,
+          bottom: 0,
+          width: sidePanel ? sidePanelWidth : 0, 
+          transform: sidePanel ? 'translateX(0)' : `translateX(${sidePanelWidth}px)`, 
+          boxShadow: sidePanel ? '0 0 32px 0 rgba(0,0,0,0.10)' : 'none', 
+          borderTopLeftRadius: 16, 
+          borderBottomLeftRadius: 16, 
+          overflow: 'auto' 
+        }}
       >
         {/* Draggable resizer */}
         {sidePanel && (
