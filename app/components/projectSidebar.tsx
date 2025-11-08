@@ -39,8 +39,8 @@ const sidebarItems = [
     icon: <Cloud size={20} />,
   },
   {
-    name: 'Tests',
-    path: '/tests',
+    name: 'Test',
+    path: '/test',
     icon: <Play size={20} />,
   },
   {

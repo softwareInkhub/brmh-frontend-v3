@@ -1198,7 +1198,16 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                     {viewMode === 'list' && (
                       <div className="mt-1 flex items-center gap-3 min-w-0">
                         {ns["namespace-url"] && (
-                          <span className={`text-gray-500 truncate ${shouldHideActionButtons ? 'text-[10px] max-w-[200px]' : 'text-xs max-w-[280px]'}`}>{ns["namespace-url"]}</span>
+                          <a 
+                            href={ns["namespace-url"]} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className={`text-blue-600 hover:text-blue-800 truncate flex items-center gap-1 group ${shouldHideActionButtons ? 'text-[10px] max-w-[200px]' : 'text-xs max-w-[280px]'}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Globe size={shouldHideActionButtons ? 10 : 12} />
+                            <span className="truncate group-hover:underline">{ns["namespace-url"]}</span>
+                          </a>
                         )}
                         {Array.isArray(ns.tags) && ns.tags.length > 0 && !shouldHideActionButtons && (
                           <div className="hidden md:flex flex-wrap gap-1">
@@ -1313,7 +1322,18 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                 <div className="flex-1 min-w-0">
                   <h2 className="text-lg md:text-2xl font-bold text-gray-900 truncate">{floatingNamespaceDetails["namespace-name"]}</h2>
                   <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 text-xs md:text-sm text-gray-600 mt-1">
-                    <span className="truncate">{floatingNamespaceDetails["namespace-url"]}</span>
+                    {floatingNamespaceDetails["namespace-url"] && (
+                      <a 
+                        href={floatingNamespaceDetails["namespace-url"]} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 truncate flex items-center gap-1 group"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Globe size={14} />
+                        <span className="truncate group-hover:underline">{floatingNamespaceDetails["namespace-url"]}</span>
+                      </a>
+                    )}
                     {namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]] && (
                       <div className="flex items-center gap-2 md:gap-4">
                         <span className="hidden md:inline">•</span>
