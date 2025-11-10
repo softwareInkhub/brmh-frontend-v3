@@ -1,18 +1,44 @@
 'use client'
 import React, { useEffect, useState } from 'react';
-import { Database, Globe, FileCode, Terminal, User, Link2, Copy, MoreVertical, Trash2, Search, Play, Copy as CopyIcon, Edit3, Settings } from 'lucide-react';
+import { Database, Globe, FileCode, Terminal, User, Link2, Copy, MoreVertical, Trash2, Play, Copy as CopyIcon, Edit3 } from 'lucide-react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
-export default function SingleNamespacePage({ namespaceId, initialNamespace, refreshSidePanelData, onViewAccount, onViewMethod, onViewSchema, onTestMethod }: { namespaceId: string, initialNamespace?: any, refreshSidePanelData?: () => Promise<void>, onViewAccount?: (account: any, ns?: any) => void, onViewMethod?: (method: any, ns?: any) => void, onViewSchema?: (schema: any, ns?: any) => void, onTestMethod?: (method: any, ns?: any) => void }) {
+export default function SingleNamespacePage({ 
+  namespaceId, 
+  initialNamespace, 
+  refreshSidePanelData, 
+  activeSecondaryTab,
+  onSecondaryTabChange,
+  searchQuery = '',
+  onAddItem,
+  onViewAccount, 
+  onViewMethod, 
+  onViewSchema, 
+  onTestMethod 
+}: { 
+  namespaceId: string, 
+  initialNamespace?: any, 
+  refreshSidePanelData?: () => Promise<void>, 
+  activeSecondaryTab?: 'accounts' | 'methods' | 'schemas' | 'webhooks' | 'lambdas',
+  onSecondaryTabChange?: (tab: 'accounts' | 'methods' | 'schemas' | 'webhooks' | 'lambdas') => void,
+  searchQuery?: string,
+  onAddItem?: (type: string, parentData?: any) => void,
+  onViewAccount?: (account: any, ns?: any) => void, 
+  onViewMethod?: (method: any, ns?: any) => void, 
+  onViewSchema?: (schema: any, ns?: any) => void, 
+  onTestMethod?: (method: any, ns?: any) => void 
+}) {
   const [namespace, setNamespace] = useState<any>(initialNamespace || null);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [methods, setMethods] = useState<any[]>([]);
   const [schemas, setSchemas] = useState<any[]>([]);
+  const [webhooks, setWebhooks] = useState<any[]>([]);
+  const [lambdas, setLambdas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'accounts' | 'methods' | 'schemas'>('accounts');
+  // Use prop if provided, otherwise fallback to local state
+  const activeTab = activeSecondaryTab || 'accounts';
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -20,18 +46,27 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
   const [duplicateNamespaceName, setDuplicateNamespaceName] = useState('');
   const [isDuplicating, setIsDuplicating] = useState(false);
 
-  // Filter data based on search query
+  // Filter data based on search query from parent (secondary tab bar)
   const filteredAccounts = accounts.filter(acc => 
-    acc['namespace-account-name']?.toLowerCase().includes(searchQuery.toLowerCase())
+    searchQuery === '' || acc['namespace-account-name']?.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
   const filteredMethods = methods.filter(m => 
+    searchQuery === '' || 
     m['namespace-method-name']?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m['namespace-method-type']?.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
   const filteredSchemas = schemas.filter(s => 
-    s.schemaName?.toLowerCase().includes(searchQuery.toLowerCase())
+    searchQuery === '' || s.schemaName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredWebhooks = webhooks.filter(w => 
+    searchQuery === '' || w['webhook-name']?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredLambdas = lambdas.filter(l => 
+    searchQuery === '' || l.functionName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const typeBadgeClasses = (t: string) => {
@@ -73,6 +108,10 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
           setMethods(prev => prev.filter(method => method['namespace-method-id'] !== id));
         } else if (type === 'schema') {
           setSchemas(prev => prev.filter(schema => schema.id !== id));
+        } else if (type === 'webhook') {
+          setWebhooks(prev => prev.filter(wh => wh['webhook-id'] !== id));
+        } else if (type === 'lambda') {
+          setLambdas(prev => prev.filter(lambda => lambda.id !== id));
         }
         
         // Refresh side panel data to remove the deleted item
@@ -146,6 +185,22 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
             : []);
           
           // Refresh side panel data to show the new schema
+          if (refreshSidePanelData) {
+            await refreshSidePanelData();
+          }
+        } else if (type === 'webhook') {
+          const whRes = await fetch(`${API_BASE_URL}/unified/webhooks/namespace/${namespaceId}`);
+          const whData = await whRes.json();
+          setWebhooks(Array.isArray(whData) ? whData : []);
+          
+          if (refreshSidePanelData) {
+            await refreshSidePanelData();
+          }
+        } else if (type === 'lambda') {
+          const lambdaRes = await fetch(`${API_BASE_URL}/workspace/lambdas/${namespaceId}`);
+          const lambdaData = await lambdaRes.json();
+          setLambdas(Array.isArray(lambdaData.lambdas) ? lambdaData.lambdas : []);
+          
           if (refreshSidePanelData) {
             await refreshSidePanelData();
           }
@@ -333,12 +388,26 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
         setSchemas(Array.isArray(schData) 
           ? schData.filter((s: any) => s.namespaceId === namespaceId)
           : []);
+
+        console.log('Fetching webhooks for namespaceId:', namespaceId);
+        const whRes = await fetch(`${API_BASE_URL}/unified/webhooks/namespace/${namespaceId}`);
+        const whData = await whRes.json();
+        console.log('Webhooks:', whData);
+        setWebhooks(Array.isArray(whData) ? whData : []);
+
+        console.log('Fetching lambdas for namespaceId:', namespaceId);
+        const lambdaRes = await fetch(`${API_BASE_URL}/workspace/lambdas/${namespaceId}`);
+        const lambdaData = await lambdaRes.json();
+        console.log('Lambdas:', lambdaData);
+        setLambdas(Array.isArray(lambdaData.lambdas) ? lambdaData.lambdas : []);
       } catch (err) {
         // do not overwrite namespace if initialNamespace exists
         if (!initialNamespace) setNamespace(null);
         setAccounts([]);
         setMethods([]);
         setSchemas([]);
+        setWebhooks([]);
+        setLambdas([]);
       } finally {
         setLoading(false);
       }
@@ -346,273 +415,36 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
     fetchNamespace();
   }, [namespaceId, initialNamespace]);
 
+  // Listen for settings events from secondary tab bar
+  useEffect(() => {
+    const handleEditNamespace = () => {
+      editNamespace();
+    };
+
+    const handleDuplicateNamespace = () => {
+      openDuplicateModal();
+    };
+
+    const handleDeleteNamespace = () => {
+      openDeleteModal();
+    };
+
+    window.addEventListener('edit-namespace', handleEditNamespace);
+    window.addEventListener('duplicate-namespace', handleDuplicateNamespace);
+    window.addEventListener('delete-namespace', handleDeleteNamespace);
+
+    return () => {
+      window.removeEventListener('edit-namespace', handleEditNamespace);
+      window.removeEventListener('duplicate-namespace', handleDuplicateNamespace);
+      window.removeEventListener('delete-namespace', handleDeleteNamespace);
+    };
+  }, []);
+
   if (loading) return <div className="p-8">Loading...</div>;
   if (!namespace || Object.keys(namespace).length === 0) return <div className="p-8">Namespace not found.</div>;
 
   return (
     <div className="pt-4 px-4 md:p-8 w-full bg-gradient-to-b from-gray-50 to-white min-h-screen">
-      {/* Header */}
-      <div className="mb-4 md:mb-6">
-        {/* Mobile Layout */}
-        <div className="md:hidden space-y-4">
-          {/* Namespace Info */}
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0">
-              {namespace['icon-url'] ? (
-                <img
-                  src={namespace['icon-url']}
-                  alt={`${namespace['namespace-name']} icon`}
-                  className="w-10 h-10 rounded-lg object-cover shadow-sm"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-                  <Database size={18} className="text-blue-600" />
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-gray-900 truncate">{namespace['namespace-name']}</h2>
-              {namespace['namespace-url'] && (
-                <a 
-                  href={namespace['namespace-url']} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:text-blue-800 truncate mt-0.5 flex items-center gap-1 group"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Globe size={12} />
-                  <span className="truncate group-hover:underline">{namespace['namespace-url']}</span>
-                </a>
-              )}
-            </div>
-            {/* Settings Button */}
-            <div className="relative">
-              <button
-                onClick={() => toggleMenu('namespace-actions')}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Namespace actions"
-              >
-                <Settings size={18} />
-              </button>
-              {openMenus['namespace-actions'] && (
-                <div className="menu-dropdown absolute right-0 top-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[160px]">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copyToClipboard(namespace['namespace-id']);
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
-                  >
-                    <Copy size={14} />
-                    Copy ID
-                  </button>
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      editNamespace();
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
-                  >
-                    <Edit3 size={14} />
-                    Edit 
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openDuplicateModal();
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 w-full text-left"
-                  >
-                    <CopyIcon size={14} />
-                    Duplicate 
-                  </button>
-                 <button
-                   onClick={(e) => {
-                     e.stopPropagation();
-                     openDeleteModal();
-                   }}
-                   className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
-                 >
-                   <Trash2 size={14} />
-                   Delete 
-                 </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-
-          {/* Search Box */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={16} className="text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search accounts, methods, schemas..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Desktop Layout */}
-        <div className="hidden md:block">
-          <div className="flex items-center gap-4 justify-between">
-            {/* Icon and Title */}
-            <div className="min-w-0 flex items-center gap-4">
-              <div className="flex-shrink-0">
-                {namespace['icon-url'] ? (
-                  <img
-                    src={namespace['icon-url']}
-                    alt={`${namespace['namespace-name']} icon`}
-                    className="w-12 h-12 rounded-lg object-cover shadow-sm"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-                    <Database size={20} className="text-blue-600" />
-                  </div>
-                )}
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-2xl font-bold text-gray-900 truncate">{namespace['namespace-name']}</h2>
-                {namespace['namespace-url'] && (
-                  <a 
-                    href={namespace['namespace-url']} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:text-blue-800 truncate mt-1 flex items-center gap-1 group"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Globe size={14} />
-                    <span className="truncate group-hover:underline">{namespace['namespace-url']}</span>
-                  </a>
-                )}
-              </div>
-            </div>
-            
-            {/* Search Box and Namespace Actions */}
-            <div className="flex items-center gap-4">
-              <div className="relative max-w-md">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search size={16} className="text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search accounts, methods, schemas..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-              
-              {/* Namespace Actions */}
-              <div className="relative">
-                <button
-                  onClick={() => toggleMenu('namespace-actions')}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Namespace actions"
-                >
-                  <Settings size={18} />
-                </button>
-                {openMenus['namespace-actions'] && (
-                  <div className="menu-dropdown absolute right-0 top-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[160px]">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyToClipboard(namespace['namespace-id']);
-                      }}
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
-                    >
-                      <Copy size={14} />
-                      Copy ID
-                    </button>
-                    <div className="border-t border-gray-100 my-1"></div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        editNamespace();
-                      }}
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
-                    >
-                      <Edit3 size={14} />
-                      Edit 
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openDuplicateModal();
-                      }}
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 w-full text-left"
-                    >
-                      <CopyIcon size={14} />
-                      Duplicate 
-                    </button>
-                   <button
-                     onClick={(e) => {
-                       e.stopPropagation();
-                       openDeleteModal();
-                     }}
-                     className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
-                   >
-                     <Trash2 size={14} />
-                     Delete 
-                   </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="mb-4 md:mb-6">
-        <div className="flex items-center gap-2 border-b border-gray-200">
-          <button
-            className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-t-lg transition-colors ${activeTab === 'accounts' ? 'bg-white border border-b-white border-gray-200 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}
-            onClick={() => setActiveTab('accounts')}
-          >
-            Accounts <span className="text-xs text-gray-500">({filteredAccounts.length})</span>
-          </button>
-          <button
-            className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-t-lg transition-colors ${activeTab === 'methods' ? 'bg-white border border-b-white border-gray-200 text-green-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}
-            onClick={() => setActiveTab('methods')}
-          >
-            Methods <span className="text-xs text-gray-500">({filteredMethods.length})</span>
-          </button>
-          <button
-            className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-t-lg transition-colors ${activeTab === 'schemas' ? 'bg-white border border-b-white border-gray-200 text-purple-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}
-            onClick={() => setActiveTab('schemas')}
-          >
-            Schemas <span className="text-xs text-gray-500">({filteredSchemas.length})</span>
-          </button>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Accounts Card */}
@@ -625,18 +457,16 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
             </h3>
             <button
               onClick={() => {
-                // Ask parent to open All Accounts tab for this namespace
-                // We can't directly open tabs here, but parent passes onViewAccount for items.
-                // We'll dispatch a custom event the parent page listens to.
-                const event = new CustomEvent('open-all-accounts-tab', { detail: { namespaceId } });
-                window.dispatchEvent(event);
+                if (onAddItem) {
+                  onAddItem('account', namespace);
+                }
               }}
               className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
             >Add Account</button>
           </div>
           <div className="mt-1 flex-1 min-h-0 overflow-y-auto pr-1">
             {filteredAccounts.length === 0 ? (
-              <div className="text-gray-400">{searchQuery ? 'No accounts match your search.' : 'No accounts found.'}</div>
+              <div className="text-gray-400">No accounts found.</div>
             ) : (
                              <ul className="space-y-2">
                {filteredAccounts.map((acc: any, idx: number) => (
@@ -702,15 +532,16 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
             </h3>
             <button
               onClick={() => {
-                const event = new CustomEvent('open-all-methods-tab', { detail: { namespaceId } });
-                window.dispatchEvent(event);
+                if (onAddItem) {
+                  onAddItem('method', namespace);
+                }
               }}
               className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
             >Add Method</button>
           </div>
           <div className="mt-1 flex-1 min-h-0 overflow-y-auto pr-1">
             {filteredMethods.length === 0 ? (
-              <div className="text-gray-400">{searchQuery ? 'No methods match your search.' : 'No methods found.'}</div>
+              <div className="text-gray-400">No methods found.</div>
             ) : (
                              <ul className="space-y-2">
                {filteredMethods.map((m: any, idx: number) => (
@@ -791,15 +622,16 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
             </h3>
             <button
               onClick={() => {
-                const event = new CustomEvent('open-create-schema-tab', { detail: { namespaceId } });
-                window.dispatchEvent(event);
+                if (onAddItem) {
+                  onAddItem('schema', namespace);
+                }
               }}
               className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded"
             >Add Schema</button>
           </div>
           <div className="mt-1 flex-1 min-h-0 overflow-y-auto pr-1">
             {filteredSchemas.length === 0 ? (
-              <div className="text-gray-400">{searchQuery ? 'No schemas match your search.' : 'No schemas found.'}</div>
+              <div className="text-gray-400">No schemas found.</div>
             ) : (
                              <ul className="space-y-2">
                {filteredSchemas.map((s: any, idx: number) => (
@@ -847,6 +679,82 @@ export default function SingleNamespacePage({ namespaceId, initialNamespace, ref
                   </div>
                 </li>
               ))}
+              </ul>
+            )}
+          </div>
+        </div>
+        )}
+
+        {/* Webhooks Card */}
+        {activeTab === 'webhooks' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 flex flex-col shadow-sm h-[50vh] md:h-[66vh]">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-semibold flex items-center gap-2 text-gray-900">
+              <span className="inline-block w-2 h-2 bg-pink-500 rounded-full"></span>
+              Webhooks <span className="text-xs text-gray-500 font-normal">({filteredWebhooks.length}/{webhooks.length})</span>
+            </h3>
+            <button
+              onClick={() => {
+                if (onAddItem) {
+                  onAddItem('webhook', namespace);
+                }
+              }}
+              className="text-xs bg-pink-600 hover:bg-pink-700 text-white px-3 py-1 rounded"
+            >Add Webhook</button>
+          </div>
+          <div className="mt-1 flex-1 min-h-0 overflow-y-auto pr-1">
+            {filteredWebhooks.length === 0 ? (
+              <div className="text-gray-400">No webhooks found.</div>
+            ) : (
+              <ul className="space-y-2">
+                {filteredWebhooks.map((wh: any, idx: number) => (
+                  <li key={wh['webhook-id'] || idx} className="relative group">
+                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-pink-300 hover:bg-pink-50/40 transition">
+                      <div className="w-8 h-8 rounded bg-pink-100 flex items-center justify-center">
+                        <Globe size={14} className="text-pink-600"/>
+                      </div>
+                      <span className="font-medium text-gray-800 flex-1">{wh['webhook-name']}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+        )}
+
+        {/* Lambdas Card */}
+        {activeTab === 'lambdas' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 flex flex-col shadow-sm h-[50vh] md:h-[66vh]">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-semibold flex items-center gap-2 text-gray-900">
+              <span className="inline-block w-2 h-2 bg-indigo-500 rounded-full"></span>
+              Lambdas <span className="text-xs text-gray-500 font-normal">({filteredLambdas.length}/{lambdas.length})</span>
+            </h3>
+            <button
+              onClick={() => {
+                if (onAddItem) {
+                  onAddItem('lambda', namespace);
+                }
+              }}
+              className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded"
+            >Add Lambda</button>
+          </div>
+          <div className="mt-1 flex-1 min-h-0 overflow-y-auto pr-1">
+            {filteredLambdas.length === 0 ? (
+              <div className="text-gray-400">No lambdas found.</div>
+            ) : (
+              <ul className="space-y-2">
+                {filteredLambdas.map((lambda: any, idx: number) => (
+                  <li key={lambda.id || idx} className="relative group">
+                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/40 transition">
+                      <div className="w-8 h-8 rounded bg-indigo-100 flex items-center justify-center">
+                        <Terminal size={14} className="text-indigo-600"/>
+                      </div>
+                      <span className="font-medium text-gray-800 flex-1">{lambda.functionName}</span>
+                    </div>
+                  </li>
+                ))}
               </ul>
             )}
           </div>

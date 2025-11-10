@@ -165,10 +165,10 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
+      <div className="flex items-center justify-between mb-6 w-full">
+        <div className="flex-1 min-w-0">
           <h2 className="text-2xl font-bold text-gray-900">All Lambdas</h2>
           <p className="text-gray-600 mt-1">
             {namespace ? `Namespace: ${namespace['namespace-name']}` : 'All Lambda Functions'}
@@ -176,7 +176,7 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
         </div>
         <button
           onClick={() => setSidePanel('create')}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex-shrink-0"
         >
           <Plus size={18} /> Create Lambda
         </button>
@@ -209,7 +209,7 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
             <div style={{ width: 4, height: 48, background: '#3b82f6', borderRadius: 2, margin: 'auto', marginTop: 24 }} />
           </div>
         )}
-        {sidePanel === 'create' && (
+      {sidePanel === 'create' && (
           <div className="p-6 overflow-y-auto flex-1">
             <div className="mb-4 text-lg font-bold text-indigo-700 text-center">
               {namespace?.['namespace-name']}
@@ -321,10 +321,10 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
                 >
                   Create Lambda
                 </button>
-              </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
       </div>
 
       {/* Lambda Details Side Panel */}

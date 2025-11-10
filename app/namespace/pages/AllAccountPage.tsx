@@ -424,14 +424,14 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshS
 
   return (
     <div className="p-4 md:p-8 w-full flex flex-col md:flex-row relative">
-      <div className="flex-1 pr-0">
+      <div className="flex-1 pr-0 w-full">
         {/* Header */}
-        <div className="mb-4 md:mb-6">
+        <div className="mb-4 md:mb-6 w-full">
           {/* Title + Create */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 w-full">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900">All Accounts</h2>
             <button
-              className="inline-flex items-center justify-center gap-1 md:gap-2 bg-blue-600 hover:bg-blue-700 text-white px-2 md:px-4 py-1.5 md:py-2 rounded shadow whitespace-nowrap text-sm md:text-base"
+              className="inline-flex items-center justify-center gap-1 md:gap-2 bg-blue-600 hover:bg-blue-700 text-white px-2 md:px-4 py-1.5 md:py-2 rounded shadow whitespace-nowrap text-sm md:text-base flex-shrink-0"
               onClick={() => setSidePanel('create')}
             >
               <Plus size={14} className="md:hidden" />

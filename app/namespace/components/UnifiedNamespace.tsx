@@ -911,12 +911,12 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
   // --- Filtered Data ---
   const filteredNamespaces = namespaces
     .filter(ns =>
-      search.type !== 'schema' && (
-        search.text === '' ||
+    search.type !== 'schema' && (
+      search.text === '' ||
         (ns["namespace-name"] || '').toLowerCase().includes(search.text.toLowerCase()) ||
         (ns["namespace-url"] || '').toLowerCase().includes(search.text.toLowerCase()) ||
         ns.tags?.some(tag => tag?.toLowerCase()?.includes(search.text.toLowerCase()))
-      )
+    )
     )
     .sort((a, b) => {
       const nameA = (a["namespace-name"] || '').toLowerCase();
@@ -926,11 +926,11 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
 
   const filteredSchemas = schemas
     .filter(s =>
-      search.type !== 'namespace' && (
-        search.text === '' ||
+    search.type !== 'namespace' && (
+      search.text === '' ||
         (s.schemaName || '').toLowerCase().includes(search.text.toLowerCase()) ||
         (s.originalType || '').toLowerCase().includes(search.text.toLowerCase())
-      )
+    )
     )
     .sort((a, b) => {
       const nameA = (a.schemaName || '').toLowerCase();
@@ -1137,10 +1137,10 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
         <div className="max-w-full mx-auto px-3">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             {/* Left Section - Title */}
-            <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
                 <Database className="text-white" size={20} />
-              </div>
+          </div>
               <div>
                 <h2 className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
                   Namespaces
@@ -1149,47 +1149,47 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                   </span>
                 </h2>
                 <p className="text-xs text-gray-500">Manage your API namespaces</p>
-              </div>
+        </div>
             </div>
             
             {/* Right Section - Actions */}
             <div className="flex items-center gap-3 flex-wrap">
               {/* Search Bar */}
-              <div className="relative">
-                <input
-                  type="text"
+          <div className="relative">
+            <input
+              type="text"
                   placeholder="Search namespaces..."
                   className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-64 text-sm transition-all"
-                  value={search.text}
-                  onChange={e => setSearch(prev => ({ ...prev, text: e.target.value }))}
-                />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-              </div>
-            
+              value={search.text}
+              onChange={e => setSearch(prev => ({ ...prev, text: e.target.value }))}
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+          </div>
+        
               {/* View Mode Toggle */}
               <div className="flex items-center gap-1 bg-white border border-gray-300 rounded-lg p-1 shadow-sm">
-                <button
-                  onClick={() => setViewMode('grid')}
+            <button
+              onClick={() => setViewMode('grid')}
                   className={`p-2 rounded transition-all ${
                     viewMode === 'grid' 
                       ? 'bg-blue-500 text-white shadow-sm' 
                       : 'text-gray-500 hover:bg-gray-100'
                   }`}
                   title="Grid View"
-                >
-                  <Grid size={16} />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
+            >
+              <Grid size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
                   className={`p-2 rounded transition-all ${
                     viewMode === 'list' 
                       ? 'bg-blue-500 text-white shadow-sm' 
                       : 'text-gray-500 hover:bg-gray-100'
                   }`}
                   title="List View"
-                >
-                  <ListIcon size={16} />
-                </button>
+            >
+              <ListIcon size={16} />
+            </button>
               </div>
               
               {/* Refresh Button */}
@@ -1210,13 +1210,13 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
               </button>
               
               {/* Add Namespace Button */}
-              <button
-                onClick={() => { setEditingNamespace(null); setShowNamespaceModal(true); }}
+            <button
+              onClick={() => { setEditingNamespace(null); setShowNamespaceModal(true); }}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-lg shadow-md hover:shadow-lg transition-all"
-              >
+            >
                 <Plus size={16} />
                 <span>Add Namespace</span>
-              </button>
+            </button>
             </div>
           </div>
         </div>
@@ -1254,9 +1254,9 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                     viewMode === 'grid' && selectedNamespaceId === ns["namespace-id"] 
                       ? 'scale-110' 
                       : viewMode === 'list' && selectedNamespaceId === ns["namespace-id"]
-                        ? 'ring-2 ring-blue-500 border-blue-300'
+                      ? 'ring-2 ring-blue-500 border-blue-300' 
                         : viewMode === 'list' && expandedNamespaceId === ns["namespace-id"]
-                          ? 'ring-2 ring-green-500 border-green-300'
+                        ? 'ring-2 ring-green-500 border-green-300' 
                           : viewMode === 'list'
                             ? 'hover:border-gray-300'
                             : ''
@@ -1321,63 +1321,63 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                   </div>
 
                   {/* List Mode Extra Content */}
-                  {viewMode === 'list' && (
+                    {viewMode === 'list' && (
                     <>
-                      {ns["namespace-url"] && (
-                        <a 
-                          href={ns["namespace-url"]} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
+                        {ns["namespace-url"] && (
+                          <a 
+                            href={ns["namespace-url"]} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
                           className="text-blue-600 hover:text-blue-800 truncate flex items-center gap-1 text-xs max-w-[280px]"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                            onClick={(e) => e.stopPropagation()}
+                          >
                           <Globe size={12} />
-                          <span className="truncate group-hover:underline">{ns["namespace-url"]}</span>
-                        </a>
-                      )}
+                            <span className="truncate group-hover:underline">{ns["namespace-url"]}</span>
+                          </a>
+                        )}
                       {Array.isArray(ns.tags) && ns.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                          {ns.tags.slice(0, 3).map((tag: string) => (
-                            <span key={`${ns["namespace-id"]}-${tag}`} className="px-2 py-0.5 bg-gray-50 text-gray-700 text-[11px] rounded-full border border-gray-200">
-                              {tag}
-                            </span>
-                          ))}
-                          {ns.tags.length > 3 && (
-                            <span key={`${ns["namespace-id"]}-more`} className="px-2 py-0.5 bg-gray-50 text-gray-700 text-[11px] rounded-full border border-gray-200">
-                              +{ns.tags.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      )}
+                            {ns.tags.slice(0, 3).map((tag: string) => (
+                              <span key={`${ns["namespace-id"]}-${tag}`} className="px-2 py-0.5 bg-gray-50 text-gray-700 text-[11px] rounded-full border border-gray-200">
+                                {tag}
+                              </span>
+                            ))}
+                            {ns.tags.length > 3 && (
+                              <span key={`${ns["namespace-id"]}-more`} className="px-2 py-0.5 bg-gray-50 text-gray-700 text-[11px] rounded-full border border-gray-200">
+                                +{ns.tags.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       <div className="flex items-center gap-2 ml-auto">
-                        <span className="px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200 text-[11px] text-gray-700">
-                          Accounts {namespaceDetailsMap[ns["namespace-id"]]?.accounts?.length ?? '—'}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200 text-[11px] text-gray-700">
-                          Methods {namespaceDetailsMap[ns["namespace-id"]]?.methods?.length ?? '—'}
-                        </span>
-                      </div>
+                          <span className="px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200 text-[11px] text-gray-700">
+                            Accounts {namespaceDetailsMap[ns["namespace-id"]]?.accounts?.length ?? '—'}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200 text-[11px] text-gray-700">
+                            Methods {namespaceDetailsMap[ns["namespace-id"]]?.methods?.length ?? '—'}
+                          </span>
+                        </div>
                     </>
-                  )}
-                  
+                        )}
+
                   {/* Action Buttons - Only in List Mode */}
                   {viewMode === 'list' && !shouldHideActionButtons && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={e => { e.stopPropagation(); setEditingNamespace(ns); setShowNamespaceModal(true); }}
-                        className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                        title="Edit"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button
-                        onClick={e => { e.stopPropagation(); handleDelete('namespace', ns["namespace-id"]); }}
-                        className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={e => { e.stopPropagation(); setEditingNamespace(ns); setShowNamespaceModal(true); }}
+                      className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                      title="Edit"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button
+                      onClick={e => { e.stopPropagation(); handleDelete('namespace', ns["namespace-id"]); }}
+                      className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                   )}
                 </div>
               </React.Fragment>

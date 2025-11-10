@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Eye, Edit, Trash2 } from 'lucide-react';
+import { Eye, Edit, Trash2, Plus } from 'lucide-react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -61,17 +61,17 @@ export default function AllSchemaPage({ namespace, onViewSchema, onEditSchema, o
 
   return (
     <div className="p-8 w-full">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
+      <div className="flex items-center justify-between mb-6 w-full">
+        <h2 className="text-2xl font-bold text-gray-900 flex-1 min-w-0">
           All Schemas{namespace ? `: ${namespace['namespace-name']}` : ''}
         </h2>
         <button
-          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded shadow"
+          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded shadow flex-shrink-0"
           onClick={() => {
             if (typeof onCreateNew === 'function') onCreateNew();
           }}
         >
-          + Create Schema
+          <Plus size={18} /> Create Schema
         </button>
       </div>
       {loading ? (

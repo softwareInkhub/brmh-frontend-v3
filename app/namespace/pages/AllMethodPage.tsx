@@ -280,7 +280,7 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
           </div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-bold text-green-700 flex items-center gap-2">
-              <span className="inline-block w-6 h-6 bg-green-100 text-green-500 rounded-full flex items-center justify-center mr-2">→</span>
+              <span className="w-6 h-6 bg-green-100 text-green-500 rounded-full flex items-center justify-center mr-2">→</span>
               Create Method
             </h3>
             <button type="button" onClick={() => setSidePanel(null)} className="text-gray-400 hover:text-gray-700"><X size={22} /></button>
@@ -456,9 +456,17 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
   return (
     <div ref={pageRef} className="p-4 w-full flex relative ">
       <div className="flex-1 pr-0">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">All Methods</h2>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <button
+              className="inline-flex items-center justify-center gap-1 md:gap-2 bg-green-600 hover:bg-green-700 text-white px-2 md:px-4 py-1.5 md:py-2 rounded shadow whitespace-nowrap text-sm md:text-base flex-shrink-0"
+              onClick={() => setSidePanel('create')}
+            >
+              <Plus size={14} className="md:hidden" />
+              <Plus size={18} className="hidden md:block" />
+              <span className="hidden sm:inline">Create Method</span><span className="sm:hidden">Create</span>
+            </button>
             <div className="relative flex-1 sm:flex-initial">
               <input
                 type="text"
@@ -487,15 +495,6 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
                 ≡
               </button>
             </div>
-            <button
-              className="inline-flex items-center justify-center gap-1 sm:gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-sm sm:text-base"
-              onClick={() => setSidePanel('create')}
-            >
-              <Plus size={14} className="sm:hidden" />
-              <Plus size={18} className="hidden sm:block" />
-              <span className="hidden sm:inline">Create Method</span>
-              <span className="sm:hidden">Create</span>
-            </button>
           </div>
         </div>
         {loading ? (

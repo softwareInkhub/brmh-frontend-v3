@@ -140,11 +140,12 @@ const NamespaceModal: React.FC<NamespaceModalProps> = ({ isOpen, onClose, onSave
 
   return (
     <div 
-      className="fixed inset-0 bg-blue-900/40 backdrop-blur-sm flex items-center justify-center z-50"
+      className="fixed inset-0 bg-blue-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
-      <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        {/* Fixed Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
               <Database className="text-blue-600" size={16} />
@@ -161,7 +162,8 @@ const NamespaceModal: React.FC<NamespaceModalProps> = ({ isOpen, onClose, onSave
           </button>
         </div>
 
-        <div className="space-y-4">
+        {/* Scrollable Content */}
+        <div className="space-y-4 p-6 overflow-y-auto flex-1">
           {/* Icon Upload Section */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -290,32 +292,42 @@ const NamespaceModal: React.FC<NamespaceModalProps> = ({ isOpen, onClose, onSave
 
           {isEdit && namespace && Array.isArray(namespace["schemaIds"]) && namespace["schemaIds"].length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Schema IDs</label>
-              <ul className="list-disc pl-5 text-xs text-gray-700 bg-gray-100 rounded p-2">
-                {namespace["schemaIds"].map((id: string) => (
-                  <li key={id}>{id}</li>
-                ))}
-              </ul>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Schema IDs ({namespace["schemaIds"].length})
+              </label>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-60 overflow-y-auto">
+                <ul className="list-disc pl-5 text-xs text-gray-700 space-y-1">
+                  {namespace["schemaIds"].map((id: string) => (
+                    <li key={id} className="break-all">{id}</li>
+                  ))}
+                </ul>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Scroll to view all schema IDs
+              </p>
             </div>
           )}
         </div>
 
-        {error && <div className="mt-4 text-sm text-red-600">{error}</div>}
-
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className={`px-4 py-2 ${isEdit ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-lg`}
-            disabled={loading}
-          >
-            {loading ? (isEdit ? 'Saving...' : 'Creating...') : isEdit ? 'Update Namespace' : 'Create Namespace'}
-          </button>
+        {/* Fixed Footer */}
+        <div className="border-t border-gray-200 p-6 bg-gray-50">
+          {error && <div className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</div>}
+          
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className={`px-4 py-2 ${isEdit ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-lg transition-colors shadow-sm`}
+              disabled={loading}
+            >
+              {loading ? (isEdit ? 'Saving...' : 'Creating...') : isEdit ? 'Update Namespace' : 'Create Namespace'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
