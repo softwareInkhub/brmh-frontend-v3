@@ -29,7 +29,7 @@ brmh-frontend-v3/app/BRMH-IAM/
 ### 3. **Files Modified**
 
 ```
-brmh-frontend-v3/app/aws/
+brmh-frontend-v3/app/aws/   
 └── 📝 layout.tsx                   # Added BRMH IAM to sidebar with UserCog icon
 ```
 
