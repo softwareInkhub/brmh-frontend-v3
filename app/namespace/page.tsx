@@ -435,9 +435,9 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
       setSchemaPageTabs(prev => {
         const exists = prev.find(t => t.key === key);
         if (exists) {
-          return prev.map(t => t.key === key ? { ...t, mode: 'create', namespace: ns, timestamp: Date.now() } : t);
+          return prev.map(t => t.key === key ? { ...t, mode: 'create', namespace: ns, schema: undefined, timestamp: Date.now() } : t);
         }
-        return [...prev, { key, mode: 'create', namespace: ns, timestamp: Date.now() }];
+        return [...prev, { key, mode: 'create', namespace: ns, schema: undefined, timestamp: Date.now() }];
       });
       return;
     } else if (type === 'webhook') {
@@ -1410,28 +1410,6 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                                 <span className="truncate group-hover:underline">{currentNamespace['namespace-url']}</span>
                               </a>
                             )}
-                            
-                            {/* Search Bar */}
-                            <div className="relative mt-2">
-                              <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                                <Search size={12} className="text-gray-400" />
-                              </div>
-                              <input
-                                type="text"
-                                placeholder="Search..."
-                                value={secondarySearchQuery}
-                                onChange={(e) => setSecondarySearchQuery(e.target.value)}
-                                className="w-full pl-7 pr-7 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs"
-                              />
-                              {secondarySearchQuery && (
-                                <button
-                                  onClick={() => setSecondarySearchQuery('')}
-                                  className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600"
-                                >
-                                  <X size={12} />
-                                </button>
-                              )}
-                            </div>
                           </div>
 
                           {/* Navigation Items */}

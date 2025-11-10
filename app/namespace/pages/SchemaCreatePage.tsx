@@ -106,16 +106,62 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
     namespace: namespace?.['namespace-id']
   });
 
+  // Safely parse initialSchema once during initialization
+  const parseInitialSchema = (schema: any): any => {
+    if (!schema) return null;
+    
+    try {
+      // If schema property exists
+      if (schema.schema !== undefined) {
+        // If it's a string, parse it
+        if (typeof schema.schema === 'string') {
+          const trimmed = schema.schema.trim();
+          if (!trimmed || trimmed === '') return null; // Empty string protection
+          return JSON.parse(trimmed);
+        }
+        // If it's already an object, return it
+        return schema.schema;
+      }
+      // If no schema property, use schema itself
+      if (typeof schema === 'string') {
+        const trimmed = schema.trim();
+        if (!trimmed || trimmed === '') return null; // Empty string protection
+        return JSON.parse(trimmed);
+      }
+      return schema;
+    } catch (error) {
+      console.error('Error parsing initialSchema:', error, 'Schema value:', schema);
+      return null;
+    }
+  };
+  
   const [schemaName, setSchemaName] = useState(initialSchemaName || initialSchema?.schemaName || '');
-  const [fields, setFields] = useState<any[]>(initialSchema ? schemaToFields(initialSchema.schema || initialSchema) : []);
+  const [fields, setFields] = useState<any[]>(() => {
+    const parsed = parseInitialSchema(initialSchema);
+    return parsed ? schemaToFields(parsed) : [];
+  });
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
   const [rawFields, setRawFields] = useState('');
   const [rawFieldsError, setRawFieldsError] = useState<string | null>(null);
-  const [jsonSchema, setJsonSchema] = useState(initialSchema ? JSON.stringify(initialSchema.schema || initialSchema, null, 2) : `{
+  const [jsonSchema, setJsonSchema] = useState(() => {
+    const parsed = parseInitialSchema(initialSchema);
+    return parsed 
+      ? JSON.stringify(parsed, null, 2) 
+      : `{
   "type": "object",
   "properties": {},
   "required": []
-}`);
+}`;
+  });
+  // Parsed JSON schema state - updated only when JSON is valid
+  const [parsedJsonSchema, setParsedJsonSchema] = useState<any>(() => {
+    try {
+      const parsed = parseInitialSchema(initialSchema);
+      return parsed || { type: 'object', properties: {}, required: [] };
+    } catch {
+      return { type: 'object', properties: {}, required: [] };
+    }
+  });
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [validationResult, setValidationResult] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -228,10 +274,15 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
         hasId: !!(initialSchema.id || initialSchema.schemaId),
         schemaName: initialSchema.schemaName
       });
-      // If initialSchema has a .schema property, it's the full schema object
-      const schemaDefinition = initialSchema.schema || initialSchema;
-      setFields(schemaToFields(schemaDefinition));
-      setJsonSchema(JSON.stringify(schemaDefinition, null, 2));
+      
+      const schemaDefinition = parseInitialSchema(initialSchema);
+      
+      if (schemaDefinition) {
+        setFields(schemaToFields(schemaDefinition));
+        setJsonSchema(JSON.stringify(schemaDefinition, null, 2));
+        setParsedJsonSchema(schemaDefinition);
+      }
+      
       // Always set the schema name from initialSchema if available
       if (initialSchema.schemaName) {
         console.log('📝 Setting schema name from initialSchema:', initialSchema.schemaName);
@@ -239,6 +290,27 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
       }
     }
   }, [initialSchema]);
+
+  // Update parsedJsonSchema whenever jsonSchema text changes (if valid)
+  useEffect(() => {
+    try {
+      const parsed = JSON.parse(jsonSchema);
+      setParsedJsonSchema(parsed);
+      setJsonError(null);
+    } catch (error) {
+      // Don't update parsedJsonSchema if JSON is invalid
+      // This prevents crashes when user is typing
+      if (jsonSchema.trim() === '') {
+        // If completely empty, reset to default
+        const defaultSchema = { type: 'object', properties: {}, required: [] };
+        setParsedJsonSchema(defaultSchema);
+        setJsonError(null);
+      } else {
+        // Otherwise, just set error without updating parsed schema
+        setJsonError('Invalid JSON syntax');
+      }
+    }
+  }, [jsonSchema]);
 
   // Set schemaObj from initialSchema if it has an ID (for editing)
   React.useEffect(() => {
@@ -1297,10 +1369,10 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
               className="max-w-xl"
             >
               <RecursiveDataForm
-                schema={JSON.parse(jsonSchema)}
+                schema={parsedJsonSchema}
                 value={formData}
                 onChange={setFormData}
-                required={JSON.parse(jsonSchema).required}
+                required={parsedJsonSchema?.required || []}
               />
 
               <div className="flex flex-col sm:flex-row gap-2 mt-4">
@@ -1705,7 +1777,7 @@ export default function SchemaCreatePage({ onSchemaNameChange, namespace, initia
           const tableNameMap = acc?.tableName || {};
           return tableNameMap[methodName] || '';
         })()}
-        schema={JSON.parse(jsonSchema)}
+        schema={parsedJsonSchema}
         onInsertData={handleInsertMockData}
         onFillForm={(data) => {
           setFormData(data);

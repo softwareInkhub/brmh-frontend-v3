@@ -17,6 +17,8 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
   const [sidePanelWidth, setSidePanelWidth] = useState(400);
   const [isResizing, setIsResizing] = useState(false);
   const [panelTopPosition, setPanelTopPosition] = useState(0); // Panel top position in pixels
+  const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [createData, setCreateData] = useState<any>({
     'webhook-name': '',
     'post-exec-url': '',
@@ -185,7 +187,7 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
           <form onSubmit={handleCreate} className="flex flex-col gap-4 h-full p-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-bold text-pink-700 flex items-center gap-2">
-                <span className="inline-block w-6 h-6 bg-pink-100 text-pink-500 rounded-full flex items-center justify-center mr-2">→</span>
+                <span className="w-6 h-6 bg-pink-100 text-pink-500 rounded-full flex items-center justify-center mr-2">→</span>
                 Create Webhook
               </h3>
               <button type="button" onClick={() => setSidePanel(null)} className="text-gray-400 hover:text-gray-700"><X size={22} /></button>
@@ -321,24 +323,63 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
     return null;
   };
 
+  const filteredWebhooks = webhooks.filter(wh => 
+    (wh['webhook-name'] || '').toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div className="p-8 w-full flex relative">
+    <div className="p-4 md:p-8 w-full flex relative">
       <div className="flex-1 pr-0 w-full">
-        <div className="flex items-center justify-between mb-6 w-full">
-          <h2 className="text-2xl font-bold text-gray-900">All Webhooks</h2>
-          <button
-            className="flex items-center gap-2 bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded shadow flex-shrink-0"
-            onClick={() => setSidePanel('create')}
-          >
-            <Plus size={18} /> Create Webhook
-          </button>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">All Webhooks</h2>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <button
+              className="inline-flex items-center justify-center gap-1 md:gap-2 bg-pink-600 hover:bg-pink-700 text-white px-2 md:px-4 py-1.5 md:py-2 rounded shadow whitespace-nowrap text-sm md:text-base flex-shrink-0"
+              onClick={() => setSidePanel('create')}
+            >
+              <Plus size={14} className="md:hidden" />
+              <Plus size={18} className="hidden md:block" />
+              <span className="hidden sm:inline">Create Webhook</span><span className="sm:hidden">Create</span>
+            </button>
+            <div className="relative flex-1 sm:flex-initial">
+              <input
+                type="text"
+                placeholder="Search webhooks..."
+                className="pl-8 pr-3 py-1.5 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 w-full text-sm"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
+            </div>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-2 py-1 rounded text-sm ${viewMode === 'grid' ? 'bg-pink-100 text-pink-600' : 'text-gray-600 hover:bg-gray-100'}`}
+                title="Grid view"
+              >
+                ▦
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-2 py-1 rounded text-sm ${viewMode === 'list' ? 'bg-pink-100 text-pink-600' : 'text-gray-600 hover:bg-gray-100'}`}
+                title="List view"
+              >
+                ≡
+              </button>
+            </div>
+          </div>
         </div>
+
+        {/* Content */}
         {loading ? (
           <div>Loading...</div>
-        ) : (
-          <div className="space-y-2">
-            {webhooks.length === 0 && <div className="text-gray-400">No webhooks found.</div>}
-            {webhooks.map((wh, idx) => (
+        ) : viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredWebhooks.length === 0 && <div className="text-gray-400">No webhooks found.</div>}
+            {filteredWebhooks.map((wh, idx) => (
               <div 
                 key={wh['webhook-id'] || idx} 
                 className="flex items-center justify-between bg-white border rounded px-4 py-2 shadow-sm hover:shadow-md hover:border-pink-400 transition-all cursor-pointer"
@@ -358,6 +399,30 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
                 </button>
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="divide-y">
+              {filteredWebhooks.length === 0 && <div className="p-4 text-gray-400">No webhooks found.</div>}
+              {filteredWebhooks.map((wh, idx) => (
+                <div 
+                  key={wh['webhook-id'] || idx}
+                  className="flex items-center gap-3 px-3 md:px-4 py-3 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setSidePanel({ webhook: wh })}
+                >
+                  <div className="w-8 h-8 rounded bg-pink-50 flex items-center justify-center border border-pink-100">
+                    <span className="text-xs font-bold text-pink-600">W</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-gray-900 truncate">{wh['webhook-name']}</div>
+                    <div className="text-xs text-gray-500 truncate">{wh['post-exec-url']}</div>
+                  </div>
+                  <button className="text-pink-600 hover:text-pink-800 p-1" title="View" onClick={(e) => { e.stopPropagation(); setSidePanel({ webhook: wh }); }}>
+                    <Eye size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

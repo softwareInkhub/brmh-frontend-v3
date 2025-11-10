@@ -18,6 +18,8 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
   const [panelTopPosition, setPanelTopPosition] = useState(0); // Panel top position in pixels
   const [sidePanelWidth, setSidePanelWidth] = useState(400);
   const [isResizing, setIsResizing] = useState(false);
+  const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Create form state
   const [createData, setCreateData] = useState({
@@ -164,22 +166,53 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
     );
   }
 
+  const filteredLambdas = lambdas.filter(lambda => 
+    (lambda.functionName || '').toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div className="p-6 w-full">
+    <div className="p-4 md:p-8 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 w-full">
-        <div className="flex-1 min-w-0">
-          <h2 className="text-2xl font-bold text-gray-900">All Lambdas</h2>
-          <p className="text-gray-600 mt-1">
-            {namespace ? `Namespace: ${namespace['namespace-name']}` : 'All Lambda Functions'}
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">All Lambdas</h2>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <button
+            className="inline-flex items-center justify-center gap-1 md:gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-2 md:px-4 py-1.5 md:py-2 rounded shadow whitespace-nowrap text-sm md:text-base flex-shrink-0"
+            onClick={() => setSidePanel('create')}
+          >
+            <Plus size={14} className="md:hidden" />
+            <Plus size={18} className="hidden md:block" />
+            <span className="hidden sm:inline">Create Lambda</span><span className="sm:hidden">Create</span>
+          </button>
+          <div className="relative flex-1 sm:flex-initial">
+            <input
+              type="text"
+              placeholder="Search lambdas..."
+              className="pl-8 pr-3 py-1.5 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full text-sm"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </span>
+          </div>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`px-2 py-1 rounded text-sm ${viewMode === 'grid' ? 'bg-indigo-100 text-indigo-600' : 'text-gray-600 hover:bg-gray-100'}`}
+              title="Grid view"
+            >
+              ▦
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-2 py-1 rounded text-sm ${viewMode === 'list' ? 'bg-indigo-100 text-indigo-600' : 'text-gray-600 hover:bg-gray-100'}`}
+              title="List view"
+            >
+              ≡
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setSidePanel('create')}
-          className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex-shrink-0"
-        >
-          <Plus size={18} /> Create Lambda
-        </button>
       </div>
 
       {/* Create Lambda Side Panel */}
@@ -385,9 +418,10 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
       )}
 
       {/* Lambda List */}
-      <div className="space-y-3">
-        {lambdas.length === 0 && <div className="text-gray-400">No lambdas found.</div>}
-        {lambdas.map((lambda, idx) => (
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredLambdas.length === 0 && <div className="text-gray-400">No lambdas found.</div>}
+          {filteredLambdas.map((lambda, idx) => (
           <div 
             key={lambda.id || idx} 
             className="flex items-center justify-between bg-white border rounded px-4 py-2 shadow-sm hover:shadow-md hover:border-indigo-400 transition-all cursor-pointer"
@@ -427,6 +461,31 @@ const AllLambdasPage: React.FC<AllLambdasPageProps> = ({ namespace, onViewLambda
           </div>
         ))}
       </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="divide-y">
+            {filteredLambdas.length === 0 && <div className="p-4 text-gray-400">No lambdas found.</div>}
+            {filteredLambdas.map((lambda, idx) => (
+              <div 
+                key={lambda.id || idx}
+                className="flex items-center gap-3 px-3 md:px-4 py-3 hover:bg-gray-50 cursor-pointer"
+                onClick={() => setSidePanel({ lambda: lambda })}
+              >
+                <div className="w-8 h-8 rounded bg-indigo-50 flex items-center justify-center border border-indigo-100">
+                  <Code size={16} className="text-indigo-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-gray-900 truncate">{lambda.functionName}</div>
+                  <div className="text-xs text-gray-500 truncate">{lambda.description || 'No description'}</div>
+                </div>
+                <button className="text-blue-600 hover:text-blue-800 p-1" title="View" onClick={(e) => { e.stopPropagation(); setSidePanel({ lambda: lambda }); }}>
+                  <Eye size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
