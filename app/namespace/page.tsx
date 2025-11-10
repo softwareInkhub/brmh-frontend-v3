@@ -1179,10 +1179,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                     `}
                                 onClick={() => {
                                   setActiveTab(tab.key);
-                                  // Clear namespace context if switching to overview or non-namespace tabs
-                                  if (tab.key === 'overview' || tab.key === 'namespace' || tab.key === 'schemaService' || tab.key === 'tables' || tab.key === 'unifiedNamespace') {
-                                    setCurrentNamespace(null);
-                                  }
+                                  setCurrentNamespace(null);
                                 }}
                   >
                                 {tab.label}
@@ -1190,17 +1187,68 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                             </div>
                           ))}
                           {/* Pinned tabs (sticky) - Only show namespace tabs */}
-                          {tabs.filter(tab => tab.pinned && tab.key !== 'overview' && shouldShowInTabBar(tab.key)).map(tab => (
+                          {tabs.filter(tab => tab.pinned && tab.key !== 'overview' && shouldShowInTabBar(tab.key)).map(tab => {
+                            // Check if this namespace tab is active (direct match or any of its All pages)
+                            const namespaceId = tab.key.replace('namespace-', '');
+                            const isActive = activeTab === tab.key || 
+                                           activeTab === `allAccounts-${namespaceId}` ||
+                                           activeTab === `allMethods-${namespaceId}` ||
+                                           activeTab === `all-schemas-${namespaceId}` ||
+                                           activeTab === `allWebhooks-${namespaceId}` ||
+                                           activeTab === `allLambdas-${namespaceId}`;
+                            return (
                             <div key={tab.key} className="flex items-center group">
                               <button
                                 className={`px-2 md:px-4 py-2 text-xs md:text-sm rounded-t-lg transition
-                                  ${activeTab === tab.key ? 'font-medium text-blue-700 border-b-2 border-blue-600 bg-white' : 'text-gray-700 hover:bg-gray-100'}
+                                  ${isActive ? 'font-medium text-blue-700 border-b-2 border-blue-600 bg-white' : 'text-gray-700 hover:bg-gray-100'}
                                 `}
                                 onClick={() => {
-                                  setActiveTab(tab.key);
-                                  // Clear namespace context if switching to overview or non-namespace tabs
-                                  if (tab.key === 'overview' || tab.key === 'namespace' || tab.key === 'schemaService' || tab.key === 'tables' || tab.key === 'unifiedNamespace') {
-                                    setCurrentNamespace(null);
+                                  // Handle namespace tab clicks
+                                  if (tab.key.startsWith('namespace-')) {
+                                    const namespaceId = tab.key.replace('namespace-', '');
+                                    const ns = namespaces.find(n => n['namespace-id'] === namespaceId);
+                                    if (ns) {
+                                      setCurrentNamespace(ns);
+                                      // Determine target based on secondaryTab
+                                      let targetKey = '';
+                                      if (secondaryTab === 'methods') {
+                                        targetKey = `allMethods-${namespaceId}`;
+                                        setAllMethodsTabs(prev => {
+                                          if (prev.find(t => t.key === targetKey)) return prev;
+                                          return [...prev, { key: targetKey, namespace: ns, openCreate: false }];
+                                        });
+                                      } else if (secondaryTab === 'schemas') {
+                                        targetKey = `all-schemas-${namespaceId}`;
+                                        setAllSchemasTabs(prev => {
+                                          if (prev.find(t => t.key === targetKey)) return prev;
+                                          return [...prev, { key: targetKey, namespace: ns, openCreate: false }];
+                                        });
+                                      } else if (secondaryTab === 'webhooks') {
+                                        targetKey = `allWebhooks-${namespaceId}`;
+                                        setAllWebhooksTabs(prev => {
+                                          if (prev.find(t => t.key === targetKey)) return prev;
+                                          return [...prev, { key: targetKey, namespace: ns, openCreate: false }];
+                                        });
+                                      } else if (secondaryTab === 'lambdas') {
+                                        targetKey = `allLambdas-${namespaceId}`;
+                                        setAllLambdasTabs(prev => {
+                                          if (prev.find(t => t.key === targetKey)) return prev;
+                                          return [...prev, { key: targetKey, namespace: ns, openCreate: false }];
+                                        });
+                                      } else {
+                                        targetKey = `allAccounts-${namespaceId}`;
+                                        setAllAccountsTabs(prev => {
+                                          if (prev.find(t => t.key === targetKey)) return prev;
+                                          return [...prev, { key: targetKey, namespace: ns, openCreate: false }];
+                                        });
+                                      }
+                                      setActiveTab(targetKey);
+                                    }
+                                  } else {
+                                    setActiveTab(tab.key);
+                                    if (tab.key === 'overview' || tab.key === 'namespace' || tab.key === 'schemaService' || tab.key === 'tables' || tab.key === 'unifiedNamespace') {
+                                      setCurrentNamespace(null);
+                                    }
                                   }
                                 }}
                               >
@@ -1214,20 +1262,72 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                                 <Pin size={16} fill="currentColor" />
                               </button>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                         {/* Scrollable tabs except Overview and pinned - Only show namespace tabs */}
-                        {tabs.filter(tab => !tab.pinned && tab.key !== 'overview' && shouldShowInTabBar(tab.key)).map(tab => (
+                        {tabs.filter(tab => !tab.pinned && tab.key !== 'overview' && shouldShowInTabBar(tab.key)).map(tab => {
+                          // Check if this namespace tab is active (direct match or any of its All pages)
+                          const namespaceId = tab.key.replace('namespace-', '');
+                          const isActive = activeTab === tab.key || 
+                                         activeTab === `allAccounts-${namespaceId}` ||
+                                         activeTab === `allMethods-${namespaceId}` ||
+                                         activeTab === `all-schemas-${namespaceId}` ||
+                                         activeTab === `allWebhooks-${namespaceId}` ||
+                                         activeTab === `allLambdas-${namespaceId}`;
+                          return (
                           <div key={tab.key} className="flex items-center group">
                             <button
                               className={`px-2 md:px-4 py-2 text-xs md:text-sm rounded-t-lg transition
-                                ${activeTab === tab.key ? 'font-medium text-gray-700 border-b-2 border-blue-600 bg-white' : 'text-gray-700 hover:bg-gray-100'}
+                                ${isActive ? 'font-medium text-gray-700 border-b-2 border-blue-600 bg-white' : 'text-gray-700 hover:bg-gray-100'}
                               `}
                               onClick={() => {
-                                setActiveTab(tab.key);
-                                // Clear namespace context if switching to overview or non-namespace tabs
-                                if (tab.key === 'overview' || tab.key === 'namespace' || tab.key === 'schemaService' || tab.key === 'tables' || tab.key === 'unifiedNamespace') {
-                                  setCurrentNamespace(null);
+                                // Handle namespace tab clicks
+                                if (tab.key.startsWith('namespace-')) {
+                                  const namespaceId = tab.key.replace('namespace-', '');
+                                  const ns = namespaces.find(n => n['namespace-id'] === namespaceId);
+                                  if (ns) {
+                                    setCurrentNamespace(ns);
+                                    // Determine target based on secondaryTab and ensure All page exists
+                                    let targetKey = '';
+                                    if (secondaryTab === 'methods') {
+                                      targetKey = `allMethods-${namespaceId}`;
+                                      setAllMethodsTabs(prev => {
+                                        if (prev.find(t => t.key === targetKey)) return prev;
+                                        return [...prev, { key: targetKey, namespace: ns, openCreate: false }];
+                                      });
+                                    } else if (secondaryTab === 'schemas') {
+                                      targetKey = `all-schemas-${namespaceId}`;
+                                      setAllSchemasTabs(prev => {
+                                        if (prev.find(t => t.key === targetKey)) return prev;
+                                        return [...prev, { key: targetKey, namespace: ns, openCreate: false }];
+                                      });
+                                    } else if (secondaryTab === 'webhooks') {
+                                      targetKey = `allWebhooks-${namespaceId}`;
+                                      setAllWebhooksTabs(prev => {
+                                        if (prev.find(t => t.key === targetKey)) return prev;
+                                        return [...prev, { key: targetKey, namespace: ns, openCreate: false }];
+                                      });
+                                    } else if (secondaryTab === 'lambdas') {
+                                      targetKey = `allLambdas-${namespaceId}`;
+                                      setAllLambdasTabs(prev => {
+                                        if (prev.find(t => t.key === targetKey)) return prev;
+                                        return [...prev, { key: targetKey, namespace: ns, openCreate: false }];
+                                      });
+                                    } else {
+                                      targetKey = `allAccounts-${namespaceId}`;
+                                      setAllAccountsTabs(prev => {
+                                        if (prev.find(t => t.key === targetKey)) return prev;
+                                        return [...prev, { key: targetKey, namespace: ns, openCreate: false }];
+                                      });
+                                    }
+                                    setActiveTab(targetKey);
+                                  }
+                                } else {
+                                  setActiveTab(tab.key);
+                                  if (tab.key === 'overview' || tab.key === 'namespace' || tab.key === 'schemaService' || tab.key === 'tables' || tab.key === 'unifiedNamespace') {
+                                    setCurrentNamespace(null);
+                                  }
                                 }
                               }}
                             >
@@ -1250,7 +1350,8 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                       ×
                     </button>
                 </div>
-              ))}
+                );
+              })}
               <button className="px-2 py-2 text-gray-500 hover:bg-gray-100 rounded-full">
                 <MoreHorizontal size={16} />
               </button>
