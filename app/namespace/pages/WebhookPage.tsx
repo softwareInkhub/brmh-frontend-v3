@@ -12,6 +12,10 @@ const WebhookPage: React.FC<WebhookPageProps> = ({ webhook, namespace }) => {
 
   useEffect(() => {
     setEditWebhook(webhook || {});
+    // Auto-open in edit mode if __openEdit flag is set
+    if (webhook?.__openEdit) {
+      setEditMode(true);
+    }
   }, [webhook]);
 
   const handleInput = (field: string, value: any) => {

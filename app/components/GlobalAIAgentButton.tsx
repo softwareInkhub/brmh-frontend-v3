@@ -87,7 +87,6 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
         
         if (isVisible) {
           const width = parseInt(styles.width);
-          console.log('🎯 Floating Button - Right Panel OPEN (found visible):', width, 'Total panels:', rightPanels.length);
           setRightPanelWidth(width > 0 ? width : 0);
           foundVisiblePanel = true;
           break; // Found visible panel, stop searching
@@ -95,7 +94,6 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
       }
       
       if (!foundVisiblePanel) {
-        console.log('🎯 Floating Button - No visible right panel (checked', rightPanels.length, 'panels)');
         setRightPanelWidth(0);
       }
     };
@@ -141,13 +139,6 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
   };
 
   if (!isVisible || isBottomTerminalOpen) return null;
-
-  // Debug log for floating button positioning
-  console.log('🔘 Floating Button Position:', {
-    rightPanelWidth,
-    calculatedRight: rightPanelWidth + 24,
-    isVisible: !isBottomTerminalOpen
-  });
 
   return (
     <>

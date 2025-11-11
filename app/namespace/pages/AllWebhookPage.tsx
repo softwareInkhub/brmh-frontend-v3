@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Eye, X } from 'lucide-react';
+import { Plus, Eye, X, Edit2, Trash2 } from 'lucide-react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -131,6 +131,28 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
 
   const handleCreateInput = (field: string, value: any) => {
     setCreateData((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const handleDelete = async (webhook: any) => {
+    if (!window.confirm(`Are you sure you want to delete the webhook "${webhook['webhook-name']}"?`)) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/unified/webhooks/${webhook['webhook-id']}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        alert('Webhook deleted successfully!');
+        // Refresh webhooks list
+        const nsId = namespace ? namespace['namespace-id'] : '';
+        const res2 = await fetch(`${API_BASE_URL}/unified/webhooks/namespace/${nsId}`);
+        const data2 = await res2.json();
+        setWebhooks(Array.isArray(data2) ? data2 : []);
+      } else {
+        alert('Failed to delete webhook.');
+      }
+    } catch (error) {
+      console.error('Delete webhook error:', error);
+      alert('Failed to delete webhook.');
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -300,6 +322,26 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
                 >
                   Open in Tab
                 </button>
+                <button
+                  title="Edit"
+                  className="p-1 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                  onClick={() => {
+                    // Open in tab with edit mode
+                    if (typeof onViewWebhook === 'function') {
+                      onViewWebhook({ ...wh, __openEdit: true }, namespace);
+                    }
+                    setSidePanel(null);
+                  }}
+                >
+                  <Edit2 size={14} />
+                </button>
+                <button
+                  title="Delete"
+                  className="p-1 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
+                  onClick={() => handleDelete(wh)}
+                >
+                  <Trash2 size={14} />
+                </button>
                 <button 
                   type="button" 
                   onClick={() => setSidePanel(null)} 
@@ -391,21 +433,48 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
             {filteredWebhooks.map((wh, idx) => (
               <div 
                 key={wh['webhook-id'] || idx} 
-                className="flex items-center justify-between bg-white border rounded px-4 py-2 shadow-sm hover:shadow-md hover:border-pink-400 transition-all cursor-pointer"
+                className="group relative rounded-xl border border-gray-200 bg-white px-3 md:px-4 py-3 shadow-sm hover:shadow-md transition cursor-pointer"
                 onClick={() => setSidePanel({ webhook: wh })}
                 title="Click to view webhook details"
               >
-                <div className="flex flex-col">
-                  <span className="font-semibold text-gray-900">{wh['webhook-name']}</span>
-                  <span className="text-xs text-gray-500">{wh['post-exec-url']}</span>
+                {/* actions */}
+                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    className="w-7 h-7 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-pink-600 bg-transparent"
+                    title="View"
+                    onClick={(e) => { e.stopPropagation(); setSidePanel({ webhook: wh }); }}
+                  >
+                    <Eye size={14} />
+                  </button>
+                  <button
+                    className="w-7 h-7 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-blue-600 bg-transparent"
+                    title="Edit"
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      if (typeof onViewWebhook === 'function') {
+                        onViewWebhook({ ...wh, __openEdit: true }, namespace);
+                      }
+                    }}
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button
+                    className="w-7 h-7 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-red-600 bg-transparent"
+                    title="Delete"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(wh); }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-                <button 
-                  className="text-pink-600 hover:text-pink-800 p-1" 
-                  title="View" 
-                  onClick={(e) => { e.stopPropagation(); setSidePanel({ webhook: wh }); }}
-                >
-                  <Eye size={16} />
-                </button>
+                <div className="flex items-center gap-3 pr-14">
+                  <div className="w-9 h-9 rounded-lg bg-pink-50 flex items-center justify-center border border-pink-100">
+                    <span className="text-pink-600 text-xl">🔗</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-gray-900 truncate">{wh['webhook-name']}</div>
+                    <div className="text-xs text-gray-500 truncate">{wh['post-exec-url'] || 'No URL'}</div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -424,11 +493,24 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="font-medium text-gray-900 truncate">{wh['webhook-name']}</div>
-                    <div className="text-xs text-gray-500 truncate">{wh['post-exec-url']}</div>
+                    <div className="text-xs text-gray-500 truncate">{wh['post-exec-url'] || 'No URL'}</div>
                   </div>
-                  <button className="text-pink-600 hover:text-pink-800 p-1" title="View" onClick={(e) => { e.stopPropagation(); setSidePanel({ webhook: wh }); }}>
-                    <Eye size={16} />
-                  </button>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button className="text-pink-600 hover:text-pink-800 p-1" title="View" onClick={(e) => { e.stopPropagation(); setSidePanel({ webhook: wh }); }}>
+                      <Eye size={16} />
+                    </button>
+                    <button className="text-blue-600 hover:text-blue-800 p-1" title="Edit" onClick={(e) => { 
+                      e.stopPropagation(); 
+                      if (typeof onViewWebhook === 'function') {
+                        onViewWebhook({ ...wh, __openEdit: true }, namespace);
+                      }
+                    }}>
+                      <Edit2 size={16} />
+                    </button>
+                    <button className="text-red-600 hover:text-red-800 p-1" title="Delete" onClick={(e) => { e.stopPropagation(); handleDelete(wh); }}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

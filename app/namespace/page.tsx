@@ -1936,7 +1936,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                             openCreate={!!openCreate}
                             timestamp={timestamp}
                             onViewWebhook={(webhook, ns) => {
-                              // (Optional) Open single webhook tab here
+                              handleSidePanelAdd('webhookPage', { webhook, namespace: ns });
                             }}
                           />
                         </div>
@@ -2339,7 +2339,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                   openCreate={!!openCreate}
                   timestamp={timestamp}
                   onViewWebhook={(webhook, ns) => {
-                    // (Optional) Open single webhook tab here
+                    handleSidePanelAdd('webhookPage', { webhook, namespace: ns });
                   }}
                 />
               </div>

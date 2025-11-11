@@ -3530,47 +3530,43 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           <div className="p-1.5 rounded-lg bg-white shadow-sm">
             <Bot className="w-4 h-4 text-indigo-600" />
           </div>
-          <div>
-            <h2 className="font-bold text-sm text-white tracking-tight">AI Assistant</h2>
-            <div className="text-[10px] text-white/90">
-              {(localNamespace || droppedNamespaces.length > 0) ? (
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-semibold text-white/95">Context:</span>
-                  <span className="text-[10px] bg-white text-indigo-700 px-1.5 py-0.5 rounded-full font-medium">
-                      {(localNamespace ? 1 : 0) + droppedNamespaces.length} Namespace{(localNamespace ? 1 : 0) + droppedNamespaces.length > 1 ? 's' : ''}
-                  </span>
-                  {sessionId && (
-                    <span className="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-medium">
-                      💾 Memory Active
-                    </span>
-                  )}
-                  </div>
-                  {localNamespace && (
-                    <div className="text-[10px] text-white/80 ml-1 font-medium">
-                      • {localNamespace['namespace-name']} <span className="text-white/60">(primary)</span>
-                    </div>
-                  )}
-                  {droppedNamespaces.map((ns, index) => (
-                    <div key={ns['namespace-id'] || ns.id || index} className="text-[10px] text-white/80 ml-1">
-                      • {ns['namespace-name'] || ns.name || 'Unknown Namespace'}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <span className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-medium text-white/95">General Development</span>
-                  <span className="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-medium">
-                    ✨ Namespace Generation Mode
-                  </span>
-                  {sessionId && (
-                    <span className="text-[10px] bg-white text-indigo-700 px-1.5 py-0.5 rounded-full font-medium">
-                      💾 Memory Active
-                    </span>
-                  )}
+          <h2 className="font-bold text-sm text-white tracking-tight">AI Assistant</h2>
+          <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-white/90">
+            {(localNamespace || droppedNamespaces.length > 0) ? (
+              <>
+                <span className="font-semibold text-white/95">Context:</span>
+                <span className="bg-white text-indigo-700 px-1.5 py-0.5 rounded-full font-medium">
+                  {(localNamespace ? 1 : 0) + droppedNamespaces.length} Namespace{(localNamespace ? 1 : 0) + droppedNamespaces.length > 1 ? 's' : ''}
                 </span>
-              )}
-            </div>
+                {sessionId && (
+                  <span className="bg-green-500 text-white px-1.5 py-0.5 rounded-full font-medium">
+                    💾 Memory Active
+                  </span>
+                )}
+                {localNamespace && (
+                  <span className="text-white/80 font-medium">
+                    • {localNamespace['namespace-name']} <span className="text-white/60">(primary)</span>
+                  </span>
+                )}
+                {droppedNamespaces.map((ns, index) => (
+                  <span key={ns['namespace-id'] || ns.id || index} className="text-white/80">
+                    • {ns['namespace-name'] || ns.name || 'Unknown Namespace'}
+                  </span>
+                ))}
+              </>
+            ) : (
+              <>
+                <span className="font-medium text-white/95">General Development</span>
+                <span className="bg-green-500 text-white px-1.5 py-0.5 rounded-full font-medium">
+                  ✨ Namespace Generation Mode
+                </span>
+                {sessionId && (
+                  <span className="bg-white text-indigo-700 px-1.5 py-0.5 rounded-full font-medium">
+                    💾 Memory Active
+                  </span>
+                )}
+              </>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1.5">

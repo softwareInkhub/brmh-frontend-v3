@@ -212,8 +212,20 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
   
   const [showResponse, setShowResponse] = useState(false);
   const [showValidate, setShowValidate] = useState(false);
-  
+  const [showMethodDropdown, setShowMethodDropdown] = useState(false);
+  const [selectedMethodType, setSelectedMethodType] = useState(methodType);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showMethodDropdown && !target.closest('.relative')) {
+        setShowMethodDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMethodDropdown]);
 
   const handleToggleCollapse = (path: string) => {
     const newCollapsedPaths = new Set(collapsedPaths);
@@ -294,6 +306,10 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
       }));
       setQueryParams(defaultParams.length > 0 ? defaultParams : [{ key: '', value: '' }]);
     }
+    // Update selected method type when method prop changes
+    if (method?.['namespace-method-type']) {
+      setSelectedMethodType(method['namespace-method-type']);
+    }
   }, [method]);
 
   const executeTest = async (isPaginated: boolean = false, isSync: boolean = false) => {
@@ -325,7 +341,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
       );
 
       const requestData = {
-        method: methodType,
+        method: selectedMethodType || methodType,
         url: urlWithParams,
         namespaceAccountId: selectedAccount['namespace-account-id'],
         queryParams: Object.fromEntries(
@@ -707,10 +723,38 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
             {/* API Method + URL in the same line; Account + Max Iterations in the same line */}
             <div className="flex items-end gap-1.5 mb-1.5">
               <div className="relative">
-                <button className="bg-green-500 text-white px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center space-x-0.5">
-                  <span>{methodType}</span>
+                <button 
+                  onClick={() => setShowMethodDropdown(!showMethodDropdown)}
+                  className={`${
+                    selectedMethodType === 'GET' ? 'bg-green-500' :
+                    selectedMethodType === 'POST' ? 'bg-blue-500' :
+                    selectedMethodType === 'PUT' ? 'bg-orange-500' :
+                    selectedMethodType === 'DELETE' ? 'bg-red-500' :
+                    selectedMethodType === 'PATCH' ? 'bg-purple-500' :
+                    'bg-gray-500'
+                  } text-white px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center space-x-0.5 hover:opacity-90 transition-opacity`}
+                >
+                  <span>{selectedMethodType || 'GET'}</span>
                   <ChevronDown className="w-2.5 h-2.5" />
                 </button>
+                {showMethodDropdown && (
+                  <div className="absolute top-full left-0 mt-0.5 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[80px]">
+                    {['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map((method) => (
+                      <button
+                        key={method}
+                        onClick={() => {
+                          setSelectedMethodType(method);
+                          setShowMethodDropdown(false);
+                        }}
+                        className={`w-full text-left px-2 py-1 text-[10px] hover:bg-gray-50 transition-colors ${
+                          selectedMethodType === method ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700'
+                        }`}
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <input
                 type="text"

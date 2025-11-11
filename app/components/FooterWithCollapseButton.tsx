@@ -89,7 +89,6 @@ export default function FooterWithCollapseButton() {
         
         if (isVisible) {
           const width = parseInt(styles.width);
-          console.log('✅ AI Agent Terminal - Right Panel OPEN (found visible):', width, 'Total panels:', rightPanels.length);
           setRightPanelWidth(width > 0 ? width : 0);
           foundVisiblePanel = true;
           break; // Found visible panel, stop searching
@@ -97,7 +96,6 @@ export default function FooterWithCollapseButton() {
       }
       
       if (!foundVisiblePanel) {
-        console.log('✅ AI Agent Terminal - No visible right panel (checked', rightPanels.length, 'panels)');
         setRightPanelWidth(0);
       }
     };
@@ -113,7 +111,6 @@ export default function FooterWithCollapseButton() {
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('🖱️ Resize handle grabbed at Y:', e.clientY);
     setIsResizing(true);
     resizeStartY.current = e.clientY;
     resizeStartHeight.current = panelHeight;
@@ -126,12 +123,10 @@ export default function FooterWithCollapseButton() {
       e.preventDefault();
       const deltaY = resizeStartY.current - e.clientY; // Inverted because we're dragging from top
       const newHeight = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, resizeStartHeight.current + deltaY));
-      console.log('📏 Resizing to:', newHeight, 'px');
       setPanelHeight(newHeight);
     };
 
     const handleMouseUp = () => {
-      console.log('🖱️ Resize handle released. Final height:', panelHeight, 'px');
       setIsResizing(false);
     };
 
@@ -149,23 +144,6 @@ export default function FooterWithCollapseButton() {
       document.body.style.userSelect = '';
     };
   }, [isResizing, panelHeight]);
-
-  // Debug log for AI Agent positioning
-  if (bottomTerminalOpen) {
-    console.log('🤖 AI Agent Panel:', {
-      rightPanelWidth,
-      tertiarySidebarState,
-      isCollapsed,
-      calculatedRight: rightPanelWidth,
-      totalLeftOffset: isCollapsed 
-        ? SIDEBAR_WIDTH 
-        : (tertiarySidebarState === 'expanded'
-            ? SIDEBAR_WIDTH + SIDEPANEL_WIDTH + TERTIARY_SIDEBAR_WIDTH 
-            : tertiarySidebarState === 'collapsed'
-              ? SIDEBAR_WIDTH + SIDEPANEL_WIDTH + TERTIARY_SIDEBAR_COLLAPSED_WIDTH
-              : SIDEBAR_WIDTH + SIDEPANEL_WIDTH)
-    });
-  }
 
   return (
     <>
