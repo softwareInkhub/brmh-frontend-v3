@@ -689,27 +689,12 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
     urlWithParams += (urlWithParams.includes('?') ? '&' : '?') + searchParams.toString();
   }
   return (
-    <div className="w-full h-full bg-white">
-      {/* Breadcrumbs */}
-      <div className="bg-gray-50 border-b border-gray-200 px-3 md:px-4 py-2">
-        <div className="flex items-center space-x-1 text-[10px] md:text-xs text-gray-600 overflow-x-auto">
-          <Home className="h-3 w-3" />
-          <ChevronRight className="h-3 w-3" />
-          <span className="hover:text-blue-600 cursor-pointer">Namespaces</span>
-          <ChevronRight className="h-3 w-3" />
-          <span className="hover:text-blue-600 cursor-pointer">{namespaceName}</span>
-          <ChevronRight className="h-3 w-3" />
-          <span className="text-gray-900 font-medium">{methodName}</span>
-        </div>
-      </div>
-
-      {/* Layout Container */}
-      <div className="h-full flex flex-col" style={{ height: 'calc(100vh - 60px)' }}>
+    <div className="w-full h-full bg-white overflow-hidden flex flex-col">
         {/* Request Panel */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-4" style={{ maxHeight: '520px' }}>
-          <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 rounded-t-lg">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-2 flex-shrink-0">
+          <div className="bg-gray-50 px-2 py-1 border-b border-gray-200 rounded-t-lg">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-gray-800 whitespace-nowrap">API Request</h3>
+              <h3 className="text-xs font-semibold text-gray-800 whitespace-nowrap">API Request</h3>
               <div className="flex items-center space-x-2 min-w-0">
                 <span className="text-xs text-gray-500 truncate">GET Find pet by ID</span>
                 <button className="text-xs text-gray-400 hover:text-gray-600">+</button>
@@ -718,24 +703,24 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
             </div>
           </div>
           
-          <div className="p-3">
+          <div className="p-2">
             {/* API Method + URL in the same line; Account + Max Iterations in the same line */}
-            <div className="flex items-end gap-2 mb-2">
+            <div className="flex items-end gap-1.5 mb-1.5">
               <div className="relative">
-                <button className="bg-green-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center space-x-1">
+                <button className="bg-green-500 text-white px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center space-x-0.5">
                   <span>{methodType}</span>
-                  <ChevronDown className="w-3 h-3" />
+                  <ChevronDown className="w-2.5 h-2.5" />
                 </button>
               </div>
               <input
                 type="text"
                 value={urlWithParams}
                 onChange={e => setUrl(e.target.value)}
-                className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1 px-1.5 py-0.5 text-[10px] border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter URL"
               />
             </div>
-            <div className="flex items-end gap-2 mb-2">
+            <div className="flex items-end gap-1.5 mb-1.5">
               <div className="flex-1">
                 <div className="relative">
                   <select
@@ -764,7 +749,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                         }
                       }
                     }}
-                    className="w-full px-2 py-1 text-xs bg-white border border-gray-200 rounded shadow-sm appearance-none cursor-pointer pr-6 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-1.5 py-0.5 text-[10px] bg-white border border-gray-200 rounded shadow-sm appearance-none cursor-pointer pr-5 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Account</option>
                     {accounts.map(account => (
@@ -773,18 +758,18 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                       </option>
                     ))}
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1">
-                    <ChevronDown className="h-3 w-3 text-gray-400" />
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-0.5">
+                    <ChevronDown className="h-2.5 w-2.5 text-gray-400" />
                   </div>
                 </div>
               </div>
-              <div className="w-24">
+              <div className="w-20">
                 <input
                   type="number"
                   value={maxIterations}
                   onChange={e => setMaxIterations(e.target.value)}
-                  className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Max iterations"
+                  className="w-full px-1.5 py-0.5 text-[10px] border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Max iteratic"
                 />
               </div>
             </div>
@@ -795,12 +780,12 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
               </div>
             )}
 
-            {/* Request Configuration Sub-Tabs */}
-            <div className="border-b border-gray-200 mb-2 overflow-x-auto">
-              <div className="flex space-x-4 text-xs">
+            {/* Request Configuration Sub-Tabs - Compact */}
+            <div className="border-b border-gray-200 mb-1 overflow-x-auto">
+              <div className="flex space-x-2 text-[10px]">
                 <button
                   onClick={() => setActiveTab('params')}
-                  className={`px-1 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+                  className={`px-1 py-1 text-[10px] font-medium border-b-2 transition-colors ${
                     activeTab === 'params' 
                       ? 'border-purple-500 text-purple-600' 
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -814,7 +799,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                 </button>
                 <button
                   onClick={() => setActiveTab('body')}
-                  className={`px-1 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+                  className={`px-1 py-1 text-[10px] font-medium border-b-2 transition-colors ${
                     activeTab === 'body' 
                       ? 'border-purple-500 text-purple-600' 
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -824,7 +809,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                 </button>
                 <button
                   onClick={() => setActiveTab('headers')}
-                  className={`px-1 py-1.5 text-xs font-medium border-b-2 transition-colors relative ${
+                  className={`px-1 py-1 text-[10px] font-medium border-b-2 transition-colors relative ${
                     activeTab === 'headers' 
                       ? 'border-purple-500 text-purple-600' 
                       : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -832,7 +817,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                 >
                   Headers
                   {headers.filter(h => h.key && h.key.trim() !== '').length > 0 && (
-                    <span className="absolute -top-0.5 -right-1 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center">
+                    <span className="absolute -top-0.5 -right-1 bg-green-500 text-white text-[9px] rounded-full w-3 h-3 flex items-center justify-center">
                       {headers.filter(h => h.key && h.key.trim() !== '').length}
                     </span>
                   )}
@@ -840,48 +825,48 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
               </div>
             </div>
 
-            {/* Request Configuration Content */}
-            <div className="space-y-1">
+            {/* Request Configuration Content - Compact */}
+            <div className="space-y-0.5">
               {activeTab === 'params' && (
                 <div>
-                  <div className="text-xs font-medium text-gray-700 mb-2">Query Params</div>
+                  <div className="text-[10px] font-medium text-gray-700 mb-1">Query Params</div>
                   <div className="border border-gray-200 rounded">
-                    <div className="grid grid-cols-5 gap-2 px-2 py-1 bg-gray-50 text-xs font-medium text-gray-700 border-b border-gray-200">
+                    <div className="grid grid-cols-5 gap-1 px-1.5 py-0.5 bg-gray-50 text-[10px] font-medium text-gray-700 border-b border-gray-200">
                       <div>Name</div>
                       <div>Value</div>
                       <div>Type</div>
                       <div>Description</div>
                     </div>
-                                          <div className="p-2">
+                                          <div className="p-1">
                         {queryParams.map((param, index) => (
-                          <div key={index} className="grid grid-cols-5 gap-2 mb-1 items-center">
+                          <div key={index} className="grid grid-cols-5 gap-1 mb-0.5 items-center">
                           <input
                             type="text"
                             value={param.key}
                             onChange={e => handleKeyValueChange(index, 'key', e.target.value, 'queryParams')}
-                            className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            className="px-1.5 py-0.5 text-[10px] border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             placeholder="Add a new param"
                           />
                           <input
                             type="text"
                             value={param.value}
                             onChange={e => handleKeyValueChange(index, 'value', e.target.value, 'queryParams')}
-                            className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            className="px-1.5 py-0.5 text-[10px] border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             placeholder="Value"
                           />
-                          <select className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                          <select className="px-1.5 py-0.5 text-[10px] border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
                             <option value="string">String</option>
                             <option value="number">Number</option>
                             <option value="boolean">Boolean</option>
                           </select>
                           <input
                             type="text"
-                            className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            className="px-1.5 py-0.5 text-[10px] border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             placeholder="Description"
                           />
                           <button
                             onClick={() => handleRemoveKeyValuePair(index, 'queryParams')}
-                            className="w-5 h-5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-full transition-colors flex items-center justify-center"
+                            className="w-4 h-4 text-[10px] text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-full transition-colors flex items-center justify-center"
                             title="Remove parameter"
                           >
                             ✕
@@ -890,7 +875,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                       ))}
                       <button
                         onClick={() => handleAddKeyValuePair('queryParams')}
-                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                        className="text-[10px] text-blue-600 hover:text-blue-700 font-medium"
                       >
                         + Add Parameter
                       </button>
@@ -970,10 +955,10 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
               )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap justify-end gap-2 mt-3">
+            {/* Action Buttons - Compact */}
+            <div className="flex flex-wrap justify-end gap-1 mt-1">
               <button
-                className="px-3 py-1 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="px-2 py-0.5 text-[10px] text-gray-600 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50"
                 onClick={() => {
                   setUrl('');
                   setRequestBody('');
@@ -988,7 +973,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                 Reset
               </button>
               <button
-                className={`px-3 py-1 text-xs text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1 shadow-sm ${activeButton === 'send' ? 'bg-blue-700' : 'bg-[#2563EB] hover:bg-blue-700'}`}
+                className={`px-2 py-0.5 text-[10px] text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-0.5 shadow-sm ${activeButton === 'send' ? 'bg-blue-700' : 'bg-[#2563EB] hover:bg-blue-700'}`}
                 onClick={e => {
                   e.preventDefault();
                   if (!isSubmitting && !loading) executeTest(false);
@@ -996,22 +981,22 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                 disabled={loading || !selectedAccount || isSubmitting}
                 type="button"
               >
-                <div className="flex items-center gap-1 min-w-[40px] justify-center">
+                <div className="flex items-center gap-0.5 min-w-[30px] justify-center">
                   {(loading || isSubmitting) && activeButton === 'send' ? (
                     <>
-                      <RefreshCw className="h-3 w-3 animate-spin" />
+                      <RefreshCw className="h-2.5 w-2.5 animate-spin" />
                       <span>Testing...</span>
                     </>
                   ) : (
                     <>
-                      <Send className="h-3 w-3" />
+                      <Send className="h-2.5 w-2.5" />
                       <span>Send</span>
                     </>
                   )}
                 </div>
               </button>
               <button
-                className={`px-3 py-1 text-xs text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1 shadow-sm ${activeButton === 'loop' ? 'bg-blue-700' : 'bg-[#2563EB] hover:bg-blue-700'}`}
+                className={`px-2 py-0.5 text-[10px] text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-0.5 shadow-sm ${activeButton === 'loop' ? 'bg-blue-700' : 'bg-[#2563EB] hover:bg-blue-700'}`}
                 onClick={e => {
                   e.preventDefault();
                   if (!isSubmitting && !loading) executeTest(true);
@@ -1019,22 +1004,22 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                 disabled={loading || !selectedAccount || isSubmitting}
                 type="button"
               >
-                <div className="flex items-center gap-1 min-w-[50px] justify-center">
+                <div className="flex items-center gap-0.5 min-w-[35px] justify-center">
                   {(loading || isSubmitting) && activeButton === 'loop' ? (
                     <>
-                      <RefreshCw className="h-3 w-3 animate-spin" />
+                      <RefreshCw className="h-2.5 w-2.5 animate-spin" />
                       <span>Testing...</span>
                     </>
                   ) : (
                     <>
-                      <RefreshCw className="h-3 w-3" />
+                      <RefreshCw className="h-2.5 w-2.5" />
                       <span>Loop</span>
                     </>
                   )}
                 </div>
               </button>
               <button
-                className={`px-3 py-1 text-xs text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1 shadow-sm ${activeButton === 'sync' ? 'bg-blue-700' : 'bg-[#2563EB] hover:bg-blue-700'}`}
+                className={`px-2 py-0.5 text-[10px] text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-0.5 shadow-sm ${activeButton === 'sync' ? 'bg-blue-700' : 'bg-[#2563EB] hover:bg-blue-700'}`}
                 onClick={e => {
                   e.preventDefault();
                   if (!isSubmitting && !loading) {
@@ -1058,15 +1043,15 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                 disabled={loading || !selectedAccount || isSubmitting}
                 type="button"
               >
-                <div className="flex items-center gap-1 min-w-[50px] justify-center">
+                <div className="flex items-center gap-0.5 min-w-[35px] justify-center">
                   {(loading || isSubmitting) && activeButton === 'sync' ? (
                     <>
-                      <RefreshCw className="h-3 w-3 animate-spin" />
+                      <RefreshCw className="h-2.5 w-2.5 animate-spin" />
                       <span>Syncing...</span>
                     </>
                   ) : (
                     <>
-                      <RefreshCw className="h-3 w-3" />
+                      <RefreshCw className="h-2.5 w-2.5" />
                       <span>Sync</span>
                     </>
                   )}
@@ -1076,14 +1061,14 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
           </div>
         </div>
         
-        {/* Bottom Panels Container */}
+        {/* Bottom Panels Container - Flexible Height */}
         {(showResponse || showValidate) && (
-          <div className="flex flex-col md:flex-row gap-4 md:h-[370px] w-[100%]">
+          <div className="flex flex-col md:flex-row gap-2 flex-1 min-h-0 overflow-hidden">
             {showResponse && (
-              <div className=" border border-gray-200 rounded-lg shadow-sm w-[100%] ">
-                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 rounded-t-lg ">
+              <div className="border border-gray-200 rounded-lg shadow-sm w-full flex flex-col min-h-0">
+                <div className="bg-gray-50 px-2 py-1 border-b border-gray-200 rounded-t-lg flex-shrink-0">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-800">Response</h3>
+                    <h3 className="text-xs font-semibold text-gray-800">Response</h3>
                     <div className="flex items-center space-x-2">
                       {response && (
                         <div className={`px-1.5 py-0.5 rounded text-xs font-medium ${
@@ -1109,7 +1094,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                   </div>
                 </div>
                 
-                <div className="p-3 md:p-4 h-full overflow-auto  w-[100%]">
+                <div className="p-2 flex-1 overflow-auto min-h-0">
                   {!response && (
                     <div className="flex items-center justify-center h-32 text-gray-500">
                       <div className="text-center">
@@ -1451,9 +1436,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
             )}
           </div>
         )}
-      </div>
 
-          
       {/* Sync Modal */}
       {showSyncModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

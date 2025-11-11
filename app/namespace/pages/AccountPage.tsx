@@ -6,19 +6,21 @@ type Props = {
   namespace?: any;
   openEdit?: boolean;
   refreshSidePanelData?: () => Promise<void>;
+  onOpenInTab?: (account: any, namespace?: any) => void;
+  hideHeader?: boolean;
 };
 
-export default function AccountPage({ account, namespace, openEdit, refreshSidePanelData }: Props) {
+export default function AccountPage({ account, namespace, openEdit, refreshSidePanelData, onOpenInTab, hideHeader }: Props) {
   const [editMode, setEditMode] = useState(false);
   const [editAccount, setEditAccount] = useState<any>(account || {});
   const [saveMsg, setSaveMsg] = useState('');
 
-  // Auto-open in edit mode when requested
+  // Auto-open in edit mode when requested (from prop or account object)
   useEffect(() => {
-    if (openEdit) {
+    if (openEdit || account?.__openEdit) {
       setEditMode(true);
     }
-  }, [openEdit]);
+  }, [openEdit, account]);
 
   // Editable headers/variables helpers
   const updateHeaderAtIndex = (index: number, field: 'key' | 'value', value: string) => {
@@ -312,39 +314,47 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
       <div className="bg-white p-4 md:p-8 flex flex-col gap-4 md:gap-6 w-full h-full m-0">
         {!editMode ? (
           <>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2 md:gap-3">
-                <User className="text-blue-500" size={20} className="md:hidden" />
-                <User className="text-blue-500" size={28} className="hidden md:block" />
-                <h2 className="text-lg md:text-2xl font-bold text-blue-700 tracking-tight">Account Details</h2>
+            {!hideHeader && (
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <User className="text-blue-500" size={20} className="md:hidden" />
+                  <User className="text-blue-500" size={28} className="hidden md:block" />
+                  <h2 className="text-lg md:text-2xl font-bold text-blue-700 tracking-tight">Account Details</h2>
+                </div>
+                <div className="flex gap-1">
+                  {onOpenInTab && (
+                    <button
+                      title="Open in Tab"
+                      className="px-2 py-1 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium text-[10px] border border-blue-200 transition-all"
+                      onClick={() => onOpenInTab(editAccount, namespace)}
+                    >
+                      Open in Tab
+                    </button>
+                  )}
+                  <button
+                    title="Link"
+                    className="p-1 rounded-md bg-gray-100 text-blue-700 hover:bg-blue-50 transition-colors"
+                    onClick={() => handleOAuthRedirect(editAccount)}
+                  >
+                    <LinkIcon size={14} />
+                  </button>
+                  <button
+                    title="Edit"
+                    className="p-1 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    onClick={() => setEditMode(true)}
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button
+                    title="Delete"
+                    className="p-1 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
+                    onClick={handleDelete}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-1 md:gap-2">
-                <button
-                  title="Link"
-                  className="p-1.5 md:p-2 rounded-lg bg-gray-100 text-blue-700 hover:bg-blue-50 transition-colors"
-                  onClick={() => handleOAuthRedirect(editAccount)}
-                >
-                  <LinkIcon size={16} className="md:hidden" />
-                  <LinkIcon size={18} className="hidden md:block" />
-                </button>
-                <button
-                  title="Edit"
-                  className="p-1.5 md:p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                  onClick={() => setEditMode(true)}
-                >
-                  <Edit2 size={16} className="md:hidden" />
-                  <Edit2 size={18} className="hidden md:block" />
-                </button>
-                <button
-                  title="Delete"
-                  className="p-1.5 md:p-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
-                  onClick={handleDelete}
-                >
-                  <Trash2 size={16} className="md:hidden" />
-                  <Trash2 size={18} className="hidden md:block" />
-                </button>
-              </div>
-            </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-3 md:gap-y-4">
               <div>
                 <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><User size={14} className="text-blue-400 md:hidden" /><User size={16} className="text-blue-400 hidden md:block" /> Name</div>

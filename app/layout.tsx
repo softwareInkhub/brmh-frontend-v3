@@ -11,6 +11,7 @@ import { queryClient } from "./lib/queryClient";
 import { SidePanelProvider } from "./components/SidePanelContext";
 import { NamespaceProvider } from "./components/NamespaceContext";
 import { AIAgentProvider } from "./components/AIAgentContext";
+import { BottomTerminalProvider } from "./components/BottomTerminalContext";
 import FooterWithCollapseButton from "./components/FooterWithCollapseButton";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -35,13 +36,15 @@ export default function RootLayout({
           <QueryClientProvider client={queryClient}>
             <NamespaceProvider>
               <SidePanelProvider>
-                <AIAgentProvider>
-                  <AuthGuard>
-                    <AppContentClient>
-                      {children}
-                    </AppContentClient>
-                  </AuthGuard>
-                </AIAgentProvider>
+                <BottomTerminalProvider>
+                  <AIAgentProvider>
+                    <AuthGuard>
+                      <AppContentClient>
+                        {children}
+                      </AppContentClient>
+                    </AuthGuard>
+                  </AIAgentProvider>
+                </BottomTerminalProvider>
               </SidePanelProvider>
             </NamespaceProvider>
             <Toaster richColors position="top-right" />

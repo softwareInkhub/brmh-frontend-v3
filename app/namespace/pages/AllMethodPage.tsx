@@ -407,16 +407,13 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
       if (m['namespace-method-type'] === 'POST') typeIcon = <Send size={22} className="text-orange-500" />;
       if (m['namespace-method-type'] === 'DELETE') typeIcon = <Trash2 size={22} className="text-red-500" />;
       return (
-        <div className="flex flex-col p-6 relative h-[45vh] overflow-auto">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              {typeIcon}
-              <span className="text-xl font-bold text-blue-700 hover:underline cursor-pointer" style={{ wordBreak: 'break-all' }}>{m['namespace-method-name']}</span>
-            </div>
-            <div className="flex items-center gap-2">
+        <div key={m['namespace-method-id']} className="flex flex-col p-6 relative h-[45vh] overflow-auto">
+          <div className="flex items-center justify-between mb-4 sticky top-0 bg-white z-10 pb-2 border-b">
+            <h3 className="text-lg font-bold text-green-700">{m['namespace-method-name']}</h3>
+            <div className="flex items-center gap-1">
               <button
-                className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold px-4 py-1 rounded-lg border border-blue-200 shadow-sm transition-all"
-                style={{ fontSize: '0.95rem' }}
+                title="Open in Tab"
+                className="px-2 py-1 rounded-md bg-green-50 hover:bg-green-100 text-green-700 font-medium text-[10px] border border-green-200 transition-all"
                 onClick={() => {
                   if (typeof onViewMethod === 'function') onViewMethod(m, m.namespace);
                   setSidePanel(null);
@@ -424,7 +421,13 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
               >
                 Open in Tab
               </button>
-              <button type="button" onClick={() => setSidePanel(null)} className="text-gray-400 hover:text-gray-700"><X size={24} /></button>
+              <button 
+                type="button" 
+                onClick={() => setSidePanel(null)} 
+                className="text-gray-400 hover:text-gray-700 ml-1"
+              >
+                <X size={22} />
+              </button>
             </div>
           </div>
           <div className="space-y-4 text-sm text-gray-700">
@@ -454,7 +457,13 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
     });
 
   return (
-    <div ref={pageRef} className="p-4 w-full flex relative ">
+    <div 
+      ref={pageRef} 
+      className="p-4 flex relative transition-all duration-300"
+      style={{
+        width: sidePanel ? `calc(100% - ${sidePanelWidth}px)` : '100%'
+      }}
+    >
       <div className="flex-1 pr-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">All Methods</h2>
@@ -602,20 +611,18 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
           </div>
         )}
       </div>
-      {/* Bottom Sheet Panel: create (right) retained, details (bottom) */}
-      {/* Create side panel (right) */}
-      {sidePanel === 'create' && (
+      {/* Right Side Panel - For both create and method details */}
+      {sidePanel && (
         <div
           ref={panelRef}
-          className={`fixed right-0 bg-white border-l border-gray-200 shadow-2xl z-50 transition-transform duration-300 flex flex-col`}
+          className={`method-details-panel fixed right-0 bg-white border-l border-gray-200 z-50 transition-transform duration-300 flex flex-col`}
           style={{ 
             top: `${panelTopPosition}px`,
-            bottom: 0,
+            bottom: '40px',
             width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : (sidePanel ? sidePanelWidth : 0), 
             transform: sidePanel ? 'translateX(0)' : `translateX(${sidePanelWidth}px)`, 
-            boxShadow: sidePanel ? '0 0 32px 0 rgba(0,0,0,0.10)' : 'none', 
-            borderTopLeftRadius: 16, 
-            borderBottomLeftRadius: 16, 
+            borderTopLeftRadius: 0, 
+            borderBottomLeftRadius: 0, 
             overflow: 'auto' 
           }}
         >
@@ -627,15 +634,6 @@ export default function AllMethodPage({ namespace, onViewMethod, openCreate = fa
             <div style={{ width: 4, height: 48, background: '#e5e7eb', borderRadius: 2, margin: 'auto', marginTop: 24 }} />
           </div>
           <div style={{ marginLeft: 16, flex: 1, minWidth: 0 }}>{renderSidePanel()}</div>
-        </div>
-      )}
-
-      {/* Bottom details sheet */}
-      {sidePanel && typeof sidePanel === 'object' && sidePanel.method && (
-        <div className="fixed bottom-0 z-20 " style={{ left: typeof window !== 'undefined' && window.innerWidth < 768 ? 0 : Math.max(0, sheetBounds.left - 16), width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : sheetBounds.width + 52 }}>
-          <div className=" border border-gray-200 bg-white ">
-            {renderSidePanel()}
-          </div>
         </div>
       )}
     </div>

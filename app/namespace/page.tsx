@@ -8,7 +8,7 @@ import Tables from './components/Tables';
 
 import dynamic from 'next/dynamic';
 import { NestedFieldsEditor, schemaToFields } from './components/SchemaService';
-import { User, X, Plus, MoreHorizontal,  Zap, Box, FileText, GitBranch, Database, Sparkles, View, LayoutGrid, LayoutPanelLeft, Pin, PinOff, Globe, Search, Settings, Copy, Edit3, Trash2 } from 'lucide-react';
+import { User, X, Plus, MoreHorizontal,  Zap, Box, FileText, GitBranch, Database, Sparkles, View, LayoutGrid, LayoutPanelLeft, Pin, PinOff, Globe, Search, Settings, Copy, Edit3, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import AccountModal from './Modals/AccountModal';
 import MethodModal from './components/MethodModal';
 import NamespaceModal from './Modals/NamespaceModal';
@@ -93,6 +93,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
   const [secondarySearchQuery, setSecondarySearchQuery] = useState('');
   const [showSecondarySettings, setShowSecondarySettings] = useState(false);
   const [tertiarySidebarTop, setTertiarySidebarTop] = useState(116); // Default: navbar (64px) + tab bar (~52px)
+  const [isTertiaryCollapsed, setIsTertiaryCollapsed] = useState(false);
 
   // Modal state for schema creation
   const [showModal, setShowModal] = useState(false);
@@ -1160,7 +1161,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                 {/* Tab Layout: Horizontal or Vertical */}
                 {tabLayout === 'horizontal' ? (
                   <>
-                    <div className="border-b bg-white px-2 md:px-4 py-2 overflow-x-auto whitespace-nowrap relative scrollbar-thin-x namespace-tab-bar">
+                    <div className="sticky top-0 z-40 border-b bg-white px-2 md:px-4 py-2 overflow-x-auto whitespace-nowrap scrollbar-thin-x namespace-tab-bar">
                       <div className="flex items-center gap-1" style={{ minWidth: 'fit-content', width: 'fit-content', display: 'inline-flex' }}>
                         {/* Sticky container for view button and Overview tab */}
                         <div className="sticky left-0 z-10 bg-white flex items-center pr-2" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.04)' }}>
@@ -1370,13 +1371,16 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                       const nsLambdas = currentNamespace ? (lambdasMap[currentNamespace['namespace-id']] || []) : [];
 
                       return (
-                        <div className="fixed left-[336px] bottom-0 w-56 bg-white border-r border-gray-200 shadow-lg z-30 overflow-y-auto tertiary-sidebar"
+                        <div 
+                          className="fixed bottom-0 bg-white border-r border-gray-200 shadow-lg z-30 tertiary-sidebar transition-all duration-300 flex flex-col pb-4"
                           style={{
-                            top: `${tertiarySidebarTop}px`
+                            top: `${tertiarySidebarTop}px`,
+                            left: isCollapsed ? `${SIDEBAR_WIDTH}px` : `${SIDEBAR_WIDTH + SIDEPANEL_WIDTH}px`,
+                            width: isTertiaryCollapsed ? '48px' : '224px'
                           }}
                         >
                           {/* Header Section */}
-                          <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white sticky top-0 z-10">
+                          <div className={`px-4 py-4 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white sticky top-0 z-10 ${isTertiaryCollapsed ? 'hidden' : ''}`}>
                             <div className="flex items-center gap-2 mb-2">
                               {currentNamespace?.['icon-url'] ? (
                                 <img
@@ -1413,7 +1417,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           </div>
 
                           {/* Navigation Items */}
-                          <div className="py-2">
+                          <div className="py-2 flex-1 overflow-y-auto">
                             {/* Accounts */}
                             <button
                               onClick={() => {
@@ -1426,21 +1430,29 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                                   return [...prev, { key, namespace: currentNamespace, openCreate: false }];
                                 });
                               }}
-                              className={`w-full px-4 py-3 flex items-center gap-3 transition-all ${
+                              className={`w-full px-2 py-3 flex items-center justify-center transition-all ${
+                                isTertiaryCollapsed ? 'flex-col gap-1' : 'gap-3'
+                              } ${
                                 secondaryTab === 'accounts'
                                   ? 'bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500 text-blue-700'
                                   : 'text-gray-700 hover:bg-gray-50 border-l-4 border-transparent hover:border-gray-300'
                               }`}
+                              title={isTertiaryCollapsed ? `Accounts (${nsAccounts.length})` : ''}
                             >
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              <div className={`${isTertiaryCollapsed ? 'w-6 h-6' : 'w-8 h-8'} rounded-lg flex items-center justify-center ${
                                 secondaryTab === 'accounts' ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-600'
                               }`}>
-                                <User size={16} />
+                                <User size={isTertiaryCollapsed ? 14 : 16} />
                               </div>
-                              <div className="flex-1 text-left">
-                                <div className="font-medium text-sm">Accounts</div>
-                                <div className="text-xs text-gray-500">{nsAccounts.length} items</div>
-                              </div>
+                              {!isTertiaryCollapsed && (
+                                <div className="flex-1 text-left">
+                                  <div className="font-medium text-sm">Accounts</div>
+                                  <div className="text-xs text-gray-500">{nsAccounts.length} items</div>
+                                </div>
+                              )}
+                              {isTertiaryCollapsed && (
+                                <div className="text-[9px] text-gray-600">{nsAccounts.length}</div>
+                              )}
                             </button>
 
                             {/* Methods */}
@@ -1455,21 +1467,29 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                                   return [...prev, { key, namespace: currentNamespace, openCreate: false }];
                                 });
                               }}
-                              className={`w-full px-4 py-3 flex items-center gap-3 transition-all ${
+                              className={`w-full px-2 py-3 flex items-center justify-center transition-all ${
+                                isTertiaryCollapsed ? 'flex-col gap-1' : 'gap-3'
+                              } ${
                                 secondaryTab === 'methods'
                                   ? 'bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 text-green-700'
                                   : 'text-gray-700 hover:bg-gray-50 border-l-4 border-transparent hover:border-gray-300'
                               }`}
+                              title={isTertiaryCollapsed ? `Methods (${nsMethods.length})` : ''}
                             >
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              <div className={`${isTertiaryCollapsed ? 'w-6 h-6' : 'w-8 h-8'} rounded-lg flex items-center justify-center ${
                                 secondaryTab === 'methods' ? 'bg-green-500 text-white' : 'bg-green-50 text-green-600'
                               }`}>
-                                <Zap size={16} />
+                                <Zap size={isTertiaryCollapsed ? 14 : 16} />
                               </div>
-                              <div className="flex-1 text-left">
-                                <div className="font-medium text-sm">Methods</div>
-                                <div className="text-xs text-gray-500">{nsMethods.length} items</div>
-                              </div>
+                              {!isTertiaryCollapsed && (
+                                <div className="flex-1 text-left">
+                                  <div className="font-medium text-sm">Methods</div>
+                                  <div className="text-xs text-gray-500">{nsMethods.length} items</div>
+                                </div>
+                              )}
+                              {isTertiaryCollapsed && (
+                                <div className="text-[9px] text-gray-600">{nsMethods.length}</div>
+                              )}
                             </button>
 
                             {/* Schemas */}
@@ -1484,21 +1504,29 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                                   return [...prev, { key, namespace: currentNamespace, openCreate: false }];
                                 });
                               }}
-                              className={`w-full px-4 py-3 flex items-center gap-3 transition-all ${
+                              className={`w-full px-2 py-3 flex items-center justify-center transition-all ${
+                                isTertiaryCollapsed ? 'flex-col gap-1' : 'gap-3'
+                              } ${
                                 secondaryTab === 'schemas'
                                   ? 'bg-gradient-to-r from-purple-50 to-purple-100 border-l-4 border-purple-500 text-purple-700'
                                   : 'text-gray-700 hover:bg-gray-50 border-l-4 border-transparent hover:border-gray-300'
                               }`}
+                              title={isTertiaryCollapsed ? `Schemas (${nsSchemas.length})` : ''}
                             >
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              <div className={`${isTertiaryCollapsed ? 'w-6 h-6' : 'w-8 h-8'} rounded-lg flex items-center justify-center ${
                                 secondaryTab === 'schemas' ? 'bg-purple-500 text-white' : 'bg-purple-50 text-purple-600'
                               }`}>
-                                <FileText size={16} />
+                                <FileText size={isTertiaryCollapsed ? 14 : 16} />
                               </div>
-                              <div className="flex-1 text-left">
-                                <div className="font-medium text-sm">Schemas</div>
-                                <div className="text-xs text-gray-500">{nsSchemas.length} items</div>
-                              </div>
+                              {!isTertiaryCollapsed && (
+                                <div className="flex-1 text-left">
+                                  <div className="font-medium text-sm">Schemas</div>
+                                  <div className="text-xs text-gray-500">{nsSchemas.length} items</div>
+                                </div>
+                              )}
+                              {isTertiaryCollapsed && (
+                                <div className="text-[9px] text-gray-600">{nsSchemas.length}</div>
+                              )}
                             </button>
 
                             {/* Webhooks */}
@@ -1513,21 +1541,29 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                                   return [...prev, { key, namespace: currentNamespace, openCreate: false }];
                                 });
                               }}
-                              className={`w-full px-4 py-3 flex items-center gap-3 transition-all ${
+                              className={`w-full px-2 py-3 flex items-center justify-center transition-all ${
+                                isTertiaryCollapsed ? 'flex-col gap-1' : 'gap-3'
+                              } ${
                                 secondaryTab === 'webhooks'
                                   ? 'bg-gradient-to-r from-pink-50 to-pink-100 border-l-4 border-pink-500 text-pink-700'
                                   : 'text-gray-700 hover:bg-gray-50 border-l-4 border-transparent hover:border-gray-300'
                               }`}
+                              title={isTertiaryCollapsed ? `Webhooks (${nsWebhooks.length})` : ''}
                             >
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              <div className={`${isTertiaryCollapsed ? 'w-6 h-6' : 'w-8 h-8'} rounded-lg flex items-center justify-center ${
                                 secondaryTab === 'webhooks' ? 'bg-pink-500 text-white' : 'bg-pink-50 text-pink-600'
                               }`}>
-                                <GitBranch size={16} />
+                                <GitBranch size={isTertiaryCollapsed ? 14 : 16} />
                               </div>
-                              <div className="flex-1 text-left">
-                                <div className="font-medium text-sm">Webhooks</div>
-                                <div className="text-xs text-gray-500">{nsWebhooks.length} items</div>
-                              </div>
+                              {!isTertiaryCollapsed && (
+                                <div className="flex-1 text-left">
+                                  <div className="font-medium text-sm">Webhooks</div>
+                                  <div className="text-xs text-gray-500">{nsWebhooks.length} items</div>
+                                </div>
+                              )}
+                              {isTertiaryCollapsed && (
+                                <div className="text-[9px] text-gray-600">{nsWebhooks.length}</div>
+                              )}
                             </button>
 
                             {/* Lambdas */}
@@ -1542,38 +1578,48 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                                   return [...prev, { key, namespace: currentNamespace, openCreate: false }];
                                 });
                               }}
-                              className={`w-full px-4 py-3 flex items-center gap-3 transition-all ${
+                              className={`w-full px-2 py-3 flex items-center justify-center transition-all ${
+                                isTertiaryCollapsed ? 'flex-col gap-1' : 'gap-3'
+                              } ${
                                 secondaryTab === 'lambdas'
                                   ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 border-l-4 border-indigo-500 text-indigo-700'
                                   : 'text-gray-700 hover:bg-gray-50 border-l-4 border-transparent hover:border-gray-300'
                               }`}
+                              title={isTertiaryCollapsed ? `Lambdas (${nsLambdas.length})` : ''}
                             >
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              <div className={`${isTertiaryCollapsed ? 'w-6 h-6' : 'w-8 h-8'} rounded-lg flex items-center justify-center ${
                                 secondaryTab === 'lambdas' ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-600'
                               }`}>
-                                <Box size={16} />
+                                <Box size={isTertiaryCollapsed ? 14 : 16} />
                               </div>
-                              <div className="flex-1 text-left">
-                                <div className="font-medium text-sm">Lambdas</div>
-                                <div className="text-xs text-gray-500">{nsLambdas.length} items</div>
-                              </div>
+                              {!isTertiaryCollapsed && (
+                                <div className="flex-1 text-left">
+                                  <div className="font-medium text-sm">Lambdas</div>
+                                  <div className="text-xs text-gray-500">{nsLambdas.length} items</div>
+                                </div>
+                              )}
+                              {isTertiaryCollapsed && (
+                                <div className="text-[9px] text-gray-600">{nsLambdas.length}</div>
+                              )}
                             </button>
                           </div>
 
-                          {/* Settings Button at Bottom */}
-                          <div className="px-4 py-3 border-t border-gray-200 mt-auto sticky bottom-0 bg-white">
+                          {/* Settings and Collapse Button at Bottom - Always Visible */}
+                          <div className={`py-3 pb-4 border-t border-gray-200 bg-white flex-shrink-0 ${isTertiaryCollapsed ? 'px-1' : 'px-4'} space-y-2`}>
+                            {/* Settings Button */}
                             <div className="relative">
                               <button
                                 onClick={() => setShowSecondarySettings(!showSecondarySettings)}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                className={`w-full flex items-center ${isTertiaryCollapsed ? 'justify-center' : 'gap-2'} ${isTertiaryCollapsed ? 'px-1' : 'px-3'} py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors bg-white`}
+                                title={isTertiaryCollapsed ? 'Namespace Settings' : ''}
                               >
                                 <Settings size={16} />
-                                <span>Namespace Settings</span>
+                                {!isTertiaryCollapsed && <span>Namespace Settings</span>}
                               </button>
                               
                               {/* Settings Dropdown Menu */}
-                              {showSecondarySettings && (
-                                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
+                              {showSecondarySettings && !isTertiaryCollapsed && (
+                                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-[100]">
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1625,18 +1671,34 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                                 </div>
                               )}
                             </div>
+                            
+                            {/* Collapse Button - Icon Only */}
+                            <button
+                              onClick={() => setIsTertiaryCollapsed(!isTertiaryCollapsed)}
+                              className="w-full flex items-center justify-center p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded transition-colors"
+                              title={isTertiaryCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                            >
+                              {isTertiaryCollapsed ? (
+                                <ChevronRight className="w-4 h-4" />
+                              ) : (
+                                <ChevronLeft className="w-4 h-4" />
+                              )}
+                            </button>
                           </div>
                         </div>
                       );
                     })()}
 
                     {/* Main Tab Content with responsive padding - adjusted for tertiary sidebar */}
-                    <div className={`pr-2 md:pr-8 pt-2 md:pt-4 transition-all duration-200`}
+                    <div className={`pr-2 md:pr-8 pt-2 md:pt-4 transition-all duration-300`}
                       style={{
-                        marginLeft: getCurrentNamespaceForSecondaryBar() ? '224px' : '0', // w-56 = 224px
+                        marginLeft: getCurrentNamespaceForSecondaryBar() 
+                          ? (isTertiaryCollapsed ? '48px' : '224px')
+                          : '0',
                         width: getCurrentNamespaceForSecondaryBar() 
-                          ? 'calc(100% - 224px)' 
-                          : '100%'
+                          ? (isTertiaryCollapsed ? 'calc(100% - 48px)' : 'calc(100% - 224px)')
+                          : '100%',
+                        transition: 'all 0.3s ease'
                       }}
                     >
                       {activeTab === 'overview' && (

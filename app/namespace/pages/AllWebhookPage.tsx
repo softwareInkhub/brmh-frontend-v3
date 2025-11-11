@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Eye, X } from 'lucide-react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
@@ -16,6 +16,7 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
   const [sidePanel, setSidePanel] = useState<'create' | { webhook: any } | null>(null);
   const [sidePanelWidth, setSidePanelWidth] = useState(400);
   const [isResizing, setIsResizing] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [panelTopPosition, setPanelTopPosition] = useState(0); // Panel top position in pixels
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -288,21 +289,24 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
       const wh = sidePanel.webhook;
       return (
         <>
-          <div className="flex flex-col h-full p-8 relative" style={{ minHeight: '100vh' }}>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <span className="text-pink-500 font-bold">🔗</span>
-                <span className="text-xl font-bold text-pink-700 hover:underline cursor-pointer" style={{ wordBreak: 'break-all' }}>{wh['webhook-name']}</span>
-              </div>
-              <div className="flex items-center gap-2">
+          <div key={wh['webhook-id']} className="flex flex-col h-full p-8 relative" style={{ minHeight: '100vh' }}>
+            <div className="flex items-center justify-between mb-4 sticky top-0 bg-white z-10 pb-2 border-b">
+              <h3 className="text-lg font-bold text-pink-700">{wh['webhook-name']}</h3>
+              <div className="flex items-center gap-1">
                 <button
-                  className="bg-pink-50 hover:bg-pink-100 text-pink-700 font-semibold px-4 py-1 rounded-lg border border-pink-200 shadow-sm transition-all"
-                  style={{ fontSize: '0.95rem' }}
+                  title="Open in Tab"
+                  className="px-2 py-1 rounded-md bg-pink-50 hover:bg-pink-100 text-pink-700 font-medium text-[10px] border border-pink-200 transition-all"
                   onClick={() => { if (typeof onViewWebhook === 'function') onViewWebhook(wh, namespace); setSidePanel(null); }}
                 >
                   Open in Tab
                 </button>
-                <button type="button" onClick={() => setSidePanel(null)} className="text-gray-400 hover:text-gray-700"><X size={24} /></button>
+                <button 
+                  type="button" 
+                  onClick={() => setSidePanel(null)} 
+                  className="text-gray-400 hover:text-gray-700 ml-1"
+                >
+                  <X size={22} />
+                </button>
               </div>
             </div>
             <div className="space-y-4 text-sm text-gray-700">
@@ -328,7 +332,12 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
   );
 
   return (
-    <div className="p-4 md:p-8 w-full flex relative">
+    <div 
+      className="p-4 flex relative transition-all duration-300"
+      style={{
+        width: sidePanel ? `calc(100% - ${sidePanelWidth}px)` : '100%'
+      }}
+    >
       <div className="flex-1 pr-0 w-full">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
@@ -427,30 +436,30 @@ const AllWebhookPage: React.FC<AllWebhookPageProps> = ({ namespace, onViewWebhoo
         )}
       </div>
       {/* Side Panel with draggable resizer */}
-      <div
-        className={`fixed right-0 bg-white border-l border-gray-200 shadow-2xl z-50 transition-transform duration-300 flex flex-col`}
-        style={{ 
-          top: `${panelTopPosition}px`,
-          bottom: 0,
-          width: sidePanel ? sidePanelWidth : 0, 
-          transform: sidePanel ? 'translateX(0)' : `translateX(${sidePanelWidth}px)`, 
-          boxShadow: sidePanel ? '0 0 32px 0 rgba(0,0,0,0.10)' : 'none', 
-          borderTopLeftRadius: 16, 
-          borderBottomLeftRadius: 16, 
-          overflow: 'auto' 
-        }}
-      >
-        {/* Draggable resizer */}
-        {sidePanel && (
+      {sidePanel && (
+        <div
+          ref={panelRef}
+          className={`method-details-panel fixed right-0 bg-white border-l border-gray-200 z-50 transition-transform duration-300 flex flex-col`}
+          style={{ 
+            top: `${panelTopPosition}px`,
+            bottom: '40px',
+            width: sidePanel ? sidePanelWidth : 0, 
+            transform: sidePanel ? 'translateX(0)' : `translateX(${sidePanelWidth}px)`, 
+            borderTopLeftRadius: 0, 
+            borderBottomLeftRadius: 0, 
+            overflow: 'auto' 
+          }}
+        >
+          {/* Draggable resizer */}
           <div
             style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 8, cursor: 'ew-resize', zIndex: 10 }}
             onMouseDown={() => setIsResizing(true)}
           >
-            <div style={{ width: 4, height: 48, background: '#f9a8d4', borderRadius: 2, margin: 'auto', marginTop: 24 }} />
+            <div style={{ width: 4, height: 48, background: '#e5e7eb', borderRadius: 2, margin: 'auto', marginTop: 24 }} />
           </div>
-        )}
-        <div style={{ marginLeft: sidePanel ? 16 : 0, flex: 1, minWidth: 0 }}>{renderSidePanel()}</div>
-      </div>
+          <div style={{ marginLeft: 16, flex: 1, minWidth: 0 }}>{renderSidePanel()}</div>
+        </div>
+      )}
     </div>
   );
 };

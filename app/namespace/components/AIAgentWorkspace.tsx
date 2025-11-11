@@ -4,6 +4,7 @@ import { Bot, Send, File, Folder, Play, Database, Code, X, Upload, FileText, Ima
 import { useDrop } from 'react-dnd';
 import { useNamespaceContext } from '../../components/NamespaceContext';
 import APIMethodCreationAgent from './APIMethodCreationAgent';
+import MethodTestPage from '../pages/MethodTestPage';
 
 interface Message {
   id: string;
@@ -3523,47 +3524,47 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         maxWidth: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : '100vw'
       }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 md:p-5 border-b-2 border-indigo-100 bg-indigo-600 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-white shadow-md">
-            <Bot className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
+      {/* Header - Compact */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-indigo-100 bg-indigo-600 shadow-lg">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-white shadow-sm">
+            <Bot className="w-4 h-4 text-indigo-600" />
           </div>
           <div>
-            <h2 className="font-bold text-lg md:text-xl text-white tracking-tight">AI Assistant</h2>
-            <div className="text-xs md:text-sm text-white/90">
+            <h2 className="font-bold text-sm text-white tracking-tight">AI Assistant</h2>
+            <div className="text-[10px] text-white/90">
               {(localNamespace || droppedNamespaces.length > 0) ? (
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-semibold text-white/95">Context:</span>
-                  <span className="text-xs bg-white text-indigo-700 px-2.5 py-1 rounded-full font-medium shadow-sm">
+                  <span className="text-[10px] bg-white text-indigo-700 px-1.5 py-0.5 rounded-full font-medium">
                       {(localNamespace ? 1 : 0) + droppedNamespaces.length} Namespace{(localNamespace ? 1 : 0) + droppedNamespaces.length > 1 ? 's' : ''}
                   </span>
                   {sessionId && (
-                    <span className="text-xs bg-green-500 text-white px-2.5 py-1 rounded-full font-medium shadow-sm">
+                    <span className="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-medium">
                       💾 Memory Active
                     </span>
                   )}
                   </div>
                   {localNamespace && (
-                    <div className="text-xs text-white/80 ml-2 font-medium">
+                    <div className="text-[10px] text-white/80 ml-1 font-medium">
                       • {localNamespace['namespace-name']} <span className="text-white/60">(primary)</span>
                     </div>
                   )}
                   {droppedNamespaces.map((ns, index) => (
-                    <div key={ns['namespace-id'] || ns.id || index} className="text-xs text-white/80 ml-2">
+                    <div key={ns['namespace-id'] || ns.id || index} className="text-[10px] text-white/80 ml-1">
                       • {ns['namespace-name'] || ns.name || 'Unknown Namespace'}
                     </div>
                   ))}
                 </div>
               ) : (
-                <span className="flex items-center gap-2 flex-wrap">
+                <span className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-medium text-white/95">General Development</span>
-                  <span className="text-xs bg-green-500 text-white px-2.5 py-1 rounded-full font-medium shadow-sm">
+                  <span className="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-medium">
                     ✨ Namespace Generation Mode
                   </span>
                   {sessionId && (
-                    <span className="text-xs bg-white text-indigo-700 px-2.5 py-1 rounded-full font-medium shadow-sm">
+                    <span className="text-[10px] bg-white text-indigo-700 px-1.5 py-0.5 rounded-full font-medium">
                       💾 Memory Active
                     </span>
                   )}
@@ -3572,111 +3573,111 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => setIsMinimized(!isMinimized)}
-            className="p-2 md:p-2.5 rounded-xl bg-white hover:bg-gray-100 transition-all shadow-md hover:shadow-lg"
+            className="p-1.5 rounded-lg bg-white hover:bg-gray-100 transition-all shadow-sm"
             title={isMinimized ? 'Expand AI Agent' : 'Minimize AI Agent'}
           >
             {isMinimized ? (
-              <Maximize2 className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
+              <Maximize2 className="w-4 h-4 text-indigo-600" />
             ) : (
-              <Minimize2 className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
+              <Minimize2 className="w-4 h-4 text-indigo-600" />
             )}
           </button>
           <button
             onClick={onClose}
-            className="p-2 md:p-2.5 rounded-xl bg-white hover:bg-gray-100 transition-all shadow-md hover:shadow-lg"
+            className="p-1.5 rounded-lg bg-white hover:bg-gray-100 transition-all shadow-sm"
             title="Close AI Assistant"
           >
-            <X className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
+            <X className="w-4 h-4 text-indigo-600" />
           </button>
         </div>
       </div>
 
-      {/* Tab Navigation */}
-        <div className="flex border-b-2 border-gray-200 bg-white px-2 md:px-4 pt-2 overflow-x-auto shadow-sm">
+      {/* Tab Navigation - Compact */}
+        <div className="flex border-b border-gray-200 bg-white px-2 pt-1 overflow-x-auto shadow-sm">
         <button
           onClick={() => setActiveTab('lambda')}
-            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
+            className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'lambda'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
               : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <Code size={16} className="md:w-5 md:h-5" /> 
+            <Code size={14} /> 
             <span className="hidden sm:inline">Lambda</span>
             {activeTab === 'lambda' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('api')}
-            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
+            className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'api'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
               : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <Database size={16} className="md:w-5 md:h-5" /> 
+            <Database size={14} /> 
             <span className="hidden sm:inline">API</span>
             {activeTab === 'api' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('web-scraping')}
-            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
+            className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'web-scraping'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
               : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <FileText size={16} className="md:w-5 md:h-5" /> 
+            <FileText size={14} /> 
             <span className="hidden sm:inline">Web Scraping</span>
             {activeTab === 'web-scraping' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('files')}
-            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
+            className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'files'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
               : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <Folder size={16} className="md:w-5 md:h-5" /> 
+            <Folder size={14} /> 
             <span className="hidden sm:inline">Files</span>
             {activeTab === 'files' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('schema')}
-            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
+            className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'schema'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
               : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <Database size={16} className="md:w-5 md:h-5" /> 
+            <Database size={14} /> 
             <span className="hidden sm:inline">Schema</span>
             {activeTab === 'schema' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('deployment')}
-            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
+            className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'deployment'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
               : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <Play size={16} className="md:w-5 md:h-5" /> 
+            <Play size={14} /> 
             <span className="hidden sm:inline">Deploy</span>
             {activeTab === 'deployment' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('console')}
-            className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-semibold border-b-3 transition-all flex items-center gap-2 whitespace-nowrap relative ${
+            className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'console'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-0.5'
+              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
               : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
           }`}
         >
-            <Play size={16} className="md:w-5 md:h-5" /> 
+            <Play size={14} /> 
             <span className="hidden sm:inline">Console</span>
             {activeTab === 'console' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
         </button>
@@ -3750,51 +3751,42 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         
         {activeTab === 'api' && (
           <div className="h-full overflow-hidden flex flex-col">
-            <div className="p-4">
-              <h3 className="font-bold text-xl mb-2 text-indigo-900">API Method Creation & Management</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Create reusable API methods from API Gateway URLs with OpenAPI specifications. 
-                Generate methods that can be overridden with different URLs and saved to your namespace.
-                <br />
-                <span className="text-indigo-600 font-semibold">💡 Tip:</span> Use deployed Lambda endpoints or any API Gateway URL to create methods!
-              </p>
-            </div>
-            
-            {/* API Method Creation Agent */}
-            <div className="flex-1 overflow-y-auto px-4 pb-4">
-            <APIMethodCreationAgent 
-              namespace={localNamespace}
-              deployedEndpoints={deployedEndpoints}
-              onMethodCreated={(method) => {
-                console.log('New method created:', method);
-                // Optionally refresh namespace data or show success message
-              }}
-            />
+            {/* API Method Testing Interface */}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {localNamespace && (
+                <MethodTestPage
+                  method={{
+                    'namespace-method-name': 'API Test',
+                    'namespace-method-type': 'GET',
+                    'namespace-method-url-override': '',
+                    'namespace-method-id': 'api-test-default',
+                    'save-data': false
+                  }}
+                  namespace={localNamespace}
+                  refreshSidePanelData={async () => {}}
+                />
+              )}
+              {!localNamespace && (
+                <div className="h-full flex items-center justify-center p-4">
+                  <div className="text-center max-w-md">
+                    <div className="mb-4 text-gray-400">
+                      <Database className="w-12 h-12 mx-auto mb-2" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">No Namespace Selected</h3>
+                    <p className="text-xs text-gray-500">
+                      Please select or drag a namespace to use the API testing interface.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
         {activeTab === 'web-scraping' && (
-          <div className="h-full overflow-y-auto">
-            <div className="mb-4">
-              <h3 className="font-medium text-lg mb-2">Web Scraping Agent</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Automatically scrape APIs, schemas, and documentation from popular services like Shopify, Pinterest, Google, Stripe, and GitHub.
-                <br />
-                <span className="text-blue-600 font-medium">💡 Tip:</span> Select a service and click "Scrape & Save" to import everything into your namespace!
-              </p>
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <h4 className="font-medium text-purple-800 mb-2">Instructions:</h4>
-                <ul className="text-sm text-purple-700 space-y-1">
-                  <li>• Select a service from the dropdown below</li>
-                  <li>• Choose what to scrape (APIs, Schemas, Documentation)</li>
-                  <li>• Click "Preview" to see what will be scraped</li>
-                  <li>• Click "Scrape & Save" to import everything to your namespace</li>
-                </ul>
-              </div>
-            </div>
+          <div className="h-full overflow-y-auto p-2">
             
-            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-              <h4 className="font-medium mb-4">Service Selection</h4>
+            <div className="bg-white border border-gray-200 rounded-lg p-2 mb-2">
+              <h4 className="font-medium text-xs mb-2">Service Selection</h4>
               
               {/* Debug info */}
               <div className="text-xs text-gray-500 mb-2">
@@ -3813,16 +3805,16 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                   Test: Set Custom URL
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Service or URL</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Service or URL</label>
                   <select 
                     value={selectedService} 
                     onChange={(e) => {
                       console.log('Service selection changed:', e.target.value);
                       setSelectedService(e.target.value);
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
                   >
                     <option value="">Select a service or enter custom URL...</option>
                     {supportedServices.map(service => (
@@ -3841,46 +3833,46 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                         console.log('Custom URL input changed:', e.target.value);
                         setCustomUrl(e.target.value);
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Options</label>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Options</label>
+                  <div className="space-y-0.5">
+                    <label className="flex items-center text-xs">
                       <input 
                         type="checkbox" 
                         checked={scrapeOptions.apis} 
                         onChange={(e) => setScrapeOptions(prev => ({ ...prev, apis: e.target.checked }))}
-                        className="mr-2"
+                        className="mr-1.5"
                       />
                       Scrape APIs
                     </label>
-                    <label className="flex items-center">
+                    <label className="flex items-center text-xs">
                       <input 
                         type="checkbox" 
                         checked={scrapeOptions.schemas} 
                         onChange={(e) => setScrapeOptions(prev => ({ ...prev, schemas: e.target.checked }))}
-                        className="mr-2"
+                        className="mr-1.5"
                       />
                       Scrape Schemas
                     </label>
-                    <label className="flex items-center">
+                    <label className="flex items-center text-xs">
                       <input 
                         type="checkbox" 
                         checked={scrapeOptions.documentation} 
                         onChange={(e) => setScrapeOptions(prev => ({ ...prev, documentation: e.target.checked }))}
-                        className="mr-2"
+                        className="mr-1.5"
                       />
                       Scrape Documentation
                     </label>
-                    <label className="flex items-center">
+                    <label className="flex items-center text-xs">
                       <input 
                         type="checkbox" 
                         checked={scrapeOptions.followLinks} 
                         onChange={(e) => setScrapeOptions(prev => ({ ...prev, followLinks: e.target.checked }))}
-                        className="mr-2"
+                        className="mr-1.5"
                       />
                       Follow Links (find more content)
                     </label>
@@ -3888,18 +3880,18 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                 </div>
               </div>
               
-              <div className="flex gap-2 mt-4">
+              <div className="flex gap-1.5 mt-2">
                 <button
                   onClick={handlePreviewScrape}
                   disabled={!selectedService || isScraping}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isScraping ? 'Scraping...' : 'Preview'}
                 </button>
                 <button
                   onClick={handleScrapeAndSave}
                   disabled={!selectedService || isScraping}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isScraping ? 'Scraping...' : 'Scrape & Save'}
                 </button>
@@ -3909,28 +3901,28 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
 
             
             {scrapedData && (
-              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-medium">Scraped Data Preview</h4>
+              <div className="bg-white border border-gray-200 rounded-lg p-2 mb-2">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-xs">Scraped Data Preview</h4>
                   <button
                     onClick={() => setShowAllScrapedData(true)}
-                    className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                    className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                   >
                     View All Data
                   </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div className="bg-blue-50 p-3 rounded">
-                    <h5 className="font-medium text-blue-800">APIs</h5>
-                    <p className="text-2xl font-bold text-blue-600">{scrapedData.apis?.length || 0}</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                  <div className="bg-blue-50 p-2 rounded">
+                    <h5 className="font-medium text-xs text-blue-800">APIs</h5>
+                    <p className="text-lg font-bold text-blue-600">{scrapedData.apis?.length || 0}</p>
                   </div>
-                  <div className="bg-green-50 p-3 rounded">
-                    <h5 className="font-medium text-green-800">Schemas</h5>
-                    <p className="text-2xl font-bold text-green-600">{scrapedData.schemas?.length || 0}</p>
+                  <div className="bg-green-50 p-2 rounded">
+                    <h5 className="font-medium text-xs text-green-800">Schemas</h5>
+                    <p className="text-lg font-bold text-green-600">{scrapedData.schemas?.length || 0}</p>
                   </div>
-                  <div className="bg-purple-50 p-3 rounded">
-                    <h5 className="font-medium text-purple-800">Documentation</h5>
-                    <p className="text-2xl font-bold text-purple-600">{scrapedData.documentation?.length || 0}</p>
+                  <div className="bg-purple-50 p-2 rounded">
+                    <h5 className="font-medium text-xs text-purple-800">Documentation</h5>
+                    <p className="text-lg font-bold text-purple-600">{scrapedData.documentation?.length || 0}</p>
                   </div>
                 </div>
                 
@@ -4096,15 +4088,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           </div>
         )}
         {activeTab === 'schema' && (
-          <div className="h-full overflow-y-auto">
-            <div className="mb-4">
-              <h3 className="font-medium text-lg mb-2">Schema Management</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Use the chat below to generate and manage schemas. The AI will create schemas based on your descriptions.
-                <br />
-                <span className="text-blue-600 font-medium">💡 Tip:</span> Drag any schema below to the chat area to provide context for your AI conversations!
-              </p>
-            </div>
+          <div className="h-full overflow-y-auto p-2">
             
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -4269,11 +4253,11 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         )}
         {activeTab === 'files' && (
           <div className="h-full flex flex-col md:flex-row">
-            {/* File Tree Panel */}
-            <div className="w-full md:w-1/3 border-r border-gray-200 bg-white p-2 md:p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium text-sm md:text-base">Files</h3>
-                <div className="flex gap-1 md:gap-2">
+            {/* File Tree Panel - Compact */}
+            <div className="w-full md:w-1/3 border-r border-gray-200 bg-white p-2">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-xs">Files</h3>
+                <div className="flex gap-1">
                   <button
                     onClick={saveFilesToS3}
                     disabled={projectFiles.length === 0 || isSavingToS3}
@@ -4344,46 +4328,40 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           </div>
         )}
         {activeTab === 'deployment' && (
-          <div className="h-full overflow-y-auto">
-            <div className="mb-4">
-              <h3 className="font-medium text-lg mb-2">Deployment Configuration</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Configure Lambda function deployment settings and deploy your project.
-              </p>
-            </div>
+          <div className="h-full overflow-y-auto p-2">
             
-            {/* Deployed Endpoints Section */}
+            {/* Deployed Endpoints Section - Compact */}
             {deployedEndpoints.length > 0 && (
-              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <h4 className="font-medium text-green-800 mb-3">🌐 Deployed API Gateway Endpoints</h4>
-                <div className="space-y-3">
+              <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                <h4 className="font-medium text-xs text-green-800 mb-1.5">🌐 Deployed API Gateway Endpoints</h4>
+                <div className="space-y-1.5">
                   {deployedEndpoints.map((endpoint, index) => (
-                    <div key={index} className="bg-white border border-green-200 rounded p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-green-700">{endpoint.functionName}</span>
+                    <div key={index} className="bg-white border border-green-200 rounded p-1.5">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-xs text-green-700">{endpoint.functionName}</span>
                         <span className="text-xs text-green-600">
                           {endpoint.deployedAt.toLocaleString()}
                         </span>
                       </div>
-                      <div className="space-y-1">
-                        <div className="text-sm">
+                      <div className="space-y-0.5">
+                        <div className="text-xs">
                           <span className="font-medium">API Gateway URL:</span>
-                          <code className="ml-2 bg-gray-100 px-2 py-1 rounded text-xs break-all">
+                          <code className="ml-1 bg-gray-100 px-1 py-0.5 rounded text-[10px] break-all">
                             {endpoint.apiGatewayUrl}
                           </code>
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-[10px] text-gray-600">
                           <span className="font-medium">Function ARN:</span>
-                          <span className="ml-2 break-all">{endpoint.functionArn}</span>
+                          <span className="ml-1 break-all">{endpoint.functionArn}</span>
                         </div>
                       </div>
-                      <div className="mt-2 flex gap-2">
+                      <div className="mt-1 flex gap-1">
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(endpoint.apiGatewayUrl);
                             setConsoleOutput(prev => [...prev, `📋 Copied API Gateway URL to clipboard: ${endpoint.apiGatewayUrl}`]);
                           }}
-                          className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                          className="px-1.5 py-0.5 text-[10px] bg-green-500 text-white rounded hover:bg-green-600"
                         >
                           Copy URL
                         </button>
@@ -4404,7 +4382,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                                 setConsoleOutput(prev => [...prev, `❌ Test failed: ${err.message}`]);
                               });
                           }}
-                          className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                          className="px-1.5 py-0.5 text-[10px] bg-blue-500 text-white rounded hover:bg-blue-600"
                         >
                           Test Endpoint
                         </button>
@@ -4415,16 +4393,16 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
               </div>
             )}
             
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h4 className="font-medium">Lambda Configuration</h4>
+            <div className="grid grid-cols-2 gap-2 px-2">
+              <div className="space-y-1.5">
+                <h4 className="font-medium text-xs">Lambda Configuration</h4>
                 
 
                 
                 <div>
-                  <label className="block font-semibold mb-1">Function Name</label>
+                  <label className="block font-semibold text-xs mb-0.5">Function Name</label>
                   <input
-                    className="w-full border rounded px-2 py-1 mb-2"
+                    className="w-full border rounded px-1.5 py-0.5 text-xs mb-1"
                     value={lambdaForm.functionName}
                     onChange={e => setLambdaForm(f => ({ ...f, functionName: e.target.value }))}
                     placeholder="handler.js"
@@ -4433,9 +4411,9 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                 </div>
                 
                 <div>
-                  <label className="block font-semibold mb-1">Runtime</label>
+                  <label className="block font-semibold text-xs mb-0.5">Runtime</label>
                   <select
-                    className="w-full border rounded px-2 py-1 mb-2"
+                    className="w-full border rounded px-1.5 py-0.5 text-xs mb-1"
                     value={lambdaForm.runtime}
                     onChange={e => setLambdaForm(f => ({ ...f, runtime: e.target.value }))}
                   >
@@ -4453,9 +4431,9 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                 </div>
                 
                 <div>
-                  <label className="block font-semibold mb-1">Handler</label>
+                  <label className="block font-semibold text-xs mb-0.5">Handler</label>
                   <input
-                    className="w-full border rounded px-2 py-1 mb-2"
+                    className="w-full border rounded px-1.5 py-0.5 text-xs mb-1"
                     value={lambdaForm.handler}
                     onChange={e => setLambdaForm(f => ({ ...f, handler: e.target.value }))}
                     placeholder="index.handler"
@@ -4464,14 +4442,14 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                 </div>
               </div>
               
-              <div className="space-y-4">
-                <h4 className="font-medium">Resource Configuration</h4>
+              <div className="space-y-1.5">
+                <h4 className="font-medium text-xs">Resource Configuration</h4>
                 
                 <div>
-                  <label className="block font-semibold mb-1">Memory (MB)</label>
+                  <label className="block font-semibold text-xs mb-0.5">Memory (MB)</label>
                   <input
                     type="number"
-                    className="w-full border rounded px-2 py-1 mb-2"
+                    className="w-full border rounded px-1.5 py-0.5 text-xs mb-1"
                     value={lambdaForm.memory}
                     min={128}
                     max={10240}
@@ -4481,10 +4459,10 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                 </div>
                 
                 <div>
-                  <label className="block font-semibold mb-1">Timeout (seconds)</label>
+                  <label className="block font-semibold text-xs mb-0.5">Timeout (seconds)</label>
                   <input
                     type="number"
-                    className="w-full border rounded px-2 py-1 mb-2"
+                    className="w-full border rounded px-1.5 py-0.5 text-xs mb-1"
                     value={lambdaForm.timeout}
                     min={1}
                     max={900}
@@ -4559,11 +4537,11 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
       </div>
 
 
-      {/* Chat Messages Area - Show only for lambda tab */}
+      {/* Chat Messages Area - Show only for lambda tab - Compact */}
       {activeTab === 'lambda' && (
       <div 
           ref={sidebarSchemaDropRef as any}
-        className={`flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 transition-colors scrollbar-thin ${
+        className={`flex-1 overflow-y-auto p-2 space-y-2 bg-gray-50 transition-colors scrollbar-thin ${
             isSidebarSchemaDropOver ? 'bg-purple-50 border-2 border-dashed border-purple-300' : ''
         }`}
       >
@@ -4573,55 +4551,55 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           </div>
         )}
         
-        {/* Namespace Generation Mode Hint */}
+        {/* Namespace Generation Mode Hint - Compact */}
         {activeTab === 'lambda' && !namespace && messages.length === 0 && !isSidebarSchemaDropOver && (
-          <div className="text-center py-4">
-            <div className="max-w-xs mx-auto bg-indigo-50 border border-indigo-200 rounded-lg p-4 shadow-sm">
-              <div className="flex items-center justify-center mb-2">
-                <div className="p-2 rounded-full bg-indigo-100">
-                  <Bot className="w-5 h-5 text-indigo-600" />
+          <div className="text-center py-2">
+            <div className="max-w-xs mx-auto bg-indigo-50 border border-indigo-200 rounded-lg p-2 shadow-sm">
+              <div className="flex items-center justify-center mb-1">
+                <div className="p-1 rounded-full bg-indigo-100">
+                  <Bot className="w-4 h-4 text-indigo-600" />
                 </div>
               </div>
-              <h3 className="text-sm font-bold text-indigo-900 mb-2">🚀 Namespace Generation Mode</h3>
-              <p className="text-xs text-gray-600 mb-3">
+              <h3 className="text-xs font-bold text-indigo-900 mb-1">🚀 Namespace Generation Mode</h3>
+              <p className="text-[10px] text-gray-600 mb-1.5">
                 Create complete namespaces from scratch!
               </p>
-              <div className="text-left text-xs text-gray-600 space-y-0.5 mb-3">
+              <div className="text-left text-[10px] text-gray-600 space-y-0.5 mb-1.5">
                 <div>• <strong>Schemas</strong> & API Methods</div>
                 <div>• <strong>Webhooks</strong> & Lambda Functions</div>
                 <div>• <strong>Account Types</strong> & more</div>
               </div>
-              <div className="p-2 bg-white rounded border border-indigo-100">
-                <p className="text-xs text-gray-500 font-medium mb-0.5">Try:</p>
-                <p className="text-xs text-indigo-600">"Create an e-commerce system"</p>
+              <div className="p-1.5 bg-white rounded border border-indigo-100">
+                <p className="text-[10px] text-gray-500 font-medium mb-0.5">Try:</p>
+                <p className="text-[10px] text-indigo-600">"Create an e-commerce system"</p>
               </div>
             </div>
           </div>
         )}
         
-        {/* Code Generation Tips - Only show for Lambda tab */}
+        {/* Code Generation Tips - Only show for Lambda tab - Compact */}
         {activeTab === 'lambda' && (
-          <div className="bg-indigo-50 rounded-xl border-2 border-indigo-200 p-4 mb-4 shadow-sm hover:shadow-md transition-all">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-1.5 bg-indigo-600 rounded-lg shadow-sm">
-                <span className="text-base">💡</span>
+          <div className="bg-indigo-50 rounded-lg border border-indigo-200 p-2 mb-2 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <div className="p-1 bg-indigo-600 rounded shadow-sm">
+                <span className="text-xs">💡</span>
               </div>
-              <h4 className="font-bold text-indigo-900">Code Generation Tips</h4>
+              <h4 className="font-bold text-xs text-indigo-900">Code Generation Tips</h4>
             </div>
-            <ul className="text-sm text-indigo-800 space-y-2 ml-1">
-              <li className="flex items-start gap-2">
+            <ul className="text-[11px] text-indigo-800 space-y-1 ml-1">
+              <li className="flex items-start gap-1.5">
                 <span className="text-indigo-400 font-bold">•</span>
                 <span>Describe the function's purpose clearly</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-1.5">
                 <span className="text-indigo-400 font-bold">•</span>
                 <span>Specify the programming language (Node.js, Python, etc.)</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-1.5">
                 <span className="text-indigo-400 font-bold">•</span>
                 <span>Mention any AWS services you want to integrate with</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-1.5">
                 <span className="text-indigo-400 font-bold">•</span>
                 <span>Include error handling requirements</span>
               </li>
@@ -4635,7 +4613,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
           >
             <div
-              className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm transition-all hover:shadow-md ${
+              className={`max-w-[85%] rounded-lg px-2.5 py-1.5 shadow-sm transition-all hover:shadow-md text-sm ${
                 message.role === 'user'
                   ? 'bg-indigo-600 text-white rounded-br-sm'
                   : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
@@ -4663,7 +4641,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                   )
                 }}
               />
-              <div className="text-xs opacity-70 mt-1">
+              <div className="text-[10px] opacity-70 mt-0.5">
                 {message.timestamp.toLocaleTimeString()}
               </div>
             </div>
@@ -4673,38 +4651,38 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
       </div>
       )}
 
-      {/* File Upload and Context Area */}
+      {/* File Upload and Context Area - Compact */}
       {activeTab === 'lambda' && (uploadedFiles.length > 0 || droppedSchemas.length > 0) && (
-        <div className="border-t border-gray-200 p-4 bg-gray-50">
-          <div className="space-y-3">
+        <div className="border-t border-gray-200 p-2 bg-gray-50">
+          <div className="space-y-2">
             {/* Uploaded Files */}
             {uploadedFiles.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">📎 Uploaded Files</h4>
-                <div className="flex flex-wrap gap-2">
+                <h4 className="text-xs font-medium text-gray-700 mb-1">📎 Uploaded Files</h4>
+                <div className="flex flex-wrap gap-1.5">
                   {uploadedFiles.map((file) => (
                     <div
                       key={file.id}
-                      className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                      className="flex items-center gap-1.5 bg-white border border-gray-200 rounded px-2 py-1 text-xs"
                     >
                       {file.type.startsWith('image/') ? (
-                        <Image className="w-4 h-4 text-blue-500" />
+                        <Image className="w-3 h-3 text-blue-500" />
                       ) : file.type.includes('json') ? (
-                        <FileText className="w-4 h-4 text-green-500" />
+                        <FileText className="w-3 h-3 text-green-500" />
                       ) : file.type.includes('zip') || file.type.includes('tar') ? (
-                        <Archive className="w-4 h-4 text-orange-500" />
+                        <Archive className="w-3 h-3 text-orange-500" />
                       ) : (
-                        <File className="w-4 h-4 text-gray-500" />
+                        <File className="w-3 h-3 text-gray-500" />
                       )}
-                      <span className="truncate max-w-32">{file.name}</span>
-                      <span className="text-xs text-gray-500">
+                      <span className="truncate max-w-24">{file.name}</span>
+                      <span className="text-[10px] text-gray-500">
                         ({(file.size / 1024).toFixed(1)} KB)
                       </span>
                       <button
                         onClick={() => removeUploadedFile(file.id)}
                         className="text-red-500 hover:text-red-700"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-2.5 h-2.5" />
                       </button>
                     </div>
                   ))}
@@ -4897,13 +4875,13 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
       )}
 
 
-        {/* Chat Input - Always at bottom */}
-        <div className="border-t-2 border-gray-200 p-3 md:p-4 bg-white shadow-inner relative">
+        {/* Chat Input - Always at bottom - Compact */}
+        <div className="border-t border-gray-200 p-2 bg-white shadow-inner relative">
           {/* Selected Namespace Chips */}
           {droppedNamespaces.length > 0 && (
-            <div className="mb-2 md:mb-3">
+            <div className="mb-1.5">
               <div className="flex items-center justify-between">
-                <div className="flex flex-wrap gap-1 md:gap-2">
+                <div className="flex flex-wrap gap-1">
                   {droppedNamespaces.map((ns, index) => (
                     <div
                       key={ns['namespace-id'] || index}
@@ -4938,7 +4916,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             </div>
           )}
           
-          <div className="flex gap-2 md:gap-3">
+          <div className="flex gap-1.5">
             <div className="flex-1 relative">
               <textarea
                 ref={inputRef}
@@ -4947,7 +4925,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
                 onKeyPress={handleKeyPress}
                 onKeyDown={handleKeyDown}
                 placeholder={namespace ? "Type your message..." : "Type your message... (Try: 'Create a namespace for...' to generate a new project)"}
-                className="w-full resize-none border-2 border-gray-200 rounded-xl px-3 md:px-4 py-2 md:py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm shadow-sm hover:border-indigo-300 transition-all bg-white"
+                className="w-full resize-none border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-xs shadow-sm hover:border-indigo-300 transition-all bg-white"
                 rows={1}
                 disabled={isLoading}
               />
@@ -4982,7 +4960,7 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
             <button
               onClick={handleSendMessage}
               disabled={isLoading || !inputMessage.trim()}
-              className={`px-4 md:px-5 py-2.5 md:py-3 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg flex items-center justify-center ${
+              className={`px-2 py-1.5 rounded-lg font-semibold transition-all shadow-sm hover:shadow-md flex items-center justify-center ${
                 isLoading || !inputMessage.trim()
                   ? 'bg-gray-300 cursor-not-allowed text-gray-500'
                   : 'bg-indigo-600 hover:bg-indigo-700 text-white'
@@ -4990,9 +4968,9 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
               title={isLoading ? 'Sending...' : 'Send message'}
             >
               {isLoading ? (
-                <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
-                <Send className="w-4 h-4 md:w-5 md:h-5" />
+                <Send className="w-3.5 h-3.5" />
               )}
             </button>
           </div>

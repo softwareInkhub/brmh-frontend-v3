@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { ChevronDown, ChevronRight, Plus, Search, Filter, Database, Users, Terminal, FileCode, Folder, Layers, List, Box, FileText, Globe, Settings, User, Edit2, Trash2, Download, Upload, RefreshCw, LayoutDashboard, DatabaseIcon } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronLeft, Plus, Search, Filter, Database, Users, Terminal, FileCode, Folder, Layers, List, Box, FileText, Globe, Settings, User, Edit2, Trash2, Download, Upload, RefreshCw, LayoutDashboard, DatabaseIcon } from 'lucide-react';
 import NamespacePreviewModal from '../Modals/NamespacePreviewModal';
 import { useDrag } from 'react-dnd';
+import { useSidePanel } from '../../components/SidePanelContext';
 
 interface SidePanelProps {
   namespaces: any[];
@@ -156,6 +157,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
   const [expandedSection, setExpandedSection] = useState<Record<string, { accounts: boolean; methods: boolean; schemas: boolean; webhooks: boolean; lambdas: boolean }>>({});
   const [viewingNamespace, setViewingNamespace] = useState<any>(null);
   const [expandedNamespaces, setExpandedNamespaces] = useState(true);
+  const { setIsCollapsed } = useSidePanel();
 
   const toggle = (section: keyof typeof expanded) => setExpanded(e => ({ ...e, [section]: !e[section] }));
   const toggleNs = (nsId: string) => {
@@ -199,7 +201,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
     : [];
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-100 h-screen flex flex-col shadow-sm overflow-hidden">
+    <aside className="w-64 bg-white border-r border-gray-100 h-screen flex flex-col shadow-sm overflow-hidden pb-4">
       {/* Header - Fixed */}
       <div className="flex-shrink-0 px-1 pt-1">
         <div className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 rounded-lg px-3 py-2 mb-2">
@@ -557,6 +559,17 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
           </div>
         )}
         </div>
+      </div>
+
+      {/* Collapse Button at Bottom - Always Visible */}
+      <div className="py-3 pb-4 border-t border-gray-200 bg-white flex-shrink-0">
+        <button
+          onClick={() => setIsCollapsed(true)}
+          className="w-full flex items-center justify-center p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded transition-colors"
+          title="Collapse sidebar"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
       </div>
 
       <NamespacePreviewModal

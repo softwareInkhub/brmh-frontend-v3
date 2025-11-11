@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Pencil, Trash2, User, Plus, X } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Pencil, Trash2, User, Plus, X, Edit2, Link as LinkIcon } from 'lucide-react';
+import AccountPage from './AccountPage';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -11,6 +12,7 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshS
   const [isResizing, setIsResizing] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [search, setSearch] = useState('');
+  const panelRef = useRef<HTMLDivElement>(null);
   const [panelTopPosition, setPanelTopPosition] = useState(0); // Panel top position in pixels
   const [createData, setCreateData] = useState<any>({
     'namespace-account-name': '',
@@ -269,6 +271,121 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshS
   };
 
   const renderSidePanel = () => {
+    // View Account Details
+    if (sidePanel && typeof sidePanel === 'object' && sidePanel.account) {
+      const acc = sidePanel.account;
+      return (
+        <div className="h-full overflow-auto">
+          <div className="flex items-center justify-between mb-4 sticky top-0 bg-white z-10 pb-2 border-b">
+            <h3 className="text-lg font-bold text-blue-700">Account Details</h3>
+            <div className="flex items-center gap-1">
+              {onViewAccount && (
+                <button
+                  title="Open in Tab"
+                  className="px-2 py-1 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium text-[10px] border border-blue-200 transition-all"
+                  onClick={() => onViewAccount(acc, namespace)}
+                >
+                  Open in Tab
+                </button>
+              )}
+              <button
+                title="Link"
+                className="p-1 rounded-md bg-gray-100 text-blue-700 hover:bg-blue-50 transition-colors"
+                onClick={() => {
+                  // OAuth redirect for Pinterest
+                  const variables = (acc["variables"] || acc["namespace-account-variables"] || []);
+                  const clientId = variables.find((v: any) => v.key === 'client_id')?.value;
+                  const clientSecret = variables.find((v: any) => v.key === 'secret_key')?.value;
+                  const redirectUrl = variables.find((v: any) => v.key === 'redirect_uri')?.value;
+
+                  if (!clientId || !redirectUrl || !clientSecret) {
+                    alert('Missing client_id, secret_key, or redirect_uri in account variables');
+                    return;
+                  }
+
+                  const scopes = ['boards:read', 'boards:write', 'pins:read', 'pins:write'];
+                  const authUrl = new URL('https://www.pinterest.com/oauth/');
+                  authUrl.searchParams.append('client_id', clientId);
+                  authUrl.searchParams.append('redirect_uri', redirectUrl);
+                  authUrl.searchParams.append('response_type', 'code');
+                  authUrl.searchParams.append('scope', scopes.join(','));
+
+                  const accountDetails = {
+                    clientId,
+                    clientSecret,
+                    redirectUrl,
+                    accountId: acc['namespace-account-id']
+                  };
+
+                  sessionStorage.setItem('pinterestAccountDetails', JSON.stringify(accountDetails));
+                  window.location.href = authUrl.toString();
+                }}
+              >
+                <LinkIcon size={14} />
+              </button>
+              <button
+                title="Edit"
+                className="p-1 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                onClick={() => {
+                  // Close modal and reopen with edit mode
+                  setSidePanel(null);
+                  setTimeout(() => {
+                    setSidePanel({ account: { ...acc, __openEdit: true } });
+                  }, 50);
+                }}
+              >
+                <Edit2 size={14} />
+              </button>
+              <button
+                title="Delete"
+                className="p-1 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
+                onClick={() => handleDelete(acc)}
+              >
+                <Trash2 size={14} />
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setSidePanel(null)} 
+                className="text-gray-400 hover:text-gray-700 ml-1"
+              >
+                <X size={22} />
+              </button>
+            </div>
+          </div>
+          <AccountPage 
+            key={sidePanel.account['namespace-account-id']}
+            account={sidePanel.account} 
+            namespace={namespace}
+            hideHeader={true}
+            refreshSidePanelData={async () => {
+              // Refresh accounts list
+              const fetchAllAccounts = async () => {
+                setLoading(true);
+                try {
+                  let allAccounts: any[] = [];
+                  if (namespace) {
+                    const accRes = await fetch(`${API_BASE_URL}/unified/namespaces/${namespace['namespace-id']}/accounts`);
+                    const nsAccounts = await accRes.json();
+                    allAccounts = (nsAccounts || []).map((acc: any) => ({ ...acc, namespace }));
+                  }
+                  setAccounts(allAccounts);
+                } catch (err) {
+                  setAccounts([]);
+                } finally {
+                  setLoading(false);
+                }
+              };
+              await fetchAllAccounts();
+              if (refreshSidePanelData) {
+                await refreshSidePanelData();
+              }
+            }}
+          />
+        </div>
+      );
+    }
+    
+    // Create Account
     if (sidePanel === 'create') {
       return (
         <>
@@ -423,7 +540,12 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshS
   const filtered = accounts.filter(acc => (acc['namespace-account-name'] || '').toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="p-4 md:p-8 w-full flex flex-col md:flex-row relative">
+    <div 
+      className="p-4 flex relative transition-all duration-300"
+      style={{
+        width: sidePanel ? `calc(100% - ${sidePanelWidth}px)` : '100%'
+      }}
+    >
       <div className="flex-1 pr-0 w-full">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
@@ -477,14 +599,14 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshS
               <div
                 key={acc['namespace-account-id']}
                 className="group relative rounded-xl border border-gray-200 bg-white px-3 md:px-4 py-3 shadow-sm hover:shadow-md transition cursor-pointer"
-                onClick={() => onViewAccount && onViewAccount(acc, acc.namespace)}
+                onClick={() => setSidePanel({ account: acc })}
               >
                 {/* actions */}
                 <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     className="w-7 h-7 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-green-600 bg-transparent"
                     title="Edit"
-                    onClick={(e) => { e.stopPropagation(); onViewAccount && onViewAccount({ ...acc, __openEdit: true }, acc.namespace); }}
+                    onClick={(e) => { e.stopPropagation(); setSidePanel({ account: { ...acc, __openEdit: true } }); }}
                   >
                     <Pencil size={14} />
                   </button>
@@ -510,15 +632,19 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshS
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="divide-y">
               {filtered.map(acc => (
-                <div key={acc['namespace-account-id']} className="flex items-center gap-3 px-3 md:px-4 py-3 hover:bg-gray-50">
+                <div 
+                  key={acc['namespace-account-id']} 
+                  className="flex items-center gap-3 px-3 md:px-4 py-3 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setSidePanel({ account: acc })}
+                >
                   <div className="w-8 h-8 rounded bg-blue-50 flex items-center justify-center border border-blue-100"><User size={16} className="text-blue-600" /></div>
                   <div className="min-w-0 flex-1">
                     <div className="font-medium text-gray-900 truncate">{acc['namespace-account-name']}</div>
                     <div className="text-xs text-gray-500 truncate">Namespace: <span className="font-medium text-gray-700">{acc.namespace?.['namespace-name']}</span></div>
                   </div>
                   <div className="flex items-center gap-2 ml-auto">
-                    <button className="text-green-600 hover:text-green-800 p-1" title="Edit" onClick={(e) => { e.stopPropagation(); onViewAccount && onViewAccount({ ...acc, __openEdit: true }, acc.namespace); }}><Pencil size={16} /></button>
-                    <button className="text-red-600 hover:text-red-800 p-1" title="Delete" onClick={() => handleDelete(acc)}><Trash2 size={16} /></button>
+                    <button className="text-green-600 hover:text-green-800 p-1" title="Edit" onClick={(e) => { e.stopPropagation(); setSidePanel({ account: { ...acc, __openEdit: true } }); }}><Pencil size={16} /></button>
+                    <button className="text-red-600 hover:text-red-800 p-1" title="Delete" onClick={(e) => { e.stopPropagation(); handleDelete(acc); }}><Trash2 size={16} /></button>
                   </div>
                 </div>
               ))}
@@ -531,30 +657,31 @@ function AllAccountPage({ namespace, onViewAccount, openCreate = false, refreshS
         <div className="md:hidden fixed inset-0 bg-black/40 z-40" onClick={() => setSidePanel(null)} />
       )}
       {/* Side Panel with draggable resizer */}
-      <div
-        className={`fixed right-0 bg-white border-l border-gray-200 shadow-2xl z-50 transition-transform duration-300 flex flex-col`}
-        style={{ 
-          top: `${panelTopPosition}px`,
-          bottom: 0,
-          width: sidePanel ? (typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : sidePanelWidth) : 0, 
-          transform: sidePanel ? 'translateX(0)' : `translateX(${typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : sidePanelWidth}px)`, 
-          boxShadow: sidePanel ? '0 0 32px 0 rgba(0,0,0,0.10)' : 'none', 
-          borderTopLeftRadius: 16, 
-          borderBottomLeftRadius: 16 
-        }}
-      >
-        {/* Draggable resizer */}
-        {sidePanel && (
+      {sidePanel && (
+        <div
+          ref={panelRef}
+          className={`method-details-panel fixed right-0 bg-white border-l border-gray-200 z-50 transition-transform duration-300 flex flex-col`}
+          style={{ 
+            top: `${panelTopPosition}px`,
+            bottom: '40px',
+            width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : (sidePanel ? sidePanelWidth : 0), 
+            transform: sidePanel ? 'translateX(0)' : `translateX(${sidePanelWidth}px)`, 
+            borderTopLeftRadius: 0, 
+            borderBottomLeftRadius: 0,
+            overflow: 'auto'
+          }}
+        >
+          {/* Draggable resizer */}
           <div
             className="hidden md:block"
             style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 8, cursor: 'ew-resize', zIndex: 10 }}
             onMouseDown={() => setIsResizing(true)}
           >
-            <div style={{ width: 4, height: 48, background: '#3b82f6', borderRadius: 2, margin: 'auto', marginTop: 24 }} />
+            <div style={{ width: 4, height: 48, background: '#e5e7eb', borderRadius: 2, margin: 'auto', marginTop: 24 }} />
           </div>
-        )}
-        <div style={{ marginLeft: sidePanel ? 16 : 0, flex: 1, minWidth: 0 }}>{renderSidePanel()}</div>
-      </div>
+          <div style={{ marginLeft: 16, flex: 1, minWidth: 0 }}>{renderSidePanel()}</div>
+        </div>
+      )}
     </div>
   );
 }

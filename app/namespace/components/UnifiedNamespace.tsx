@@ -1337,8 +1337,8 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                         )}
                       {Array.isArray(ns.tags) && ns.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                            {ns.tags.slice(0, 3).map((tag: string) => (
-                              <span key={`${ns["namespace-id"]}-${tag}`} className="px-2 py-0.5 bg-gray-50 text-gray-700 text-[11px] rounded-full border border-gray-200">
+                            {ns.tags.slice(0, 3).map((tag: string, index: number) => (
+                              <span key={`${ns["namespace-id"]}-list-tag-${tag}-${index}`} className="px-2 py-0.5 bg-gray-50 text-gray-700 text-[11px] rounded-full border border-gray-200">
                                 {tag}
                               </span>
                             ))}

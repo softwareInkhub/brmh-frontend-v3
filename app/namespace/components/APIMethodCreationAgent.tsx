@@ -337,41 +337,27 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-indigo-600 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="p-2 bg-white rounded-lg shadow-md">
-            <Zap className="w-6 h-6 text-indigo-600" />
-          </div>
-          <h3 className="font-bold text-xl text-white tracking-tight">API Method Creation Agent</h3>
-        </div>
-        <p className="text-sm text-white/95 leading-relaxed">
-          Transform API Gateway URLs into reusable methods with OpenAPI specifications. 
-          Create methods that can be overridden with different URLs and saved to your namespace.
-        </p>
-      </div>
-
-      {/* Success Message */}
+    <div className="space-y-2">
+      {/* Success Message - Compact */}
       {successMessage && (
-        <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4 shadow-md animate-fade-in">
-          <p className="text-sm font-semibold text-green-700 flex items-center gap-2">
-            <span className="text-lg">✅</span>
+        <div className="bg-green-50 border border-green-300 rounded-lg p-1.5 shadow-sm animate-fade-in">
+          <p className="text-xs font-semibold text-green-700 flex items-center gap-1.5">
+            <span className="text-sm">✅</span>
             {successMessage}
           </p>
         </div>
       )}
 
-      {/* Quick Select from Deployed Endpoints */}
+      {/* Quick Select from Deployed Endpoints - Compact */}
       {deployedEndpoints.length > 0 && (
-        <div className="bg-green-50 border-2 border-green-200 rounded-xl p-5 shadow-md hover:shadow-lg transition-all">
-          <h4 className="font-bold text-green-900 mb-4 flex items-center gap-2">
-            <div className="p-1.5 bg-green-600 rounded-lg shadow-sm">
-              <Globe className="w-5 h-5 text-white" />
+        <div className="bg-green-50 border border-green-200 rounded-lg p-2 shadow-sm">
+          <h4 className="font-bold text-xs text-green-900 mb-1.5 flex items-center gap-1.5">
+            <div className="p-0.5 bg-green-600 rounded shadow-sm">
+              <Globe className="w-3 h-3 text-white" />
             </div>
             Quick Select from Deployed Endpoints
           </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
             {deployedEndpoints.map((endpoint, index) => (
               <button
                 key={index}
@@ -380,32 +366,32 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
                   setMethodName(endpoint.functionName);
                   setSelectedEndpoint(endpoint.apiGatewayUrl);
                 }}
-                className={`p-4 text-left border-2 rounded-xl transition-all shadow-sm hover:shadow-md ${
+                className={`p-2 text-left border rounded-lg transition-all shadow-sm text-xs ${
                   selectedEndpoint === endpoint.apiGatewayUrl
                     ? 'border-green-600 bg-green-100 shadow-md'
                     : 'border-green-200 bg-white hover:bg-green-50'
                 }`}
               >
-                <div className="font-bold text-green-900 mb-1">{endpoint.functionName}</div>
-                <div className="text-xs text-green-700 break-all font-mono bg-white/70 px-2 py-1 rounded">{endpoint.apiGatewayUrl}</div>
+                <div className="font-bold text-green-900 mb-0.5">{endpoint.functionName}</div>
+                <div className="text-[10px] text-green-700 break-all font-mono bg-white/70 px-1.5 py-0.5 rounded">{endpoint.apiGatewayUrl}</div>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Method Creation Form */}
-      <div className="bg-white border-2 border-gray-200 rounded-xl p-5 shadow-md hover:shadow-lg transition-all">
-        <h4 className="font-bold text-lg mb-5 flex items-center gap-2 text-gray-900">
-          <div className="p-1.5 bg-blue-100 rounded-lg">
-            <Plus className="w-5 h-5 text-blue-600" />
+      {/* Method Creation Form - Compact */}
+      <div className="bg-white border border-gray-200 rounded-lg p-2 shadow-sm">
+        <h4 className="font-bold text-xs mb-2 flex items-center gap-1.5 text-gray-900">
+          <div className="p-0.5 bg-blue-100 rounded">
+            <Plus className="w-3 h-3 text-blue-600" />
           </div>
           Create New Method
         </h4>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
               API Gateway URL *
             </label>
             <input
@@ -413,12 +399,12 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
               placeholder="https://api.example.com/endpoint"
-              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm hover:border-indigo-300"
+              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm hover:border-indigo-300"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
               Method Name *
             </label>
             <input
@@ -426,18 +412,18 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
               value={methodName}
               onChange={(e) => setMethodName(e.target.value)}
               placeholder="getUserData"
-              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm hover:border-indigo-300"
+              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm hover:border-indigo-300"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
               HTTP Method
             </label>
             <select
               value={methodType}
               onChange={(e) => setMethodType(e.target.value)}
-              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm hover:border-indigo-300 bg-white"
+              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm hover:border-indigo-300 bg-white"
             >
               <option value="GET">GET</option>
               <option value="POST">POST</option>
@@ -448,7 +434,7 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
               Override URL (Optional)
             </label>
             <input
@@ -456,70 +442,70 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
               value={overrideUrl}
               onChange={(e) => setOverrideUrl(e.target.value)}
               placeholder="https://custom-api.example.com/endpoint"
-              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm hover:border-indigo-300"
+              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm hover:border-indigo-300"
             />
-            <p className="text-xs text-gray-500 mt-2 italic">
+            <p className="text-[10px] text-gray-500 mt-0.5 italic">
               💡 Use a different URL for this method (overrides the original)
             </p>
           </div>
         </div>
 
-        <div className="mt-5">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
+        <div className="mt-2">
+          <label className="block text-xs font-semibold text-gray-700 mb-1">
             Description
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe what this API method does..."
-            rows={3}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm hover:border-indigo-300"
+            rows={2}
+            className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm hover:border-indigo-300"
           />
         </div>
 
-        {/* Advanced Options */}
-        <div className="mt-4">
+        {/* Advanced Options - Compact */}
+        <div className="mt-2">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
+            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-3 h-3" />
             Advanced Options
           </button>
 
           {showAdvanced && (
-            <div className="mt-4 space-y-4 border-t pt-4">
-              {/* Custom Parameters */}
+            <div className="mt-2 space-y-2 border-t pt-2">
+              {/* Custom Parameters - Compact */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-700">Custom Parameters</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-gray-700">Custom Parameters</label>
                   <button
                     onClick={addCustomParameter}
-                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                    className="px-1.5 py-0.5 text-[10px] bg-blue-500 text-white rounded hover:bg-blue-600"
                   >
                     Add Parameter
                   </button>
                 </div>
                 {customParameters.map((param, index) => (
-                  <div key={index} className="flex gap-2 mb-2">
+                  <div key={index} className="flex gap-1 mb-1">
                     <input
                       type="text"
                       placeholder="Parameter name"
                       value={param.name}
                       onChange={(e) => updateCustomParameter(index, 'name', e.target.value)}
-                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-1.5 py-0.5 border border-gray-300 rounded text-xs"
                     />
                     <select
                       value={param.type}
                       onChange={(e) => updateCustomParameter(index, 'type', e.target.value)}
-                      className="px-2 py-1 border border-gray-300 rounded text-sm"
+                      className="px-1.5 py-0.5 border border-gray-300 rounded text-xs"
                     >
                       <option value="string">String</option>
                       <option value="number">Number</option>
                       <option value="boolean">Boolean</option>
                       <option value="array">Array</option>
                     </select>
-                    <label className="flex items-center gap-1 text-sm">
+                    <label className="flex items-center gap-0.5 text-xs">
                       <input
                         type="checkbox"
                         checked={param.required}
@@ -529,7 +515,7 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
                     </label>
                     <button
                       onClick={() => removeCustomParameter(index)}
-                      className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                      className="px-1.5 py-0.5 text-[10px] bg-red-500 text-white rounded hover:bg-red-600"
                     >
                       Remove
                     </button>
@@ -537,34 +523,34 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
                 ))}
               </div>
 
-              {/* Custom Headers */}
+              {/* Custom Headers - Compact */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-700">Custom Headers</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-gray-700">Custom Headers</label>
                   <button
                     onClick={addCustomHeader}
-                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                    className="px-1.5 py-0.5 text-[10px] bg-blue-500 text-white rounded hover:bg-blue-600"
                   >
                     Add Header
                   </button>
                 </div>
                 {customHeaders.map((header, index) => (
-                  <div key={index} className="flex gap-2 mb-2">
+                  <div key={index} className="flex gap-1 mb-1">
                     <input
                       type="text"
                       placeholder="Header name"
                       value={header.name}
                       onChange={(e) => updateCustomHeader(index, 'name', e.target.value)}
-                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-1.5 py-0.5 border border-gray-300 rounded text-xs"
                     />
                     <input
                       type="text"
                       placeholder="Header value"
                       value={header.value}
                       onChange={(e) => updateCustomHeader(index, 'value', e.target.value)}
-                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-1.5 py-0.5 border border-gray-300 rounded text-xs"
                     />
-                    <label className="flex items-center gap-1 text-sm">
+                    <label className="flex items-center gap-0.5 text-xs">
                       <input
                         type="checkbox"
                         checked={header.required}
@@ -574,7 +560,7 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
                     </label>
                     <button
                       onClick={() => removeCustomHeader(index)}
-                      className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                      className="px-1.5 py-0.5 text-[10px] bg-red-500 text-white rounded hover:bg-red-600"
                     >
                       Remove
                     </button>
@@ -585,11 +571,11 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
           )}
         </div>
 
-        <div className="mt-6">
+        <div className="mt-2">
           <button
             onClick={handleGenerateMethod}
             disabled={isGenerating || !inputUrl || !methodName}
-            className={`w-full px-6 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-3 transition-all shadow-md hover:shadow-lg ${
+            className={`w-full px-2 py-1.5 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm hover:shadow-md ${
               isGenerating || !inputUrl || !methodName
                 ? 'bg-gray-300 cursor-not-allowed text-gray-500'
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'
@@ -597,12 +583,12 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
           >
             {isGenerating ? (
               <>
-                <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 Generating Method...
               </>
             ) : (
               <>
-                <Zap className="w-5 h-5" />
+                <Zap className="w-3 h-3" />
                 Generate Method
               </>
             )}
@@ -610,26 +596,26 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
         </div>
       </div>
 
-      {/* Generated Methods */}
+      {/* Generated Methods - Compact */}
       {generatedMethods.length > 0 && (
-        <div className="bg-white border-2 border-gray-200 rounded-xl p-5 shadow-md hover:shadow-lg transition-all">
-          <h4 className="font-bold text-lg mb-5 flex items-center gap-2 text-gray-900">
-            <div className="p-1.5 bg-indigo-100 rounded-lg">
-              <FileText className="w-5 h-5 text-indigo-600" />
+        <div className="bg-white border border-gray-200 rounded-lg p-2 shadow-sm">
+          <h4 className="font-bold text-xs mb-2 flex items-center gap-1.5 text-gray-900">
+            <div className="p-0.5 bg-indigo-100 rounded">
+              <FileText className="w-3 h-3 text-indigo-600" />
             </div>
             Generated Methods ({generatedMethods.length})
           </h4>
           
-          <div className="space-y-4">
+          <div className="space-y-2">
             {generatedMethods.map((method) => (
-              <div key={method.id} className="border-2 border-gray-200 rounded-xl p-5 bg-white hover:shadow-lg transition-all animate-fade-in">
-                <div className="flex items-center justify-between mb-4">
+              <div key={method.id} className="border border-gray-200 rounded-lg p-2 bg-white hover:shadow-md transition-all animate-fade-in">
+                <div className="flex items-center justify-between mb-1.5">
                   <div className="flex-1">
-                    <h5 className="font-bold text-lg text-gray-900 mb-1">{method.name}</h5>
-                    <p className="text-sm text-gray-600">{method.description}</p>
+                    <h5 className="font-bold text-xs text-gray-900 mb-0.5">{method.name}</h5>
+                    <p className="text-[10px] text-gray-600 leading-tight">{method.description}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm ${
+                  <div className="flex items-center gap-1">
+                    <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded shadow-sm ${
                       method.method === 'GET' ? 'bg-green-600 text-white' :
                       method.method === 'POST' ? 'bg-indigo-600 text-white' :
                       method.method === 'PUT' ? 'bg-yellow-600 text-white' :
@@ -641,38 +627,38 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 mb-1.5">
                   <div>
-                    <label className="text-xs font-medium text-gray-500">Original URL</label>
-                    <div className="text-sm bg-gray-100 p-2 rounded break-all">{method.originalUrl}</div>
+                    <label className="text-[10px] font-medium text-gray-500">Original URL</label>
+                    <div className="text-[10px] bg-gray-100 p-1 rounded break-all">{method.originalUrl}</div>
                   </div>
                   {method.overrideUrl && (
                     <div>
-                      <label className="text-xs font-medium text-gray-500">Override URL</label>
-                      <div className="text-sm bg-blue-100 p-2 rounded break-all">{method.overrideUrl}</div>
+                      <label className="text-[10px] font-medium text-gray-500">Override URL</label>
+                      <div className="text-[10px] bg-blue-100 p-1 rounded break-all">{method.overrideUrl}</div>
                     </div>
                   )}
                 </div>
 
-                <div className="flex gap-3 flex-wrap">
+                <div className="flex gap-1 flex-wrap">
                   <button
                     onClick={() => handleTestMethod(method)}
-                    className="px-4 py-2 text-sm font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 shadow-md hover:shadow-lg transition-all"
+                    className="px-2 py-0.5 text-xs font-semibold bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-1 shadow-sm hover:shadow-md transition-all"
                   >
-                    <TestTube className="w-4 h-4" />
+                    <TestTube className="w-3 h-3" />
                     Test
                   </button>
                   <button
                     onClick={() => navigator.clipboard.writeText(JSON.stringify(method.openApiSpec, null, 2))}
-                    className="px-4 py-2 text-sm font-semibold bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center gap-2 shadow-md hover:shadow-lg transition-all"
+                    className="px-2 py-0.5 text-xs font-semibold bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center gap-1 shadow-sm hover:shadow-md transition-all"
                   >
-                    <Copy className="w-4 h-4" />
+                    <Copy className="w-3 h-3" />
                     Copy OpenAPI
                   </button>
                   <button
                     onClick={() => handleSaveToNamespace(method)}
                     disabled={savingMethods.has(method.id)}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 shadow-md hover:shadow-lg transition-all ${
+                    className={`px-2 py-0.5 text-xs font-semibold rounded flex items-center gap-1 shadow-sm hover:shadow-md transition-all ${
                       savingMethods.has(method.id)
                         ? 'bg-gray-300 cursor-not-allowed text-gray-500'
                         : 'bg-indigo-600 text-white hover:bg-indigo-700'
@@ -680,12 +666,12 @@ const APIMethodCreationAgent: React.FC<APIMethodCreationAgentProps> = ({
                   >
                     {savingMethods.has(method.id) ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         Saving...
                       </>
                     ) : (
                       <>
-                        <Save className="w-4 h-4" />
+                        <Save className="w-3 h-3" />
                         Save to Namespace
                       </>
                     )}

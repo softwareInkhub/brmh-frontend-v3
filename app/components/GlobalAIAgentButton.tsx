@@ -1,27 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, X, Sparkles } from 'lucide-react';
+import { Bot, Sparkles } from 'lucide-react';
 import { useDrop } from 'react-dnd';
-import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import { useNamespaceContext } from './NamespaceContext';
 import { useAIAgent } from './AIAgentContext';
-
-// Dynamically import AIAgentWorkspace to prevent SSR issues
-const AIAgentWorkspace = dynamic(() => import('../namespace/components/AIAgentWorkspace'), {
-  ssr: false,
-  loading: () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-8">
-        <div className="flex items-center gap-3">
-          <Bot className="text-blue-500 animate-pulse" size={24} />
-          <span>Loading AI Agent Workspace...</span>
-        </div>
-      </div>
-    </div>
-  )
-});
+import { useBottomTerminal } from './BottomTerminalContext';
 
 interface GlobalAIAgentButtonProps {
   isVisible?: boolean;
@@ -30,10 +15,10 @@ interface GlobalAIAgentButtonProps {
 }
 
 const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = true, onOpen, onClose }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen: isBottomTerminalOpen, open: openBottomTerminal, setNamespace: setTerminalNamespace } = useBottomTerminal();
   const { setIsOpen: setContextIsOpen } = useAIAgent();
-  const [droppedNamespace, setDroppedNamespace] = useState<any>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [rightPanelWidth, setRightPanelWidth] = useState(0);
   const dropRef = useRef<HTMLDivElement>(null);
   const { currentNamespace, getCurrentNamespaceContext } = useNamespaceContext();
 
@@ -43,8 +28,8 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
     drop: (item: any) => {
       console.log('Drop function called with item:', item);
       console.log('Namespace dropped:', item.namespace);
-      setDroppedNamespace(item.namespace);
-      setIsOpen(true);
+      setTerminalNamespace(item.namespace);
+      openBottomTerminal();
       setIsDragOver(false);
       
       // Show success toast
@@ -73,6 +58,54 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
     console.log('Drop zone isDragOver:', isDragOver);
   }, [isOver, isDragOver]);
 
+  // Check for right side panel (method details/create panel)
+  useEffect(() => {
+    const checkRightPanel = () => {
+      // IMPORTANT: Multiple namespace tabs = multiple modals in DOM!
+      // We need to check ALL panels and find the one that's actually visible
+      const rightPanels = document.querySelectorAll('.method-details-panel') as NodeListOf<HTMLElement>;
+      
+      let foundVisiblePanel = false;
+      
+      for (const rightPanel of rightPanels) {
+        // Get bounding rect to check if panel is actually visible on screen
+        const rect = rightPanel.getBoundingClientRect();
+        const styles = window.getComputedStyle(rightPanel);
+        
+        // Panel is visible if:
+        // 1. It has width
+        // 2. It's positioned on the right side of the screen (right edge is at viewport)
+        // 3. Basic visibility checks
+        // 4. Parent is not hidden (for namespace tabs)
+        const parentHidden = rightPanel.closest('[style*="display: none"]') !== null;
+        
+        const isVisible = rect.width > 0 && 
+                         rect.right >= window.innerWidth - 10 &&
+                         styles.display !== 'none' && 
+                         styles.visibility !== 'hidden' &&
+                         !parentHidden;
+        
+        if (isVisible) {
+          const width = parseInt(styles.width);
+          console.log('🎯 Floating Button - Right Panel OPEN (found visible):', width, 'Total panels:', rightPanels.length);
+          setRightPanelWidth(width > 0 ? width : 0);
+          foundVisiblePanel = true;
+          break; // Found visible panel, stop searching
+        }
+      }
+      
+      if (!foundVisiblePanel) {
+        console.log('🎯 Floating Button - No visible right panel (checked', rightPanels.length, 'panels)');
+        setRightPanelWidth(0);
+      }
+    };
+
+    checkRightPanel();
+    const interval = setInterval(checkRightPanel, 100); // Faster polling
+
+    return () => clearInterval(interval);
+  }, []);
+
   const handleOpenAIAgent = (forceGeneralContext = false) => {
     // Get current namespace context if available
     const contextNamespace = getCurrentNamespaceContext();
@@ -80,21 +113,14 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
     
     if (forceGeneralContext) {
       // Force general context for namespace generation
-      setDroppedNamespace(null);
+      setTerminalNamespace(null);
       toast.success('AI Agent opened in general context', {
         description: 'You can now create new namespaces or work on general tasks',
         duration: 3000,
       });
-    } else if (droppedNamespace) {
-      // Use dropped namespace if available
-      console.log('Using dropped namespace context:', droppedNamespace);
-      toast.success(`AI Agent opened with dropped namespace: ${droppedNamespace['namespace-name']}`, {
-        description: 'Using dropped namespace context',
-        duration: 3000,
-      });
     } else if (contextNamespace) {
       // Prefer current namespace context when available
-      setDroppedNamespace(contextNamespace);
+      setTerminalNamespace(contextNamespace);
       console.log('Using current namespace context:', contextNamespace);
       toast.success(`AI Agent opened with current namespace: ${contextNamespace['namespace-name']}`, {
         description: 'Using current namespace context',
@@ -102,36 +128,37 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
       });
     } else {
       // Default to general context for namespace generation
-      setDroppedNamespace(null);
+      setTerminalNamespace(null);
       console.log('Opening AI Agent in general context (default)');
       toast.success('AI Agent opened in general context', {
         description: 'You can now create new namespaces or work on general tasks',
         duration: 3000,
       });
     }
-    setIsOpen(true);
+    openBottomTerminal();
     setContextIsOpen(true);
     onOpen?.();
   };
 
-  const handleCloseAIAgent = () => {
-    setIsOpen(false);
-    setContextIsOpen(false);
-    setDroppedNamespace(null);
-    onClose?.();
-  };
+  if (!isVisible || isBottomTerminalOpen) return null;
 
-  if (!isVisible) return null;
+  // Debug log for floating button positioning
+  console.log('🔘 Floating Button Position:', {
+    rightPanelWidth,
+    calculatedRight: rightPanelWidth + 24,
+    isVisible: !isBottomTerminalOpen
+  });
 
   return (
     <>
       {/* Global Floating AI Agent Button */}
       <div
         ref={dropRef}
-        className={`fixed bottom-12 right-6 z-40 transition-all duration-300 ${
+        className={`fixed bottom-12 z-40 transition-all duration-300 ${
           isDragOver ? 'scale-110' : 'scale-100'
         }`}
         style={{ 
+          right: `${rightPanelWidth + 24}px`,
           border: isDragOver ? '3px dashed #8b5cf6' : 'none',
           borderRadius: '50%',
           padding: isDragOver ? '3px' : '0px'
@@ -151,19 +178,19 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
             // Right-click uses current namespace context if available
             const contextNamespace = getCurrentNamespaceContext();
             if (contextNamespace) {
-              setDroppedNamespace(contextNamespace);
+              setTerminalNamespace(contextNamespace);
               toast.success(`AI Agent opened with current namespace: ${contextNamespace['namespace-name']}`, {
                 description: 'Using current namespace context',
                 duration: 3000,
               });
             } else {
-              setDroppedNamespace(null);
+              setTerminalNamespace(null);
               toast.success('AI Agent opened in general context', {
                 description: 'No current namespace context available',
                 duration: 3000,
               });
             }
-            setIsOpen(true);
+            openBottomTerminal();
             onOpen?.();
           }}
           className={`group relative flex items-center justify-center w-16 h-16 rounded-full shadow-lg transition-all duration-300 ${
@@ -171,7 +198,7 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
               ? 'bg-purple-600 shadow-purple-500/50 scale-110 animate-pulse'
               : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/50 hover:shadow-blue-500/70'
           }`}
-          title="AI Agent Workspace - Click for general context (Right-click for current namespace context)"
+          title="Open AI Agent in Bottom Terminal - Click for general context | Right-click for current namespace | Drag namespace here"
         >
           {/* Drag indicator */}
           {isDragOver && (
@@ -185,15 +212,6 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
           
         </button>
       </div>
-
-      {/* AI Agent Workspace - Right Side Panel */}
-      {isOpen && (
-        <AIAgentWorkspace
-          key={droppedNamespace ? `namespace-${droppedNamespace['namespace-id'] || droppedNamespace['namespace-name']}` : 'no-namespace'}
-          namespace={droppedNamespace}
-          onClose={handleCloseAIAgent}
-        />
-      )}
     </>
   );
 };
