@@ -71,6 +71,16 @@ export default function WorkflowsPage() {
 	const [stepFunctionsDefinition, setStepFunctionsDefinition] = useState<string>('{}');
 	const [loadingDefinition, setLoadingDefinition] = useState<boolean>(false);
 	const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
+	// Track raw JSON strings for inputMapping fields to allow free typing
+	const [inputMappingRaw, setInputMappingRaw] = useState<Record<string, string>>({});
+
+	// Template example for input mapping
+	const getInputMappingTemplate = () => {
+		return JSON.stringify({
+			"message": "{{step1.result.title}}",
+			"price": "{{step1.result.price}}"
+		}, null, 2);
+	};
 
 	const headers = useMemo(
 		() => ({
@@ -1064,17 +1074,45 @@ export default function WorkflowsPage() {
 													<label style={{ display: 'grid', gap: 4 }}>
 														<span style={{ fontSize: 12, color: '#374151' }}>Input Mapping (JSON)</span>
 														<textarea
-															value={JSON.stringify((s as ApiStep).inputMapping || {}, null, 2)}
+															value={inputMappingRaw[s.id] !== undefined ? inputMappingRaw[s.id] : (Object.keys((s as ApiStep).inputMapping || {}).length === 0 ? getInputMappingTemplate() : JSON.stringify((s as ApiStep).inputMapping || {}, null, 2))}
 															onChange={e => {
-																try {
-																	updateStep(i, 'inputMapping', JSON.parse(e.target.value || '{}'));
-																} catch {
-																	// ignore
+																const rawValue = e.target.value;
+																setInputMappingRaw(prev => ({ ...prev, [s.id]: rawValue }));
+																// Try to parse and update if valid JSON (skip if it's the template placeholder)
+																if (rawValue !== getInputMappingTemplate()) {
+																	try {
+																		const parsed = JSON.parse(rawValue || '{}');
+																		updateStep(i, 'inputMapping', parsed);
+																	} catch {
+																		// Keep raw value, don't update parsed value yet
+																	}
+																}
+															}}
+															onBlur={e => {
+																// On blur, try to format/validate the JSON (skip if it's the template placeholder)
+																if (e.target.value !== getInputMappingTemplate()) {
+																	try {
+																		const parsed = JSON.parse(e.target.value || '{}');
+																		const formatted = JSON.stringify(parsed, null, 2);
+																		setInputMappingRaw(prev => ({ ...prev, [s.id]: formatted }));
+																		updateStep(i, 'inputMapping', parsed);
+																	} catch {
+																		// Keep raw value if invalid
+																	}
+																}
+															}}
+															onFocus={e => {
+																const currentValue = inputMappingRaw[s.id] !== undefined ? inputMappingRaw[s.id] : (Object.keys((s as ApiStep).inputMapping || {}).length === 0 ? getInputMappingTemplate() : JSON.stringify((s as ApiStep).inputMapping || {}, null, 2));
+																if (currentValue === getInputMappingTemplate()) {
+																	setInputMappingRaw(prev => ({ ...prev, [s.id]: '{}' }));
 																}
 															}}
 															rows={4}
 															style={{ padding: 8, border: '1px solid #e5e7eb', borderRadius: 10, outline: 'none', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
 														/>
+														<div style={{ fontSize: 11, color: '#6b7280', marginTop: -4 }}>
+															💡 Use <code style={{ background: '#f3f4f6', padding: '2px 4px', borderRadius: 4 }}>{'{{stepId.result.field}}'}</code> to reference previous step results
+														</div>
 													</label>
 												</div>
 											</div>
@@ -1083,17 +1121,47 @@ export default function WorkflowsPage() {
 												<label style={{ display: 'grid', gap: 4 }}>
 													<span style={{ fontSize: 12, color: '#374151' }}>Input Mapping (JSON)</span>
 													<textarea
-														value={JSON.stringify((s as TransformStep).inputMapping || {}, null, 2)}
+														value={inputMappingRaw[s.id] !== undefined ? inputMappingRaw[s.id] : (Object.keys((s as TransformStep).inputMapping || {}).length === 0 ? getInputMappingTemplate() : JSON.stringify((s as TransformStep).inputMapping || {}, null, 2))}
 														onChange={e => {
-															try {
-																updateStep(i, 'inputMapping', JSON.parse(e.target.value || '{}'));
-															} catch {
-																// ignore
+															const rawValue = e.target.value;
+															// Store raw value to allow free typing
+															setInputMappingRaw(prev => ({ ...prev, [s.id]: rawValue }));
+															// Try to parse and update if valid JSON (skip if it's the template placeholder)
+															if (rawValue !== getInputMappingTemplate()) {
+																try {
+																	const parsed = JSON.parse(rawValue || '{}');
+																	updateStep(i, 'inputMapping', parsed);
+																} catch {
+																	// Keep raw value, don't update parsed value yet
+																}
 															}
 														}}
-														rows={4}
+														onBlur={e => {
+															// On blur, try to format/validate the JSON (skip if it's the template placeholder)
+															if (e.target.value !== getInputMappingTemplate()) {
+																try {
+																	const parsed = JSON.parse(e.target.value || '{}');
+																	const formatted = JSON.stringify(parsed, null, 2);
+																	setInputMappingRaw(prev => ({ ...prev, [s.id]: formatted }));
+																	updateStep(i, 'inputMapping', parsed);
+																} catch {
+																	// Keep raw value if invalid
+																}
+															}
+														}}
+														onFocus={e => {
+															// If it's the template, clear it on focus
+															const currentValue = inputMappingRaw[s.id] !== undefined ? inputMappingRaw[s.id] : (Object.keys((s as TransformStep).inputMapping || {}).length === 0 ? getInputMappingTemplate() : JSON.stringify((s as TransformStep).inputMapping || {}, null, 2));
+															if (currentValue === getInputMappingTemplate()) {
+																setInputMappingRaw(prev => ({ ...prev, [s.id]: '{}' }));
+															}
+														}}
+														rows={6}
 														style={{ padding: 8, border: '1px solid #e5e7eb', borderRadius: 10, outline: 'none', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
 													/>
+													<div style={{ fontSize: 11, color: '#6b7280', marginTop: -4 }}>
+														💡 Use <code style={{ background: '#f3f4f6', padding: '2px 4px', borderRadius: 4 }}>{'{{stepId.result.field}}'}</code> to reference previous step results
+													</div>
 												</label>
 											</div>
 										)}
@@ -1505,11 +1573,45 @@ export default function WorkflowsPage() {
 											<div style={{ display: 'grid', gap: 4 }}>
 												<label style={{ fontSize: 12, color: '#374151' }}>Input Mapping (JSON)</label>
 												<textarea
-													value={JSON.stringify((s as any).inputMapping || {}, null, 2)}
-													onChange={(e) => { try { updateStep(selectedStepIndex, 'inputMapping', JSON.parse(e.target.value || '{}')); } catch {} }}
+													value={inputMappingRaw[s.id] !== undefined ? inputMappingRaw[s.id] : (Object.keys((s as any).inputMapping || {}).length === 0 ? getInputMappingTemplate() : JSON.stringify((s as any).inputMapping || {}, null, 2))}
+													onChange={(e) => {
+														const rawValue = e.target.value;
+														setInputMappingRaw(prev => ({ ...prev, [s.id]: rawValue }));
+														// Try to parse and update if valid JSON (skip if it's the template placeholder)
+														if (rawValue !== getInputMappingTemplate()) {
+															try {
+																const parsed = JSON.parse(rawValue || '{}');
+																updateStep(selectedStepIndex, 'inputMapping', parsed);
+															} catch {
+																// Keep raw value, don't update parsed value yet
+															}
+														}
+													}}
+													onBlur={(e) => {
+														// On blur, try to format/validate the JSON (skip if it's the template placeholder)
+														if (e.target.value !== getInputMappingTemplate()) {
+															try {
+																const parsed = JSON.parse(e.target.value || '{}');
+																const formatted = JSON.stringify(parsed, null, 2);
+																setInputMappingRaw(prev => ({ ...prev, [s.id]: formatted }));
+																updateStep(selectedStepIndex, 'inputMapping', parsed);
+															} catch {
+																// Keep raw value if invalid
+															}
+														}
+													}}
+													onFocus={(e) => {
+														const currentValue = inputMappingRaw[s.id] !== undefined ? inputMappingRaw[s.id] : (Object.keys((s as any).inputMapping || {}).length === 0 ? getInputMappingTemplate() : JSON.stringify((s as any).inputMapping || {}, null, 2));
+														if (currentValue === getInputMappingTemplate()) {
+															setInputMappingRaw(prev => ({ ...prev, [s.id]: '{}' }));
+														}
+													}}
 													rows={6}
 													style={{ padding: 8, border: '1px solid #e5e7eb', borderRadius: 10, fontFamily: 'ui-monospace, Menlo, monospace' }}
 												/>
+												<div style={{ fontSize: 11, color: '#6b7280', marginTop: -4 }}>
+													💡 Use <code style={{ background: '#f3f4f6', padding: '2px 4px', borderRadius: 4 }}>{'{{stepId.result.field}}'}</code> to reference previous step results
+												</div>
 											</div>
 										</>
 									) : (
@@ -1517,11 +1619,45 @@ export default function WorkflowsPage() {
 											<div style={{ display: 'grid', gap: 4 }}>
 												<label style={{ fontSize: 12, color: '#374151' }}>Input Mapping (JSON)</label>
 												<textarea
-													value={JSON.stringify((s as any).inputMapping || {}, null, 2)}
-													onChange={(e) => { try { updateStep(selectedStepIndex, 'inputMapping', JSON.parse(e.target.value || '{}')); } catch {} }}
+													value={inputMappingRaw[s.id] !== undefined ? inputMappingRaw[s.id] : (Object.keys((s as any).inputMapping || {}).length === 0 ? getInputMappingTemplate() : JSON.stringify((s as any).inputMapping || {}, null, 2))}
+													onChange={(e) => {
+														const rawValue = e.target.value;
+														setInputMappingRaw(prev => ({ ...prev, [s.id]: rawValue }));
+														// Try to parse and update if valid JSON (skip if it's the template placeholder)
+														if (rawValue !== getInputMappingTemplate()) {
+															try {
+																const parsed = JSON.parse(rawValue || '{}');
+																updateStep(selectedStepIndex, 'inputMapping', parsed);
+															} catch {
+																// Keep raw value, don't update parsed value yet
+															}
+														}
+													}}
+													onBlur={(e) => {
+														// On blur, try to format/validate the JSON (skip if it's the template placeholder)
+														if (e.target.value !== getInputMappingTemplate()) {
+															try {
+																const parsed = JSON.parse(e.target.value || '{}');
+																const formatted = JSON.stringify(parsed, null, 2);
+																setInputMappingRaw(prev => ({ ...prev, [s.id]: formatted }));
+																updateStep(selectedStepIndex, 'inputMapping', parsed);
+															} catch {
+																// Keep raw value if invalid
+															}
+														}
+													}}
+													onFocus={(e) => {
+														const currentValue = inputMappingRaw[s.id] !== undefined ? inputMappingRaw[s.id] : (Object.keys((s as any).inputMapping || {}).length === 0 ? getInputMappingTemplate() : JSON.stringify((s as any).inputMapping || {}, null, 2));
+														if (currentValue === getInputMappingTemplate()) {
+															setInputMappingRaw(prev => ({ ...prev, [s.id]: '{}' }));
+														}
+													}}
 													rows={6}
 													style={{ padding: 8, border: '1px solid #e5e7eb', borderRadius: 10, fontFamily: 'ui-monospace, Menlo, monospace' }}
 												/>
+												<div style={{ fontSize: 11, color: '#6b7280', marginTop: -4 }}>
+													💡 Use <code style={{ background: '#f3f4f6', padding: '2px 4px', borderRadius: 4 }}>{'{{stepId.result.field}}'}</code> to reference previous step results
+												</div>
 											</div>
 										</>
 									)}
