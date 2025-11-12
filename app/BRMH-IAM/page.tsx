@@ -79,6 +79,25 @@ interface RoleTemplate {
   createdBy: string;
 }
 
+interface ResourceAccess {
+  userId: string;
+  resourceId: string;
+  resourceType: 'namespace' | 'schema' | 'table' | 'drive-folder' | 'drive-file';
+  actualResourceId: string;
+  permissions: string[];
+  grantedBy: string;
+  grantedAt: string;
+  updatedAt: string;
+  expiresAt?: string;
+  metadata?: any;
+  isActive: boolean;
+}
+
+interface ResourceConfig {
+  resourceTypes: Array<{ value: string; label: string; description: string }>;
+  permissionTypes: Array<{ value: string; label: string; description: string }>;
+}
+
 export default function BRMHIAMPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -98,6 +117,17 @@ export default function BRMHIAMPage() {
   const [isCreateTemplateDialogOpen, setIsCreateTemplateDialogOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<RoleTemplate | null>(null);
+  
+  // Resource Access Management
+  const [resourceAccesses, setResourceAccesses] = useState<ResourceAccess[]>([]);
+  const [resourceConfig, setResourceConfig] = useState<ResourceConfig | null>(null);
+  const [isGrantResourceDialogOpen, setIsGrantResourceDialogOpen] = useState(false);
+  const [selectedResourceUser, setSelectedResourceUser] = useState<User | null>(null);
+  const [resourceType, setResourceType] = useState<string>('');
+  const [resourceId, setResourceId] = useState<string>('');
+  const [resourcePermissions, setResourcePermissions] = useState<string[]>([]);
+  const [resourceSearch, setResourceSearch] = useState('');
+  const [filterResourceType, setFilterResourceType] = useState<string>('all');
   const [newTemplate, setNewTemplate] = useState<Partial<RoleTemplate>>({
     name: '',
     namespace: 'general',
@@ -112,6 +142,7 @@ export default function BRMHIAMPage() {
     fetchUsers();
     fetchNamespaces();
     fetchRoleTemplates();
+    fetchResourceConfig();
   }, []);
 
   const fetchNamespaces = async () => {
@@ -326,6 +357,124 @@ export default function BRMHIAMPage() {
       title: 'Template Applied',
       description: `"${template.name}" template applied`,
     });
+  };
+
+  // Resource Access Management Functions
+  const fetchResourceConfig = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/user-resources/config`);
+      const data = await res.json();
+      if (data.success) {
+        setResourceConfig(data.config);
+      }
+    } catch (err) {
+      console.error('Error fetching resource config:', err);
+    }
+  };
+
+  const fetchUserResources = async (userId: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/user-resources/${userId}`);
+      const data = await res.json();
+      if (data.success) {
+        setResourceAccesses(data.allResources || []);
+      }
+    } catch (err) {
+      console.error('Error fetching user resources:', err);
+    }
+  };
+
+  const grantResourceAccess = async () => {
+    if (!selectedResourceUser || !resourceType || !resourceId || resourcePermissions.length === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/user-resources/grant`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedResourceUser.userId,
+          resourceType,
+          resourceId,
+          permissions: resourcePermissions,
+          grantedBy: 'superadmin',
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          title: 'Success',
+          description: 'Resource access granted successfully',
+        });
+        setIsGrantResourceDialogOpen(false);
+        setResourceType('');
+        setResourceId('');
+        setResourcePermissions([]);
+        fetchUserResources(selectedResourceUser.userId);
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to grant resource access',
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      console.error('Error granting resource access:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to grant resource access',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const revokeResourceAccess = async (userId: string, resourceType: string, resourceId: string) => {
+    if (!confirm('Are you sure you want to revoke this resource access?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/user-resources/revoke`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, resourceType, resourceId }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          title: 'Success',
+          description: 'Resource access revoked successfully',
+        });
+        fetchUserResources(userId);
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to revoke resource access',
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      console.error('Error revoking resource access:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to revoke resource access',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const assignNamespaceRole = async () => {
@@ -563,7 +712,7 @@ export default function BRMHIAMPage() {
 
       {/* Main Content */}
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="users" className="gap-2">
             <Users className="w-4 h-4" />
             User Management
@@ -571,6 +720,10 @@ export default function BRMHIAMPage() {
           <TabsTrigger value="templates" className="gap-2">
             <Sparkles className="w-4 h-4" />
             Role Templates
+          </TabsTrigger>
+          <TabsTrigger value="resources" className="gap-2">
+            <Lock className="w-4 h-4" />
+            Resource Access
           </TabsTrigger>
         </TabsList>
 
@@ -805,7 +958,322 @@ export default function BRMHIAMPage() {
             </Card>
           )}
         </TabsContent>
+
+        <TabsContent value="resources" className="space-y-4">
+          {/* Resource Management Header */}
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users..."
+                value={resourceSearch}
+                onChange={(e) => setResourceSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={filterResourceType} onValueChange={setFilterResourceType}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Resources</SelectItem>
+                {resourceConfig?.resourceTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* User Selection for Resource Access */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="w-5 h-5" />
+                Resource Access Management
+              </CardTitle>
+              <CardDescription>
+                Control user access to namespaces, schemas, tables, and drive resources
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Label>Select User</Label>
+                  <Select
+                    value={selectedResourceUser?.userId || ''}
+                    onValueChange={(userId) => {
+                      const user = users.find((u) => u.userId === userId);
+                      setSelectedResourceUser(user || null);
+                      if (user) {
+                        fetchUserResources(userId);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users
+                        .filter(
+                          (u) =>
+                            !resourceSearch ||
+                            u.username.toLowerCase().includes(resourceSearch.toLowerCase()) ||
+                            u.email.toLowerCase().includes(resourceSearch.toLowerCase())
+                        )
+                        .map((user) => (
+                          <SelectItem key={user.userId} value={user.userId}>
+                            {user.username} ({user.email})
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedResourceUser && (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="font-semibold">
+                          Resource Access for {selectedResourceUser.username}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">{selectedResourceUser.email}</p>
+                      </div>
+                      <Button
+                        onClick={() => setIsGrantResourceDialogOpen(true)}
+                        className="gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Grant Access
+                      </Button>
+                    </div>
+
+                    {/* Resource Access Table */}
+                    {loading ? (
+                      <div className="flex justify-center p-8">
+                        <RefreshCw className="w-6 h-6 animate-spin" />
+                      </div>
+                    ) : resourceAccesses.length === 0 ? (
+                      <Card className="border-dashed">
+                        <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+                          <Lock className="w-12 h-12 text-muted-foreground mb-4" />
+                          <h3 className="text-lg font-semibold mb-2">No Resource Access</h3>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            This user has no resource access assigned yet
+                          </p>
+                          <Button onClick={() => setIsGrantResourceDialogOpen(true)} className="gap-2">
+                            <Plus className="w-4 h-4" />
+                            Grant First Access
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <Card>
+                        <CardContent className="p-0">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Resource Type</TableHead>
+                                <TableHead>Resource ID</TableHead>
+                                <TableHead>Permissions</TableHead>
+                                <TableHead>Granted By</TableHead>
+                                <TableHead>Granted At</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {resourceAccesses
+                                .filter(
+                                  (ra) =>
+                                    filterResourceType === 'all' || ra.resourceType === filterResourceType
+                                )
+                                .map((resource) => (
+                                  <TableRow key={resource.resourceId}>
+                                    <TableCell>
+                                      <Badge variant="outline">
+                                        {resourceConfig?.resourceTypes.find((t) => t.value === resource.resourceType)?.label || resource.resourceType}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="font-mono text-sm">
+                                      {resource.actualResourceId}
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex flex-wrap gap-1">
+                                        {resource.permissions.map((perm) => (
+                                          <Badge key={perm} variant="secondary" className="text-xs">
+                                            {perm}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-sm">{resource.grantedBy}</TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">
+                                      {new Date(resource.grantedAt).toLocaleDateString()}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() =>
+                                          revokeResourceAccess(
+                                            resource.userId,
+                                            resource.resourceType,
+                                            resource.actualResourceId
+                                          )
+                                        }
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                            </TableBody>
+                          </Table>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Resource Type Overview */}
+          {resourceConfig && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {resourceConfig.resourceTypes.map((type) => (
+                <Card key={type.value}>
+                  <CardHeader>
+                    <CardTitle className="text-sm">{type.label}</CardTitle>
+                    <CardDescription className="text-xs">{type.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {
+                        resourceAccesses.filter((ra) => ra.resourceType === type.value)
+                          .length
+                      }
+                    </div>
+                    <p className="text-xs text-muted-foreground">Active assignments</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
+
+      {/* Grant Resource Access Dialog */}
+      <Dialog open={isGrantResourceDialogOpen} onOpenChange={setIsGrantResourceDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-blue-600" />
+              Grant Resource Access
+            </DialogTitle>
+            <DialogDescription>
+              Assign access to specific resources for{' '}
+              {selectedResourceUser?.username}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Resource Type</Label>
+              <Select value={resourceType} onValueChange={setResourceType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select resource type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {resourceConfig?.resourceTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      <div>
+                        <div className="font-medium">{type.label}</div>
+                        <div className="text-xs text-muted-foreground">{type.description}</div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Resource ID</Label>
+              <Input
+                value={resourceId}
+                onChange={(e) => setResourceId(e.target.value)}
+                placeholder="Enter resource ID (e.g., namespace-id, schema-id, folder-id)"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                The unique identifier of the resource you want to grant access to
+              </p>
+            </div>
+
+            <div>
+              <Label>Permissions</Label>
+              <div className="border rounded-md p-4 space-y-2 max-h-60 overflow-y-auto">
+                {resourceConfig?.permissionTypes.map((perm) => (
+                  <div key={perm.value} className="flex items-start gap-2">
+                    <Checkbox
+                      id={`resource-perm-${perm.value}`}
+                      checked={resourcePermissions.includes(perm.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setResourcePermissions([...resourcePermissions, perm.value]);
+                        } else {
+                          setResourcePermissions(
+                            resourcePermissions.filter((p) => p !== perm.value)
+                          );
+                        }
+                      }}
+                    />
+                    <div className="flex-1">
+                      <label
+                        htmlFor={`resource-perm-${perm.value}`}
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        {perm.label}
+                      </label>
+                      <p className="text-xs text-muted-foreground">{perm.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Selected: {resourcePermissions.length} permission(s)
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsGrantResourceDialogOpen(false);
+                setResourceType('');
+                setResourceId('');
+                setResourcePermissions([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={grantResourceAccess} disabled={loading}>
+              {loading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Granting...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Grant Access
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Template Dialog */}
       <Dialog open={isCreateTemplateDialogOpen} onOpenChange={setIsCreateTemplateDialogOpen}>
