@@ -1,10 +1,13 @@
 "use client";
 import React, { useEffect, useState } from 'react'
 import { Bell, Settings, Zap, FileText, Send, List, Info } from 'lucide-react'
+import { useBreadcrumb } from '../components/BreadcrumbContext'
+import GlobalBreadcrumb from '../components/GlobalBreadcrumb'
 
 type TabKey = 'overview' | 'config' | 'triggers' | 'templates' | 'test' | 'logs'
 
 const Page = () => {
+  const { setBreadcrumbs } = useBreadcrumb();
   const [active, setActive] = useState<TabKey>('overview')
   const [apiBase, setApiBase] = useState<string>(process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001')
   const [saving, setSaving] = useState(false)
@@ -63,6 +66,32 @@ const Page = () => {
   useEffect(() => {
     if (typeof window !== 'undefined') window.localStorage.setItem('notif.activeTab', active)
   }, [active])
+
+  // Update breadcrumbs based on active tab
+  useEffect(() => {
+    const tabLabels: Record<TabKey, string> = {
+      'overview': 'Overview',
+      'config': 'Configuration',
+      'triggers': 'Triggers',
+      'templates': 'Templates',
+      'test': 'Test & Fire',
+      'logs': 'Event Logs'
+    };
+
+    const breadcrumbs = [
+      { label: 'Notification Service', path: 'notification-service' }
+    ];
+
+    // Add current tab if not overview
+    if (active !== 'overview') {
+      breadcrumbs.push({
+        label: tabLabels[active],
+        path: active
+      });
+    }
+
+    setBreadcrumbs(breadcrumbs);
+  }, [active, setBreadcrumbs]);
 
   async function fetchConnections() {
     try {
@@ -552,6 +581,9 @@ const Page = () => {
 
   return (
     <div className="p-0">
+      {/* Breadcrumb Navigation */}
+      <GlobalBreadcrumb />
+      
       <div className="flex gap-0">
         {/* Child Sidebar */}
         <aside className="w-64 shrink-0 bg-white border-r border-gray-200 rounded-none p-0 h-screen sticky top-0 overflow-hidden">

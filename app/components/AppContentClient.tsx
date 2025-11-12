@@ -14,7 +14,7 @@ export default function AppContentClient({ children }: { children: React.ReactNo
   const [currentNamespaceContext, setCurrentNamespaceContext] = useState<any>(null);
   const { isOpen: aiAgentIsOpen, panelWidth } = useAIAgent();
   const pathname = usePathname();
-  const hideSidebar = pathname === '/Home' || pathname === '/authPage';
+  const hideSidebar = pathname === '/Home' || pathname === '/authPage' || pathname === '/landingPage';
 
   // Hide body scrollbar on mount, restore on unmount
   useEffect(() => {

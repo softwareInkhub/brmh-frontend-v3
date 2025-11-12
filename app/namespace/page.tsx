@@ -19,6 +19,7 @@ import UnifiedSchemaModal from './Modals/UnifiedSchemaModal';
 import SchemaPreviewModal from './Modals/SchemaPreviewModal';
 import { useSidePanel } from "../components/SidePanelContext";
 import { useNamespaceContext } from "../components/NamespaceContext";
+import { useBreadcrumb } from "../components/BreadcrumbContext";
 import SchemaCreatePage from './pages/SchemaCreatePage';
 import AllAccountPage from './pages/AllAccountPage';
 import AllMethodPage from './pages/AllMethodPage';
@@ -85,6 +86,7 @@ function fieldsToSchema(fields: any[]): Record<string, any> {
 function NamespacePage(props: React.PropsWithChildren<{}>) {
   const { isCollapsed, setIsCollapsed } = useSidePanel();
   const { setCurrentNamespace } = useNamespaceContext();
+  const { setBreadcrumbs } = useBreadcrumb();
   const [activeTab, setActiveTab] = useState('overview');
   const [tabs, setTabs] = useState(initialTabs);
   const [namespaceSearchQuery, setNamespaceSearchQuery] = useState('');
@@ -291,19 +293,30 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
   useEffect(() => {
     const calculateTertiarySidebarTop = () => {
       if (typeof window !== 'undefined') {
-        const tabBar = document.querySelector('.namespace-tab-bar');
-        if (tabBar) {
-          const rect = tabBar.getBoundingClientRect();
+        // Check if breadcrumb exists
+        const breadcrumb = document.querySelector('.breadcrumb-nav');
+        if (breadcrumb) {
+          const rect = breadcrumb.getBoundingClientRect();
           setTertiarySidebarTop(rect.bottom);
+        } else {
+          // Fallback to tab bar if no breadcrumb
+          const tabBar = document.querySelector('.namespace-tab-bar');
+          if (tabBar) {
+            const rect = tabBar.getBoundingClientRect();
+            setTertiarySidebarTop(rect.bottom);
+          }
         }
       }
     };
 
     calculateTertiarySidebarTop();
+    // Add a small delay to ensure breadcrumb is rendered
+    const timer = setTimeout(calculateTertiarySidebarTop, 100);
     window.addEventListener('resize', calculateTertiarySidebarTop);
     window.addEventListener('scroll', calculateTertiarySidebarTop);
 
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('resize', calculateTertiarySidebarTop);
       window.removeEventListener('scroll', calculateTertiarySidebarTop);
     };
@@ -723,6 +736,192 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
     return null;
   };
 
+  // Helper function to generate breadcrumb navigation
+  const getBreadcrumbs = () => {
+    const breadcrumbs: { label: string; path?: string; onClick?: () => void; hidden?: boolean }[] = [];
+    
+    // Get current namespace
+    const currentNamespace = getCurrentNamespaceForSecondaryBar();
+    if (!currentNamespace) return breadcrumbs;
+    
+    // Add hidden "namespace" path for URL routing (don't show in UI)
+    breadcrumbs.push({ 
+      label: 'Namespace', 
+      path: 'namespace',
+      hidden: true // Don't display in UI
+    });
+    
+    // Add namespace name
+    const namespacePath = currentNamespace['namespace-name'].toLowerCase().replace(/\s+/g, '-');
+    breadcrumbs.push({ 
+      label: currentNamespace['namespace-name'],
+      path: namespacePath,
+      onClick: () => {
+        const key = `allAccounts-${currentNamespace['namespace-id']}`;
+        setActiveTab(key);
+        setSecondaryTab('accounts');
+        setAllAccountsTabs(prev => {
+          if (prev.find(t => t.key === key)) return prev;
+          return [...prev, { key, namespace: currentNamespace, openCreate: false }];
+        });
+      }
+    });
+    
+    // Check what type of page we're on and add appropriate breadcrumbs
+    
+    // Account Page
+    const accountTab = accountPageTabs.find(t => t.key === activeTab);
+    if (accountTab) {
+      breadcrumbs.push({ 
+        label: 'Accounts',
+        path: 'accounts',
+        onClick: () => {
+          const key = `allAccounts-${currentNamespace['namespace-id']}`;
+          setActiveTab(key);
+          setSecondaryTab('accounts');
+        }
+      });
+      const accountPath = accountTab.account['namespace-account-name'].toLowerCase().replace(/\s+/g, '-');
+      breadcrumbs.push({ label: accountTab.account['namespace-account-name'], path: accountPath });
+      return breadcrumbs;
+    }
+    
+    // Method Page
+    const methodTab = methodPageTabs.find(t => t.key === activeTab);
+    if (methodTab) {
+      breadcrumbs.push({ 
+        label: 'Methods',
+        path: 'methods',
+        onClick: () => {
+          const key = `allMethods-${currentNamespace['namespace-id']}`;
+          setActiveTab(key);
+          setSecondaryTab('methods');
+        }
+      });
+      const methodPath = methodTab.method['namespace-method-name'].toLowerCase().replace(/\s+/g, '-');
+      breadcrumbs.push({ label: methodTab.method['namespace-method-name'], path: methodPath });
+      return breadcrumbs;
+    }
+    
+    // Method Test Page
+    const methodTestTab = methodTestTabs.find(t => t.key === activeTab);
+    if (methodTestTab) {
+      breadcrumbs.push({ 
+        label: 'Methods',
+        path: 'methods',
+        onClick: () => {
+          const key = `allMethods-${currentNamespace['namespace-id']}`;
+          setActiveTab(key);
+          setSecondaryTab('methods');
+        }
+      });
+      const methodPath = methodTestTab.method['namespace-method-name'].toLowerCase().replace(/\s+/g, '-');
+      breadcrumbs.push({ 
+        label: methodTestTab.method['namespace-method-name'],
+        path: methodPath,
+        onClick: () => {
+          const key = `methodPage-${methodTestTab.method['namespace-method-id']}`;
+          setActiveTab(key);
+        }
+      });
+      breadcrumbs.push({ label: 'Test', path: 'test' });
+      return breadcrumbs;
+    }
+    
+    // Schema Page
+    const schemaTab = schemaPageTabs.find(t => t.key === activeTab);
+    if (schemaTab) {
+      breadcrumbs.push({ 
+        label: 'Schemas',
+        path: 'schemas',
+        onClick: () => {
+          const key = `all-schemas-${currentNamespace['namespace-id']}`;
+          setActiveTab(key);
+          setSecondaryTab('schemas');
+        }
+      });
+      if (schemaTab.schema) {
+        const schemaPath = (schemaTab.schema.schemaName || 'untitled-schema').toLowerCase().replace(/\s+/g, '-');
+        breadcrumbs.push({ label: schemaTab.schema.schemaName || 'Untitled Schema', path: schemaPath });
+      } else {
+        breadcrumbs.push({ label: 'New Schema', path: 'new-schema' });
+      }
+      return breadcrumbs;
+    }
+    
+    // Webhook Page
+    const webhookTab = webhookPageTabs.find(t => t.key === activeTab);
+    if (webhookTab) {
+      breadcrumbs.push({ 
+        label: 'Webhooks',
+        path: 'webhooks',
+        onClick: () => {
+          const key = `allWebhooks-${currentNamespace['namespace-id']}`;
+          setActiveTab(key);
+          setSecondaryTab('webhooks');
+        }
+      });
+      const webhookPath = (webhookTab.webhook['webhook-name'] || 'webhook').toLowerCase().replace(/\s+/g, '-');
+      breadcrumbs.push({ label: webhookTab.webhook['webhook-name'] || 'Webhook', path: webhookPath });
+      return breadcrumbs;
+    }
+    
+    // Lambda Page
+    const lambdaTab = lambdaPageTabs.find(t => t.key === activeTab);
+    if (lambdaTab) {
+      breadcrumbs.push({ 
+        label: 'Lambdas',
+        path: 'lambdas',
+        onClick: () => {
+          const key = `allLambdas-${currentNamespace['namespace-id']}`;
+          setActiveTab(key);
+          setSecondaryTab('lambdas');
+        }
+      });
+      const lambdaPath = (lambdaTab.lambda.name || 'lambda').toLowerCase().replace(/\s+/g, '-');
+      breadcrumbs.push({ label: lambdaTab.lambda.name || 'Lambda', path: lambdaPath });
+      return breadcrumbs;
+    }
+    
+    // All Accounts
+    if (activeTab.startsWith('allAccounts-')) {
+      breadcrumbs.push({ label: 'Accounts', path: 'accounts' });
+      return breadcrumbs;
+    }
+    
+    // All Methods
+    if (activeTab.startsWith('allMethods-')) {
+      breadcrumbs.push({ label: 'Methods', path: 'methods' });
+      return breadcrumbs;
+    }
+    
+    // All Schemas
+    if (activeTab.startsWith('all-schemas-')) {
+      breadcrumbs.push({ label: 'Schemas', path: 'schemas' });
+      return breadcrumbs;
+    }
+    
+    // All Webhooks
+    if (activeTab.startsWith('allWebhooks-')) {
+      breadcrumbs.push({ label: 'Webhooks', path: 'webhooks' });
+      return breadcrumbs;
+    }
+    
+    // All Lambdas
+    if (activeTab.startsWith('allLambdas-')) {
+      breadcrumbs.push({ label: 'Lambdas', path: 'lambdas' });
+      return breadcrumbs;
+    }
+    
+    return breadcrumbs;
+  };
+
+  // Update global breadcrumb context whenever navigation changes
+  useEffect(() => {
+    const breadcrumbs = getBreadcrumbs();
+    setBreadcrumbs(breadcrumbs);
+  }, [activeTab, secondaryTab, accountPageTabs, methodPageTabs, schemaPageTabs, webhookPageTabs, lambdaPageTabs, allAccountsTabs, allMethodsTabs, allSchemasTabs, allWebhooksTabs, allLambdasTabs, methodTestTabs]);
+
   // Bidirectional sync
   useEffect(() => {
     setJsonSchema(JSON.stringify(fieldsToSchema(fields), null, 2));
@@ -942,12 +1141,25 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
   const handleCloseTab = (key: string) => {
     const tab = tabs.find(t => t.key === key);
     if (tab && tab.pinned) return; // Prevent closing pinned tabs
+    
+    // Find the index of the tab being closed
+    const closingTabIndex = tabs.findIndex(t => t.key === key);
     const filteredTabs = tabs.filter(tab => tab.key !== key);
     setTabs(filteredTabs);
+    
+    // Check if we need to switch to a different tab
+    let needToSwitchTab = false;
     
     // If closing a namespace- tab, also close all its associated All pages
     if (key.startsWith('namespace-')) {
       const namespaceId = key.replace('namespace-', '');
+      
+      // Check if current active tab belongs to this namespace
+      const currentNamespace = getCurrentNamespaceForSecondaryBar();
+      if (currentNamespace && currentNamespace['namespace-id'] === namespaceId) {
+        needToSwitchTab = true;
+      }
+      
       setAllAccountsTabs(prev => prev.filter(t => t.namespace?.['namespace-id'] !== namespaceId));
       setAllMethodsTabs(prev => prev.filter(t => t.namespace?.['namespace-id'] !== namespaceId));
       setAllSchemasTabs(prev => prev.filter(t => t.namespace?.['namespace-id'] !== namespaceId));
@@ -961,9 +1173,38 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
       setMethodTestTabs(prev => prev.filter(t => t.namespace?.['namespace-id'] !== namespaceId));
     }
     
-    if (activeTab === key) {
-      setActiveTab('overview');
+    // If closing the active tab OR if active content belongs to closing namespace, redirect to another tab
+    if (activeTab === key || needToSwitchTab) {
+      if (filteredTabs.length > 0) {
+        // Try to go to the previous tab (or next if closing the first tab)
+        const newIndex = closingTabIndex > 0 ? closingTabIndex - 1 : 0;
+        const newActiveTab = filteredTabs[newIndex];
+        
+        // If switching to a namespace tab, open its All Accounts page
+        if (newActiveTab.key.startsWith('namespace-')) {
+          const namespaceId = newActiveTab.key.replace('namespace-', '');
+          const targetNamespace = namespaces.find(ns => ns['namespace-id'] === namespaceId);
+          if (targetNamespace) {
+            // Open All Accounts page for the new namespace
+            const accountsKey = `allAccounts-${namespaceId}`;
+            setActiveTab(accountsKey);
+            setSecondaryTab('accounts');
+            setAllAccountsTabs(prev => {
+              const exists = prev.find(t => t.key === accountsKey);
+              if (exists) return prev;
+              return [...prev, { key: accountsKey, namespace: targetNamespace, openCreate: false }];
+            });
+            setCurrentNamespace(targetNamespace);
+          }
+        } else {
+          setActiveTab(newActiveTab.key);
+        }
+      } else {
+        // No tabs left, go to overview
+        setActiveTab('overview');
+      }
     }
+    
     // Remove closed tab's state from all tab arrays
     setAllAccountsTabs(prev => prev.filter(t => t.key !== key));
     setAllMethodsTabs(prev => prev.filter(t => t.key !== key));
@@ -1359,6 +1600,47 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
             </div>
                     </div>
 
+                    {/* Breadcrumb Navigation */}
+                    {(() => {
+                      const breadcrumbs = getBreadcrumbs();
+                      const visibleBreadcrumbs = breadcrumbs.filter(b => !b.hidden);
+                      if (visibleBreadcrumbs.length === 0) return null;
+                      
+                      // Calculate tab bar height dynamically
+                      const tabBarHeight = typeof window !== 'undefined' 
+                        ? (document.querySelector('.namespace-tab-bar')?.getBoundingClientRect().height || 52)
+                        : 52;
+                      
+                      return (
+                        <div 
+                          className="breadcrumb-nav bg-gray-50 border-b border-gray-200 px-4 py-2.5 sticky z-[35] w-full"
+                          style={{ top: `${tabBarHeight}px` }}
+                        >
+                          <div className="flex items-center gap-2 text-sm">
+                            {visibleBreadcrumbs.map((crumb, index) => (
+                              <React.Fragment key={index}>
+                                {index > 0 && (
+                                  <ChevronRight size={14} className="text-gray-400" />
+                                )}
+                                {crumb.onClick ? (
+                                  <button
+                                    onClick={crumb.onClick}
+                                    className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                                  >
+                                    {crumb.label}
+                                  </button>
+                                ) : (
+                                  <span className="text-gray-700 font-medium">
+                                    {crumb.label}
+                                  </span>
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* Tertiary Sidebar (Third Level Navigation) - Show for all namespace-related pages */}
                     {(() => {
                       const currentNamespace = getCurrentNamespaceForSecondaryBar();
@@ -1445,10 +1727,10 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                                 <User size={isTertiaryCollapsed ? 14 : 16} />
                               </div>
                               {!isTertiaryCollapsed && (
-                                <div className="flex-1 text-left">
-                                  <div className="font-medium text-sm">Accounts</div>
-                                  <div className="text-xs text-gray-500">{nsAccounts.length} items</div>
-                                </div>
+                              <div className="flex-1 text-left">
+                                <div className="font-medium text-sm">Accounts</div>
+                                <div className="text-xs text-gray-500">{nsAccounts.length} items</div>
+                              </div>
                               )}
                               {isTertiaryCollapsed && (
                                 <div className="text-[9px] text-gray-600">{nsAccounts.length}</div>
@@ -1482,10 +1764,10 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                                 <Zap size={isTertiaryCollapsed ? 14 : 16} />
                               </div>
                               {!isTertiaryCollapsed && (
-                                <div className="flex-1 text-left">
-                                  <div className="font-medium text-sm">Methods</div>
-                                  <div className="text-xs text-gray-500">{nsMethods.length} items</div>
-                                </div>
+                              <div className="flex-1 text-left">
+                                <div className="font-medium text-sm">Methods</div>
+                                <div className="text-xs text-gray-500">{nsMethods.length} items</div>
+                              </div>
                               )}
                               {isTertiaryCollapsed && (
                                 <div className="text-[9px] text-gray-600">{nsMethods.length}</div>
@@ -1519,10 +1801,10 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                                 <FileText size={isTertiaryCollapsed ? 14 : 16} />
                               </div>
                               {!isTertiaryCollapsed && (
-                                <div className="flex-1 text-left">
-                                  <div className="font-medium text-sm">Schemas</div>
-                                  <div className="text-xs text-gray-500">{nsSchemas.length} items</div>
-                                </div>
+                              <div className="flex-1 text-left">
+                                <div className="font-medium text-sm">Schemas</div>
+                                <div className="text-xs text-gray-500">{nsSchemas.length} items</div>
+                              </div>
                               )}
                               {isTertiaryCollapsed && (
                                 <div className="text-[9px] text-gray-600">{nsSchemas.length}</div>
@@ -1556,10 +1838,10 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                                 <GitBranch size={isTertiaryCollapsed ? 14 : 16} />
                               </div>
                               {!isTertiaryCollapsed && (
-                                <div className="flex-1 text-left">
-                                  <div className="font-medium text-sm">Webhooks</div>
-                                  <div className="text-xs text-gray-500">{nsWebhooks.length} items</div>
-                                </div>
+                              <div className="flex-1 text-left">
+                                <div className="font-medium text-sm">Webhooks</div>
+                                <div className="text-xs text-gray-500">{nsWebhooks.length} items</div>
+                              </div>
                               )}
                               {isTertiaryCollapsed && (
                                 <div className="text-[9px] text-gray-600">{nsWebhooks.length}</div>
@@ -1593,10 +1875,10 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                                 <Box size={isTertiaryCollapsed ? 14 : 16} />
                               </div>
                               {!isTertiaryCollapsed && (
-                                <div className="flex-1 text-left">
-                                  <div className="font-medium text-sm">Lambdas</div>
-                                  <div className="text-xs text-gray-500">{nsLambdas.length} items</div>
-                                </div>
+                              <div className="flex-1 text-left">
+                                <div className="font-medium text-sm">Lambdas</div>
+                                <div className="text-xs text-gray-500">{nsLambdas.length} items</div>
+                              </div>
                               )}
                               {isTertiaryCollapsed && (
                                 <div className="text-[9px] text-gray-600">{nsLambdas.length}</div>
@@ -1716,12 +1998,27 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           onOpenNamespaceTab={handleOpenNamespaceTab}
                           onAddItem={handleSidePanelAdd}
                           onViewAccount={(account, ns) => {
+                            // Add namespace tab to tab bar if it doesn't exist
+                            const namespaceTabKey = `namespace-${ns['namespace-id']}`;
+                            if (!tabs.find(tab => tab.key === namespaceTabKey)) {
+                              setTabs([...tabs, { key: namespaceTabKey, label: ns['namespace-name'], pinned: false }]);
+                            }
                             handleSidePanelAdd('accountPage', { account, namespace: ns });
                           }}
                           onViewMethod={(method, ns) => {
+                            // Add namespace tab to tab bar if it doesn't exist
+                            const namespaceTabKey = `namespace-${ns['namespace-id']}`;
+                            if (!tabs.find(tab => tab.key === namespaceTabKey)) {
+                              setTabs([...tabs, { key: namespaceTabKey, label: ns['namespace-name'], pinned: false }]);
+                            }
                             handleSidePanelAdd('methodPage', { method, namespace: ns });
                           }}
                           onViewSchema={(schema, ns) => {
+                            // Add namespace tab to tab bar if it doesn't exist
+                            const namespaceTabKey = `namespace-${ns['namespace-id']}`;
+                            if (!tabs.find(tab => tab.key === namespaceTabKey)) {
+                              setTabs([...tabs, { key: namespaceTabKey, label: ns['namespace-name'], pinned: false }]);
+                            }
                             const key = `schemaPage-${schema.id}`;
                             setSecondaryTab('schemas');
                             setActiveTab(key);
@@ -1750,12 +2047,27 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                           onOpenNamespaceTab={handleOpenNamespaceTab}
                           onAddItem={handleSidePanelAdd}
                           onViewAccount={(account, ns) => {
+                            // Add namespace tab to tab bar if it doesn't exist
+                            const namespaceTabKey = `namespace-${ns['namespace-id']}`;
+                            if (!tabs.find(tab => tab.key === namespaceTabKey)) {
+                              setTabs([...tabs, { key: namespaceTabKey, label: ns['namespace-name'], pinned: false }]);
+                            }
                             handleSidePanelAdd('accountPage', { account, namespace: ns });
                           }}
                           onViewMethod={(method, ns) => {
+                            // Add namespace tab to tab bar if it doesn't exist
+                            const namespaceTabKey = `namespace-${ns['namespace-id']}`;
+                            if (!tabs.find(tab => tab.key === namespaceTabKey)) {
+                              setTabs([...tabs, { key: namespaceTabKey, label: ns['namespace-name'], pinned: false }]);
+                            }
                             handleSidePanelAdd('methodPage', { method, namespace: ns });
                           }}
                           onViewSchema={(schema, ns) => {
+                            // Add namespace tab to tab bar if it doesn't exist
+                            const namespaceTabKey = `namespace-${ns['namespace-id']}`;
+                            if (!tabs.find(tab => tab.key === namespaceTabKey)) {
+                              setTabs([...tabs, { key: namespaceTabKey, label: ns['namespace-name'], pinned: false }]);
+                            }
                             const key = `schemaPage-${schema.id}`;
                             setSecondaryTab('schemas');
                             setActiveTab(key);
@@ -1792,6 +2104,11 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                             timestamp={timestamp}
                             refreshSidePanelData={fetchData}
                             onViewAccount={(account, ns) => {
+                              // Add namespace tab to tab bar if it doesn't exist
+                              const namespaceTabKey = `namespace-${ns['namespace-id']}`;
+                              if (!tabs.find(tab => tab.key === namespaceTabKey)) {
+                                setTabs([...tabs, { key: namespaceTabKey, label: ns['namespace-name'], pinned: false }]);
+                              }
                               handleSidePanelAdd('accountPage', { account, namespace: ns });
                             }}
                           />
@@ -2189,6 +2506,11 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                   timestamp={timestamp}
                   refreshSidePanelData={fetchData}
                   onViewAccount={(account, ns) => {
+                    // Add namespace tab to tab bar if it doesn't exist
+                    const namespaceTabKey = `namespace-${ns['namespace-id']}`;
+                    if (!tabs.find(tab => tab.key === namespaceTabKey)) {
+                      setTabs([...tabs, { key: namespaceTabKey, label: ns['namespace-name'], pinned: false }]);
+                    }
                     handleSidePanelAdd('accountPage', { account, namespace: ns });
                   }}
                 />

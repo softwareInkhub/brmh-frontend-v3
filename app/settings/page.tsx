@@ -26,6 +26,8 @@ import {
   Lock,
   Unlock
 } from 'lucide-react';
+import { useBreadcrumb } from '../components/BreadcrumbContext';
+import GlobalBreadcrumb from '../components/GlobalBreadcrumb';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -83,6 +85,8 @@ interface SettingsData {
 }
 
 export default function SettingsPage() {
+  const { setBreadcrumbs } = useBreadcrumb();
+  
   const [settings, setSettings] = useState<SettingsData>({
     general: {
       appName: 'BRMH',
@@ -141,6 +145,23 @@ export default function SettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+
+  // Set breadcrumbs for Settings page
+  useEffect(() => {
+    const tabLabels: Record<string, string> = {
+      general: 'General',
+      api: 'API Configuration',
+      security: 'Security',
+      appearance: 'Appearance',
+      notifications: 'Notifications',
+      advanced: 'Advanced'
+    };
+    
+    setBreadcrumbs([
+      { label: 'Settings', path: 'settings' },
+      { label: tabLabels[activeTab] || 'General', path: activeTab }
+    ]);
+  }, [activeTab, setBreadcrumbs]);
 
   // Load settings from localStorage on component mount
   useEffect(() => {
@@ -283,6 +304,9 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Breadcrumb */}
+      <GlobalBreadcrumb />
+      
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">

@@ -43,15 +43,23 @@ const nodePositions = {
 
 export default function HowItWorks() {
   return (
-    <section className="py-10 md:py-16 px-3 md:px-6 bg-transparent">
+    <section id="how-it-works" className="py-6 md:py-10 px-3 md:px-12 bg-transparent">
       <div className="max-w-7xl mx-auto flex flex-col items-center">
         <h2 className="text-xl sm:text-3xl md:text-4xl font-bold font-display mb-1 text-center">All-in-one API Development Platform</h2>
-        <p className="text-xs sm:text-base md:text-lg text-gray-500 mb-4 md:mb-10 text-center">API Design Specification and Connected Features</p>
+        <p className="text-xs sm:text-base md:text-lg text-gray-500 mb-2 md:mb-4 text-center">API Design Specification and Connected Features</p>
         <div className="relative w-full max-w-sm sm:max-w-xl md:max-w-3xl h-[360px] sm:h-[460px] md:h-[540px] flex items-center justify-center">
           {/* Center glow */}
           <div className="absolute w-56 h-56 sm:w-64 sm:h-64 rounded-full bg-blue-200/30 blur-2xl" />
           {/* SVG animated lines and central circle */}
           <svg className="absolute inset-0 w-full h-full z-0" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              {/* Gradient for text fill */}
+              <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#3b82f6" />
+                <stop offset="100%" stopColor="#8b5cf6" />
+              </linearGradient>
+            </defs>
+
             {/* Central circle */}
             <motion.circle 
               cx="300" cy="300" r="110" stroke="#e0e7ff" strokeWidth="2" 
@@ -63,24 +71,29 @@ export default function HowItWorks() {
               ] }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             />
+
+            {/* Central label INSIDE circle */}
+            <motion.text
+              x="300"
+              y="300"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="url(#grad1)"
+              style={{ fontSize: 22, fontWeight: 700 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.5 }}
+            >
+              <tspan x="300" dy="-0.5em">API Design</tspan>
+              <tspan x="300" dy="1.4em">Specification</tspan>
+            </motion.text>
+
             {/* Lines to nodes - symmetrical arrangement */}
             <motion.line x1="300" y1="190" x2="140" y2="100" stroke="#bae6fd" strokeWidth="2" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1, delay: 0.5 }} />
             <motion.line x1="300" y1="190" x2="460" y2="100" stroke="#bae6fd" strokeWidth="2" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1, delay: 0.7 }} />
             <motion.line x1="300" y1="410" x2="140" y2="500" stroke="#ddd6fe" strokeWidth="2" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1, delay: 0.9 }} />
             <motion.line x1="300" y1="410" x2="460" y2="500" stroke="#ddd6fe" strokeWidth="2" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1, delay: 1.1 }} />
           </svg>
-          
-          {/* Central circle text - positioned under the empty circle */}
-          <motion.div 
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="absolute left-1/2 top-1/2 transform -translate-x-1/2 translate-y-44 sm:translate-y-48 z-10 text-center w-full max-w-[220px]"
-          >
-            <span className="text-sm sm:text-base md:text-lg font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
-              API Design Specification
-            </span>
-          </motion.div>
  
           {/* Feature nodes - symmetrical absolute positions */}
           <motion.div initial={{ opacity: 0, scale: 0.75 }} animate={{ opacity: 1, scale: 1, y: [0, -4, 0] }} transition={{ delay: 1.0, duration: 0.6, repeat: Infinity, repeatDelay: 3 }}

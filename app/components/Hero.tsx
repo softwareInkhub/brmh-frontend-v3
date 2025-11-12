@@ -41,7 +41,7 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="relative pt-14 pb-10 md:pt-28 md:pb-20 overflow-hidden px-3 md:px-20">
+    <section className="relative pt-24 pb-8 md:pt-32 md:pb-10 overflow-hidden px-3 md:px-12">
       {/* Gradient background */}
       <div className="absolute inset-0 z-0">
         <div className="w-full h-full bg-gradient-to-br from-[#e0f2fe] via-white to-[#ede9fe]" />
@@ -106,9 +106,9 @@ export default function Hero() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="space-y-5 md:space-y-8 max-w-xl lg:max-w-2xl mx-auto md:mx-0 text-center md:text-left"
+            className="space-y-4 md:space-y-6 max-w-xl lg:max-w-2xl mx-auto md:mx-0 text-center md:text-left"
           >
-            <div className="space-y-3 md:space-y-4">
+            <div className="space-y-2 md:space-y-3">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -117,7 +117,7 @@ export default function Hero() {
               >
                 <span className="bg-gradient-to-r from-blue-500 via-blue-400 to-purple-500 bg-clip-text text-transparent">BRMH</span>
                 <br />
-                <span className="text-gray-900">Your Unified API & Namespace Manager</span>
+                <span className="text-gray-900">Complete Backend Runtime Management Platform</span>
               </motion.h1>
               
               <motion.p
@@ -126,7 +126,7 @@ export default function Hero() {
                 transition={{ delay: 0.4, duration: 0.8 }}
                 className="text-[13px] sm:text-base md:text-xl text-gray-700 dark:text-gray-200 leading-relaxed max-w-2xl font-normal mx-auto md:mx-0"
               >
-                Easily create, manage, and expose your APIs and namespaces with powerful schema and method control.
+                Build, deploy, and scale APIs with AI-powered code generation, serverless functions, intelligent caching, and enterprise-grade security. Everything you need in one unified platform.
               </motion.p>
             </div>
 
@@ -136,7 +136,7 @@ export default function Hero() {
               transition={{ delay: 0.6, duration: 0.8 }}
               className="flex flex-col sm:flex-row gap-2.5 sm:gap-4 items-stretch sm:items-center justify-center md:justify-start"
             >
-              <a href="#get-started" className="btn-primary flex items-center justify-center group text-xs sm:text-sm px-4 py-2">
+              <a href="/" className="btn-primary flex items-center justify-center group text-xs sm:text-sm px-4 py-2">
                 Get Started
                 <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
               </a>
@@ -155,15 +155,19 @@ export default function Hero() {
             >
               <div className="flex items-center space-x-2">
                 <Shield className="w-4 h-4 text-green-500" />
-                <span>Enterprise Security</span>
+                <span>AWS Cognito Auth</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Globe className="w-4 h-4 text-blue-500" />
-                <span>Global CDN</span>
+                <Database className="w-4 h-4 text-blue-500" />
+                <span>DynamoDB + ElastiCache</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Database className="w-4 h-4 text-purple-500" />
-                <span>99.9% Uptime</span>
+                <Code className="w-4 h-4 text-purple-500" />
+                <span>AI-Powered Generation</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Globe className="w-4 h-4 text-orange-500" />
+                <span>Multi-Region Deployment</span>
               </div>
             </motion.div>
           </motion.div>

@@ -155,7 +155,7 @@ const Sidebar: React.FC = () => {
         </div>
         
         {/* Desktop Logo - Aligned with Navbar */}
-        <div className="h-16 flex items-center justify-center hidden md:flex border-b border-gray-100">
+        <div className="h-16 hidden md:flex items-center justify-center border-b border-gray-100">
           <div className="relative group cursor-pointer" onClick={() => {
             window.location.href = '/landingPage';
           }}>
@@ -171,18 +171,24 @@ const Sidebar: React.FC = () => {
         {/* Main Navigation */}
         <nav className="flex flex-col flex-1 px-4 md:px-0 pt-4 md:pt-6">
           <div className="space-y-1 md:space-y-2">
-            {sidebarItems.map((item) => (
+            {sidebarItems.map((item) => {
+              // Check if current path matches - use startsWith for non-root paths, exact match for root
+              const isActive = item.path === '/' 
+                ? pathname === item.path 
+                : pathname.startsWith(item.path);
+              
+              return (
               <div key={item.name} className="relative group/tooltip">
                 <Link
                   href={item.path}
                   className={`flex items-center gap-3 py-2.5 px-3 rounded-lg group transition-colors md:flex-col md:gap-1 md:py-2 md:w-full
-                    ${pathname === item.path 
+                    ${isActive 
                       ? 'bg-yellow-50 text-yellow-700 border border-yellow-200 md:bg-white md:text-blue-600 md:shadow-sm' 
                       : 'text-gray-600 hover:text-yellow-700 hover:bg-yellow-50 md:text-gray-500 md:hover:text-blue-600 md:hover:bg-gray-100'
                     }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  <div className={`${pathname === item.path ? 'text-yellow-600 md:text-blue-600' : 'text-gray-500 group-hover:text-yellow-700 md:group-hover:text-blue-600'}`}>
+                  <div className={`${isActive ? 'text-yellow-600 md:text-blue-600' : 'text-gray-500 group-hover:text-yellow-700 md:group-hover:text-blue-600'}`}>
                     {item.icon}
                   </div>
                   <span className="font-medium text-sm md:hidden">{item.name}</span>
@@ -207,7 +213,8 @@ const Sidebar: React.FC = () => {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </nav>
         

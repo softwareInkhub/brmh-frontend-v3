@@ -5,38 +5,62 @@ import { Star, Quote } from 'lucide-react'
 
 const testimonials = [
   {
-    name: "Sarah Chen",
-    role: "Senior Backend Developer",
-    company: "TechCorp",
-    avatar: "SC",
-    content: "BRMH has completely transformed how we manage our APIs. The visual schema builder is a game-changer, and the real-time testing saves us hours of development time.",
+    name: "Alex Kumar",
+    role: "Lead DevOps Engineer",
+    company: "E-commerce Platform",
+    avatar: "AK",
+    content: "The AI-powered Lambda generation saved us 2 weeks of development time. We went from concept to production deployment in under 2 hours. The automatic API Gateway integration is phenomenal!",
     rating: 5
   },
   {
-    name: "Marcus Rodriguez",
-    role: "API Architect",
-    company: "StartupXYZ",
-    avatar: "MR",
-    content: "The namespace organization feature is brilliant. We can now manage multiple client APIs in one place with perfect separation. Highly recommended for any development team.",
+    name: "Maria Santos",
+    role: "Backend Architect",
+    company: "FinTech Startup",
+    avatar: "MS",
+    content: "Managing 50+ microservice APIs was a nightmare until we found BRMH. The namespace organization with DynamoDB and ElastiCache gives us sub-10ms response times. Game-changer for our team!",
     rating: 5
   },
   {
-    name: "Emily Watson",
+    name: "David Chen",
     role: "Full Stack Developer",
-    company: "DevStudio",
-    avatar: "EW",
-    content: "I love how easy it is to share APIs with the community. The public namespace feature has helped us collaborate with other developers seamlessly.",
+    company: "SaaS Company",
+    avatar: "DC",
+    content: "The web scraping feature alone is worth it - we automated Shopify and Stripe API imports in minutes. Combined with the IAM system, we have complete control over who accesses what.",
+    rating: 5
+  },
+  {
+    name: "Priya Patel",
+    role: "Solutions Architect",
+    company: "Digital Agency",
+    avatar: "PP",
+    content: "BRMH's WHAPI notification system integrated perfectly with our workflow. We now get real-time alerts on CRUD operations, and the file management system replaced our old drive solution.",
+    rating: 5
+  },
+  {
+    name: "James Wilson",
+    role: "CTO",
+    company: "Tech Consultancy",
+    avatar: "JW",
+    content: "From Cognito auth to multi-region Lambda deployments, everything just works. The breadcrumb routing and global state management make the developer experience exceptional.",
+    rating: 5
+  },
+  {
+    name: "Sophie Martin",
+    role: "API Product Manager",
+    company: "Enterprise Software",
+    avatar: "SM",
+    content: "We migrated 200+ legacy APIs to BRMH in one weekend using the web scraping tool. The schema validation and method testing caught bugs we didn't even know existed. Absolutely brilliant!",
     rating: 5
   }
 ]
 
 const companies = [
-  "TechCorp", "StartupXYZ", "DevStudio", "InnovateLab", "CodeCraft", "DataFlow"
+  "E-commerce Platform", "FinTech Startup", "SaaS Company", "Digital Agency", "Tech Consultancy", "Enterprise Software", "Cloud Solutions", "Data Analytics Co"
 ]
 
 export default function Testimonials() {
   return (
-    <section className="section-padding bg-white pl-10 pr-10 pt-10 pb-10">
+    <section className="py-6 md:py-10 px-3 md:px-12 bg-white">
       <div className="container-custom">
         {/* Section Header */}
         <motion.div
@@ -44,7 +68,7 @@ export default function Testimonials() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="text-center mb-6 md:mb-8"
         >
           <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">
             Loved by Developers Worldwide
@@ -60,7 +84,7 @@ export default function Testimonials() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="grid md:grid-cols-3 gap-8 mb-16"
+          className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8"
         >
           {testimonials.map((testimonial, index) => (
             <motion.div
@@ -147,30 +171,30 @@ export default function Testimonials() {
           <div className="grid md:grid-cols-4 gap-8 text-center">
             <div>
               <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">
-                10K+
+                25+
               </div>
-              <div className="text-gray-600">Active Developers</div>
+              <div className="text-gray-600">Platform Integrations</div>
             </div>
             
             <div>
               <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">
-                50K+
+                &lt;10ms
               </div>
-              <div className="text-gray-600">APIs Created</div>
+              <div className="text-gray-600">Cache Response Time</div>
             </div>
             
             <div>
               <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">
                 99.9%
               </div>
-              <div className="text-gray-600">Uptime</div>
+              <div className="text-gray-600">API Uptime SLA</div>
             </div>
             
             <div>
               <div className="text-3xl md:text-4xl font-bold text-primary-600 mb-2">
-                24/7
+                95%
               </div>
-              <div className="text-gray-600">Support</div>
+              <div className="text-gray-600">Cache Hit Rate</div>
             </div>
           </div>
         </motion.div>

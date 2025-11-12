@@ -1480,7 +1480,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
             )}
           </div>
         )}
-
+          
       {/* Sync Modal */}
       {showSyncModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

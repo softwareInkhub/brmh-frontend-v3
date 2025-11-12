@@ -5,59 +5,69 @@ import { Check, Star, Zap, Crown, Users } from 'lucide-react'
 
 const plans = [
   {
-    name: "Starter",
+    name: "Developer",
     price: "Free",
-    description: "Perfect for individual developers and small projects",
+    description: "Perfect for individual developers and prototyping",
     icon: Zap,
     color: "text-blue-600",
     bgColor: "bg-blue-100",
     features: [
-      "Up to 3 namespaces",
-      "Basic API schemas",
-      "100 API calls/month",
+      "Up to 5 namespaces",
+      "100 API methods",
+      "50 schemas",
+      "Basic AI code generation (10/month)",
+      "1GB BRMH Drive storage",
       "Community support",
-      "Basic documentation"
+      "DynamoDB + ElastiCache",
+      "API testing & validation"
     ],
-    cta: "Get Started Free",
+    cta: "Start Free",
     popular: false
   },
   {
-    name: "Pro",
-    price: "$29",
+    name: "Professional",
+    price: "$49",
     period: "/month",
-    description: "Ideal for growing teams and professional projects",
+    description: "For growing teams and production applications",
     icon: Star,
     color: "text-purple-600",
     bgColor: "bg-purple-100",
     features: [
       "Unlimited namespaces",
-      "Advanced schemas & validation",
-      "10,000 API calls/month",
+      "Unlimited API methods & schemas",
+      "Advanced AI code generation (unlimited)",
+      "AWS Lambda deployment",
+      "Web scraping automation",
+      "50GB BRMH Drive storage",
+      "WHAPI notifications",
+      "IAM role management",
+      "Algolia search indexing",
       "Priority support",
-      "Advanced analytics",
-      "Custom domains",
-      "Team collaboration",
-      "API versioning"
+      "Team collaboration (up to 10 users)"
     ],
-    cta: "Start Pro Trial",
+    cta: "Start 14-Day Trial",
     popular: true
   },
   {
     name: "Enterprise",
     price: "Custom",
-    description: "For large organizations with advanced requirements",
+    description: "For organizations requiring dedicated infrastructure",
     icon: Crown,
     color: "text-orange-600",
     bgColor: "bg-orange-100",
     features: [
-      "Everything in Pro",
-      "Unlimited API calls",
-      "Dedicated support",
+      "Everything in Professional",
+      "Dedicated AWS infrastructure",
+      "Custom ElastiCache configuration",
+      "Unlimited BRMH Drive storage",
+      "Multi-region deployment",
+      "Custom AI model training",
+      "Advanced IAM policies",
+      "99.99% SLA guarantee",
+      "Dedicated account manager",
       "Custom integrations",
-      "SLA guarantees",
-      "Advanced security",
-      "On-premise deployment",
-      "Custom training"
+      "On-premise deployment option",
+      "24/7 enterprise support"
     ],
     cta: "Contact Sales",
     popular: false
@@ -66,7 +76,7 @@ const plans = [
 
 export default function Pricing() {
   return (
-    <section id="pricing" className="section-padding bg-gray-50 pl-10 pr-10 pt-10 pb-10">
+    <section id="pricing" className="py-6 md:py-10 px-3 md:px-12 bg-gray-50">
       <div className="container-custom">
         {/* Section Header */}
         <motion.div
@@ -74,7 +84,7 @@ export default function Pricing() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="text-center mb-6 md:mb-8"
         >
           <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">
             Simple, Transparent Pricing
@@ -134,13 +144,23 @@ export default function Pricing() {
                 </div>
 
                 {/* CTA Button */}
-                <button className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 ${
-                  plan.popular
-                    ? 'bg-primary-600 hover:bg-primary-700 text-white'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
-                }`}>
-                  {plan.cta}
-                </button>
+                {plan.cta === "Contact Sales" ? (
+                  <a href="#contact" className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 text-center block ${
+                    plan.popular
+                      ? 'bg-primary-600 hover:bg-primary-700 text-white'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                  }`}>
+                    {plan.cta}
+                  </a>
+                ) : (
+                  <a href="/" className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 text-center block ${
+                    plan.popular
+                      ? 'bg-primary-600 hover:bg-primary-700 text-white'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                  }`}>
+                    {plan.cta}
+                  </a>
+                )}
               </div>
             </motion.div>
           ))}

@@ -1268,19 +1268,6 @@ Please select an indexing configuration above.`);
 
   return (
     <div className="h-full w-full flex flex-col bg-white">
-      {/* Breadcrumbs */}
-      <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center space-x-1 text-xs text-gray-600">
-          <span className="text-gray-400">Namespace</span>
-          <span className="text-gray-400">/</span>
-          <span className="text-gray-600">{namespace?.['namespace-name'] || 'Unknown'}</span>
-          <span className="text-gray-400">/</span>
-          <span className="text-gray-600">Method</span>
-          <span className="text-gray-400">/</span>
-          <span className="text-gray-800 font-medium">{editMethod["namespace-method-name"] || 'Details'}</span>
-        </div>
-      </div>
-
       {/* Header Section */}
       <div className="px-3 md:px-4 py-2 border-b border-gray-200 bg-white">
         <div className="flex items-center justify-between">

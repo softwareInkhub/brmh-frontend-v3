@@ -7,10 +7,13 @@ import {
   ChevronRight, ChevronDown, Box, Layers, GitBranch, Users,
   MessageSquare, Globe
 } from 'lucide-react'
+import { useBreadcrumb } from '../components/BreadcrumbContext'
+import GlobalBreadcrumb from '../components/GlobalBreadcrumb'
 
 type TabKey = 'dashboard' | 'connections' | 'triggers' | 'crud-triggers' | 'templates' | 'test' | 'logs' | 'analytics'
 
 const Page = () => {
+  const { setBreadcrumbs } = useBreadcrumb();
   const [active, setActive] = useState<TabKey>('dashboard')
   const [apiBase] = useState<string>(process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001')
   
@@ -107,6 +110,42 @@ const Page = () => {
   })
 
   const logsEndRef = useRef<HTMLDivElement>(null)
+
+  // Update breadcrumbs based on active tab
+  useEffect(() => {
+    const tabLabels: Record<TabKey, string> = {
+      'dashboard': 'Dashboard',
+      'connections': 'Connections',
+      'triggers': 'Triggers',
+      'crud-triggers': 'CRUD Triggers',
+      'templates': 'Templates',
+      'test': 'Test & Fire',
+      'logs': 'Event Logs',
+      'analytics': 'Analytics'
+    };
+
+    const breadcrumbs = [
+      { label: 'Notifications', path: 'notification-terminal' }
+    ];
+
+    // Add current tab if not dashboard
+    if (active !== 'dashboard') {
+      breadcrumbs.push({
+        label: tabLabels[active],
+        path: active
+      });
+    }
+
+    // Add selected table info for CRUD triggers
+    if (active === 'crud-triggers' && selectedTable) {
+      breadcrumbs.push({
+        label: selectedTable,
+        path: selectedTable.toLowerCase().replace(/\s+/g, '-')
+      });
+    }
+
+    setBreadcrumbs(breadcrumbs);
+  }, [active, selectedTable, setBreadcrumbs]);
 
   // Fetch functions
   async function fetchConnections() {
@@ -575,6 +614,9 @@ const Page = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Breadcrumb Navigation */}
+      <GlobalBreadcrumb />
+      
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">

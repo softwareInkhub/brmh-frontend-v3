@@ -24,6 +24,8 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-react'
+import { useBreadcrumb } from '../components/BreadcrumbContext'
+import GlobalBreadcrumb from '../components/GlobalBreadcrumb'
 import WorkflowEditor from './components/WorkflowEditor'
 import WireframeEditor from './components/WireframeEditor'
 import DocumentationEditor from './components/DocumentationEditor'
@@ -54,6 +56,7 @@ interface Document {
 }
 
 export default function DocsPage() {
+  const { setBreadcrumbs } = useBreadcrumb();
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')
   const [namespaces, setNamespaces] = useState<Namespace[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
@@ -103,6 +106,64 @@ export default function DocsPage() {
       { id: '3', name: 'Product Schema', type: 'schema', namespaceId: '1', content: {}, createdAt: '2024-01-07', updatedAt: '2024-01-12' }
     ])
   }, [])
+
+  // Update breadcrumbs based on current state
+  useEffect(() => {
+    const breadcrumbs: { label: string; path: string; onClick?: () => void }[] = [
+      { label: 'Documentation', path: 'docsPage', onClick: () => {
+        setEditingDocument(null);
+        setShowWorkflowEditor(false);
+        setShowWireframeEditor(false);
+        setShowDocumentationEditor(false);
+      }}
+    ];
+
+    // Add namespace if selected
+    if (selectedNamespace) {
+      const namespace = namespaces.find(ns => ns.id === selectedNamespace);
+      if (namespace) {
+        breadcrumbs.push({
+          label: namespace.name,
+          path: namespace.name.toLowerCase().replace(/\s+/g, '-'),
+          onClick: () => {
+            setEditingDocument(null);
+            setShowWorkflowEditor(false);
+            setShowWireframeEditor(false);
+            setShowDocumentationEditor(false);
+          }
+        });
+      }
+    }
+
+    // Add document type if editing
+    if (editingDocument) {
+      const typeLabels: Record<string, string> = {
+        workflow: 'Workflows',
+        wireframe: 'Wireframes',
+        schema: 'Schemas',
+        documentation: 'Documentation'
+      };
+      
+      breadcrumbs.push({
+        label: typeLabels[editingDocument.type] || 'Documents',
+        path: editingDocument.type + 's',
+        onClick: () => {
+          setEditingDocument(null);
+          setShowWorkflowEditor(false);
+          setShowWireframeEditor(false);
+          setShowDocumentationEditor(false);
+        }
+      });
+
+      // Add document name
+      breadcrumbs.push({
+        label: editingDocument.name,
+        path: editingDocument.name.toLowerCase().replace(/\s+/g, '-')
+      });
+    }
+
+    setBreadcrumbs(breadcrumbs);
+  }, [selectedNamespace, editingDocument, namespaces, setBreadcrumbs]);
 
   const toggleSection = (sectionId: string) => {
     const newExpanded = new Set(expandedSections)
@@ -217,6 +278,9 @@ export default function DocsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+      {/* Breadcrumb Navigation */}
+      <GlobalBreadcrumb />
+      
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>

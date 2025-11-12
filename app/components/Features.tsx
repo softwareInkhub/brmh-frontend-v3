@@ -19,53 +19,80 @@ import {
 const features = [
   {
     icon: FolderOpen,
-    title: "Create and Manage Namespaces",
-    description: "Organize your APIs into logical namespaces for better structure and management. Create unlimited namespaces with custom configurations.",
+    title: "Namespace Management",
+    description: "Organize APIs into logical namespaces with accounts, methods, schemas, webhooks, and lambdas. Support for 25+ integrations including Shopify, Instagram, Gmail, and AWS services.",
     color: "text-blue-600",
     bgColor: "bg-gradient-to-br from-blue-50 to-blue-100",
     borderColor: "border-blue-200",
     hoverColor: "hover:border-blue-300"
   },
   {
-    icon: Code2,
-    title: "Build & Control API Schemas",
-    description: "Design comprehensive API schemas with validation rules, data types, and documentation. Full control over your API structure.",
-    color: "text-green-600",
-    bgColor: "bg-gradient-to-br from-green-50 to-green-100",
-    borderColor: "border-green-200",
-    hoverColor: "hover:border-green-300"
-  },
-  {
-    icon: Database,
-    title: "Store and Fetch APIs",
-    description: "Seamlessly store and retrieve APIs from different platforms. Support for multiple data sources and formats.",
+    icon: Sparkles,
+    title: "AI-Powered Code Generation",
+    description: "Generate AWS Lambda functions from natural language descriptions. AI agents analyze schemas and auto-generate serverless code with deployment automation.",
     color: "text-purple-600",
     bgColor: "bg-gradient-to-br from-purple-50 to-purple-100",
     borderColor: "border-purple-200",
     hoverColor: "hover:border-purple-300"
   },
   {
-    icon: Settings,
-    title: "CRUD Operations",
-    description: "Complete CRUD operations on methods and schemas. Create, read, update, and delete with powerful validation.",
+    icon: Database,
+    title: "Smart Data Layer",
+    description: "DynamoDB integration with intelligent ElastiCache (Valkey) caching, duplicate detection, and Algolia search indexing for lightning-fast data access and retrieval.",
+    color: "text-green-600",
+    bgColor: "bg-gradient-to-br from-green-50 to-green-100",
+    borderColor: "border-green-200",
+    hoverColor: "hover:border-green-300"
+  },
+  {
+    icon: Code2,
+    title: "Web Scraping Engine",
+    description: "Automatically extract API documentation from websites. Scrape endpoints from Shopify, Stripe, GitHub and custom URLs with AI-powered schema generation.",
+    color: "text-indigo-600",
+    bgColor: "bg-gradient-to-br from-indigo-50 to-indigo-100",
+    borderColor: "border-indigo-200",
+    hoverColor: "hover:border-indigo-300"
+  },
+  {
+    icon: GitBranch,
+    title: "Serverless Lambda Deployment",
+    description: "Deploy Node.js Lambda functions to AWS with automatic API Gateway setup, environment management, and version tracking. Zero-config deployments.",
     color: "text-orange-600",
     bgColor: "bg-gradient-to-br from-orange-50 to-orange-100",
     borderColor: "border-orange-200",
     hoverColor: "hover:border-orange-300"
   },
   {
+    icon: Shield,
+    title: "IAM & Security",
+    description: "Role-based access control with namespace-specific permissions. OAuth2 integration, AWS Cognito authentication, and enterprise-grade security policies.",
+    color: "text-red-600",
+    bgColor: "bg-gradient-to-br from-red-50 to-red-100",
+    borderColor: "border-red-200",
+    hoverColor: "hover:border-red-300"
+  },
+  {
     icon: Share2,
-    title: "Live Sharing of Public APIs",
-    description: "Make your namespaces public and share APIs with the developer community. Real-time updates and collaboration.",
+    title: "File Management (BRMH Drive)",
+    description: "Complete drive-like file system with S3 storage, folder hierarchies, sharing permissions, and seamless namespace integration for project files.",
+    color: "text-cyan-600",
+    bgColor: "bg-gradient-to-br from-cyan-50 to-cyan-100",
+    borderColor: "border-cyan-200",
+    hoverColor: "hover:border-cyan-300"
+  },
+  {
+    icon: Zap,
+    title: "Real-time Notifications",
+    description: "WHAPI integration for WhatsApp notifications, CRUD operation triggers, event-driven webhooks, and customizable notification templates for team collaboration.",
     color: "text-pink-600",
     bgColor: "bg-gradient-to-br from-pink-50 to-pink-100",
     borderColor: "border-pink-200",
     hoverColor: "hover:border-pink-300"
   },
   {
-    icon: Zap,
-    title: "High Performance",
-    description: "Lightning-fast API responses with global CDN, caching, and optimized routing for the best developer experience.",
+    icon: BarChart3,
+    title: "Analytics & Monitoring",
+    description: "Real-time API usage analytics, performance monitoring, error tracking, and detailed request logs. Dashboard with insights into success rates and response times.",
     color: "text-yellow-600",
     bgColor: "bg-gradient-to-br from-yellow-50 to-yellow-100",
     borderColor: "border-yellow-200",
@@ -97,7 +124,7 @@ const itemVariants = {
 
 export default function Features() {
   return (
-    <section id="features" className="py-12 md:py-20 px-4 md:px-20 bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+    <section id="features" className="py-6 md:py-10 px-3 md:px-12 bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <motion.div
@@ -105,7 +132,7 @@ export default function Features() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12 md:mb-16"
+          className="text-center mb-6 md:mb-8"
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 rounded-full text-blue-700 text-sm font-medium mb-4">
             <Sparkles className="w-4 h-4" />
@@ -170,33 +197,41 @@ export default function Features() {
           className="mt-16 md:mt-20 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-3xl p-6 md:p-12 border border-blue-100"
         >
           <div className="text-center mb-8">
-            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">Enterprise-Grade Infrastructure</h3>
-            <p className="text-gray-600">Built for scale, security, and performance</p>
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">Powered by AWS Enterprise Infrastructure</h3>
+            <p className="text-gray-600">Production-ready tech stack with proven reliability</p>
           </div>
           
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
             <div className="text-center group">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                <Shield className="w-8 h-8 text-blue-600" />
+                <Database className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="text-lg font-bold mb-2 text-gray-900">Enterprise Security</h3>
-              <p className="text-sm text-gray-600">Bank-level security with encryption, authentication, and compliance</p>
+              <h3 className="text-lg font-bold mb-2 text-gray-900">DynamoDB</h3>
+              <p className="text-sm text-gray-600">NoSQL database for namespaces, schemas, and metadata with auto-scaling</p>
+            </div>
+            
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-red-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                <Zap className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold mb-2 text-gray-900">ElastiCache</h3>
+              <p className="text-sm text-gray-600">Valkey-powered caching for sub-millisecond response times</p>
+            </div>
+            
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                <GitBranch className="w-8 h-8 text-purple-600" />
+              </div>
+              <h3 className="text-lg font-bold mb-2 text-gray-900">Lambda & S3</h3>
+              <p className="text-sm text-gray-600">Serverless compute and scalable storage for files and deployments</p>
             </div>
             
             <div className="text-center group">
               <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                <Globe className="w-8 h-8 text-green-600" />
+                <Shield className="w-8 h-8 text-green-600" />
               </div>
-              <h3 className="text-lg font-bold mb-2 text-gray-900">Global Infrastructure</h3>
-              <p className="text-sm text-gray-600">Deployed across multiple regions for optimal performance</p>
-            </div>
-            
-            <div className="text-center group sm:col-span-2 lg:col-span-1">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                <BarChart3 className="w-8 h-8 text-purple-600" />
-              </div>
-              <h3 className="text-lg font-bold mb-2 text-gray-900">Analytics & Monitoring</h3>
-              <p className="text-sm text-gray-600">Real-time insights into API usage and performance</p>
+              <h3 className="text-lg font-bold mb-2 text-gray-900">Cognito Auth</h3>
+              <p className="text-sm text-gray-600">Secure authentication with OAuth2, phone, and social login support</p>
             </div>
           </div>
         </motion.div>
