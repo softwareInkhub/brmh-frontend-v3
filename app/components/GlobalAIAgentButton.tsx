@@ -58,16 +58,18 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
     console.log('Drop zone isDragOver:', isDragOver);
   }, [isOver, isDragOver]);
 
-  // Check for right side panel (method details/create panel)
+  // Check for right side panel (method details/create panel AND namespace details panel)
   useEffect(() => {
     const checkRightPanel = () => {
       // IMPORTANT: Multiple namespace tabs = multiple modals in DOM!
-      // We need to check ALL panels and find the one that's actually visible
-      const rightPanels = document.querySelectorAll('.method-details-panel') as NodeListOf<HTMLElement>;
+      // We need to check ALL panels (method panels + namespace panels) and find the one that's actually visible
+      const methodPanels = document.querySelectorAll('.method-details-panel') as NodeListOf<HTMLElement>;
+      const namespacePanels = document.querySelectorAll('.namespace-details-panel') as NodeListOf<HTMLElement>;
+      const allPanels = [...Array.from(methodPanels), ...Array.from(namespacePanels)];
       
       let foundVisiblePanel = false;
       
-      for (const rightPanel of rightPanels) {
+      for (const rightPanel of allPanels) {
         // Get bounding rect to check if panel is actually visible on screen
         const rect = rightPanel.getBoundingClientRect();
         const styles = window.getComputedStyle(rightPanel);
@@ -186,19 +188,22 @@ const GlobalAIAgentButton: React.FC<GlobalAIAgentButtonProps> = ({ isVisible = t
           }}
           className={`group relative flex items-center justify-center w-16 h-16 rounded-full shadow-lg transition-all duration-300 ${
             isDragOver
-              ? 'bg-purple-600 shadow-purple-500/50 scale-110 animate-pulse'
-              : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/50 hover:shadow-blue-500/70'
+              ? 'bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 shadow-purple-500/50 scale-110 animate-pulse'
+              : 'bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 shadow-md hover:shadow-lg'
           }`}
-          title="Open AI Agent in Bottom Terminal - Click for general context | Right-click for current namespace | Drag namespace here"
+          title="Open AI Agent - Click for general context | Right-click for current namespace | Drag namespace here"
         >
           {/* Drag indicator */}
           {isDragOver && (
-            <div className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+            <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center shadow-md">
               <Sparkles className="w-3 h-3 text-white" />
             </div>
           )}
           
-          <Bot className="w-7 h-7 text-white" />
+          {/* Glow effect on hover */}
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+          
+          <Bot className="w-7 h-7 text-white relative z-10 drop-shadow-sm" />
           
           
         </button>

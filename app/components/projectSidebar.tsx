@@ -57,9 +57,16 @@ const sidebarItems = [
 
 const Sidebar: React.FC = () => {
   const pathname = usePathname();
+  const [currentPath, setCurrentPath] = useState(pathname);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Update currentPath when pathname changes
+  useEffect(() => {
+    console.log('Sidebar: pathname changed to:', pathname);
+    setCurrentPath(pathname);
+  }, [pathname]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -172,10 +179,15 @@ const Sidebar: React.FC = () => {
         <nav className="flex flex-col flex-1 px-4 md:px-0 pt-4 md:pt-6">
           <div className="space-y-1 md:space-y-2">
             {sidebarItems.map((item) => {
+              // Debug: Log pathname for troubleshooting
+              if (typeof window !== 'undefined' && item.name === 'Namespace') {
+                console.log('Sidebar Debug:', { pathname, currentPath, itemPath: item.path, startsWith: currentPath.startsWith(item.path) });
+              }
+              
               // Check if current path matches - use startsWith for non-root paths, exact match for root
               const isActive = item.path === '/' 
-                ? pathname === item.path 
-                : pathname.startsWith(item.path);
+                ? currentPath === item.path 
+                : currentPath.startsWith(item.path);
               
               return (
               <div key={item.name} className="relative group/tooltip">

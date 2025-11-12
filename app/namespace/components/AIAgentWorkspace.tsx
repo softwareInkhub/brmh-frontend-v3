@@ -3524,13 +3524,13 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         maxWidth: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : '100vw'
       }}
     >
-      {/* Header - Compact */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-indigo-100 bg-indigo-600 shadow-lg">
+      {/* Header - Compact with Beautiful Gradient */}
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-purple-200 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 shadow-lg">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-white shadow-sm">
-            <Bot className="w-4 h-4 text-indigo-600" />
+          <div className="p-1.5 rounded-lg bg-white shadow-md">
+            <Bot className="w-5 h-5 text-purple-600" />
           </div>
-          <h2 className="font-bold text-sm text-white tracking-tight">AI Assistant</h2>
+          <h2 className="font-bold text-sm text-white tracking-tight drop-shadow-sm">AI Assistant</h2>
           <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-white/90">
             {(localNamespace || droppedNamespaces.length > 0) ? (
               <>
@@ -3572,21 +3572,21 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setIsMinimized(!isMinimized)}
-            className="p-1.5 rounded-lg bg-white hover:bg-gray-100 transition-all shadow-sm"
+            className="p-1.5 rounded-lg bg-white/90 hover:bg-white transition-all shadow-md hover:shadow-lg backdrop-blur-sm"
             title={isMinimized ? 'Expand AI Agent' : 'Minimize AI Agent'}
           >
             {isMinimized ? (
-              <Maximize2 className="w-4 h-4 text-indigo-600" />
+              <Maximize2 className="w-4 h-4 text-purple-600" />
             ) : (
-              <Minimize2 className="w-4 h-4 text-indigo-600" />
+              <Minimize2 className="w-4 h-4 text-purple-600" />
             )}
           </button>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-white hover:bg-gray-100 transition-all shadow-sm"
+            className="p-1.5 rounded-lg bg-white/90 hover:bg-white transition-all shadow-md hover:shadow-lg backdrop-blur-sm"
             title="Close AI Assistant"
           >
-            <X className="w-4 h-4 text-indigo-600" />
+            <X className="w-4 h-4 text-purple-600" />
           </button>
         </div>
       </div>
@@ -3597,85 +3597,85 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
           onClick={() => setActiveTab('lambda')}
             className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'lambda'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
-              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
+              ? 'border-purple-500 text-purple-700 bg-purple-50/50 shadow-sm rounded-t-lg -mb-px'
+              : 'border-transparent text-gray-500 hover:text-purple-600 hover:bg-purple-50/30 rounded-t-lg'
           }`}
         >
             <Code size={14} /> 
             <span className="hidden sm:inline">Lambda</span>
-            {activeTab === 'lambda' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
+            {activeTab === 'lambda' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-600 to-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('api')}
             className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'api'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
-              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
+              ? 'border-purple-500 text-purple-700 bg-purple-50/50 shadow-sm rounded-t-lg -mb-px'
+              : 'border-transparent text-gray-500 hover:text-purple-600 hover:bg-purple-50/30 rounded-t-lg'
           }`}
         >
             <Database size={14} /> 
             <span className="hidden sm:inline">API</span>
-            {activeTab === 'api' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
+            {activeTab === 'api' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-600 to-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('web-scraping')}
             className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'web-scraping'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
-              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
+              ? 'border-purple-500 text-purple-700 bg-purple-50/50 shadow-sm rounded-t-lg -mb-px'
+              : 'border-transparent text-gray-500 hover:text-purple-600 hover:bg-purple-50/30 rounded-t-lg'
           }`}
         >
             <FileText size={14} /> 
             <span className="hidden sm:inline">Web Scraping</span>
-            {activeTab === 'web-scraping' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
+            {activeTab === 'web-scraping' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-600 to-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('files')}
             className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'files'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
-              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
+              ? 'border-purple-500 text-purple-700 bg-purple-50/50 shadow-sm rounded-t-lg -mb-px'
+              : 'border-transparent text-gray-500 hover:text-purple-600 hover:bg-purple-50/30 rounded-t-lg'
           }`}
         >
             <Folder size={14} /> 
             <span className="hidden sm:inline">Files</span>
-            {activeTab === 'files' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
+            {activeTab === 'files' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-600 to-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('schema')}
             className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'schema'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
-              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
+              ? 'border-purple-500 text-purple-700 bg-purple-50/50 shadow-sm rounded-t-lg -mb-px'
+              : 'border-transparent text-gray-500 hover:text-purple-600 hover:bg-purple-50/30 rounded-t-lg'
           }`}
         >
             <Database size={14} /> 
             <span className="hidden sm:inline">Schema</span>
-            {activeTab === 'schema' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
+            {activeTab === 'schema' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-600 to-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('deployment')}
             className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'deployment'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
-              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
+              ? 'border-purple-500 text-purple-700 bg-purple-50/50 shadow-sm rounded-t-lg -mb-px'
+              : 'border-transparent text-gray-500 hover:text-purple-600 hover:bg-purple-50/30 rounded-t-lg'
           }`}
         >
             <Play size={14} /> 
             <span className="hidden sm:inline">Deploy</span>
-            {activeTab === 'deployment' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
+            {activeTab === 'deployment' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-600 to-indigo-600"></div>}
         </button>
         <button
           onClick={() => setActiveTab('console')}
             className={`px-2 py-1.5 text-[11px] font-semibold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap relative ${
             activeTab === 'console'
-              ? 'border-indigo-500 text-indigo-700 bg-white shadow-sm rounded-t-lg -mb-px'
-              : 'border-transparent text-gray-500 hover:text-indigo-600 hover:bg-white/50 rounded-t-lg'
+              ? 'border-purple-500 text-purple-700 bg-purple-50/50 shadow-sm rounded-t-lg -mb-px'
+              : 'border-transparent text-gray-500 hover:text-purple-600 hover:bg-purple-50/30 rounded-t-lg'
           }`}
         >
             <Play size={14} /> 
             <span className="hidden sm:inline">Console</span>
-            {activeTab === 'console' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>}
+            {activeTab === 'console' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-600 to-indigo-600"></div>}
         </button>
       </div>
 
@@ -3746,9 +3746,41 @@ Your files are now safely stored in the cloud and can be accessed anytime.`
         )}
         
         {activeTab === 'api' && (
-          <div className="h-full overflow-hidden flex flex-col">
+          <div className="h-full overflow-y-auto flex flex-col api-tab-container">
+            <style dangerouslySetInnerHTML={{__html: `
+              /* Force full width/height and remove all gaps for API tab */
+              .api-tab-container {
+                padding: 0 !important;
+                margin: 0 !important;
+              }
+              .api-tab-container .method-test-page-wrapper {
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+              }
+              .api-tab-container .method-test-page-wrapper > div {
+                overflow-y: auto !important;
+                height: 100% !important;
+                width: 100% !important;
+                background: transparent !important;
+                padding: 0 !important;
+                margin: 0 !important;
+              }
+              /* Remove all margins, padding from MethodTestPage container */
+              .api-tab-container .w-full.h-full.bg-white {
+                padding: 0 !important;
+                margin: 0 !important;
+                background: white !important;
+              }
+              /* Remove gaps from Request Panel */
+              .api-tab-container .bg-white.border.border-gray-200.rounded-lg {
+                margin: 0 !important;
+                box-shadow: none !important;
+              }
+            `}} />
             {/* API Method Testing Interface */}
-            <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto method-test-page-wrapper">
               {localNamespace && (
                 <MethodTestPage
                   method={{

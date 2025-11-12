@@ -1,16 +1,18 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { Plus, Edit, Trash2, Database, RefreshCw, ChevronDown, ChevronRight, Search, Code, Table, Grid, List as ListIcon, Users, Terminal, X, Info, UserPlus, FilePlus, Globe, User, Edit2, Key, MoreVertical, Zap } from "react-feather";
-import { FileCode } from 'lucide-react';
+import { FileCode, Bot } from 'lucide-react';
 import UnifiedSchemaModal from '../Modals/UnifiedSchemaModal';
 import MethodTestModal from '@/app/components/MethodTestModal';
 import SchemaPreviewModal from '../Modals/SchemaPreviewModal';
+import AIAgentWorkspace from './AIAgentWorkspace';
 
 import CreateDataModal from '../Modals/CreateDataModal';
 import NamespaceModal from '../Modals/NamespaceModal';
 import { useSidePanel } from "@/app/components/SidePanelContext";
 import { useAIAgent } from "@/app/components/AIAgentContext";
-import { toast } from 'react-hot-toast';
+import { useBottomTerminal } from "@/app/components/BottomTerminalContext";
+import { toast } from 'sonner';
 
 // --- Types ---
 interface KeyValuePair {
@@ -299,6 +301,7 @@ export interface UnifiedNamespaceProps {
 const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigger, onModalClose, fetchNamespaceDetails, namespaceDetailsMap, setNamespaceDetailsMap, refreshData, onViewAccount, onViewMethod, onViewSchema, onOpenNamespaceTab, onAddItem }) => {
   const { isCollapsed } = useSidePanel();
   const { panelWidth, isOpen: aiAgentIsOpen } = useAIAgent();
+  const { open: openBottomTerminal, setNamespace: setTerminalNamespace } = useBottomTerminal();
   
   // State for responsive behavior
   const [shouldHideActionButtons, setShouldHideActionButtons] = useState(false);
@@ -334,7 +337,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
   const [selectedNamespace, setSelectedNamespace] = useState<UnifiedNamespace | null>(null);
   const [selectedNamespaceId, setSelectedNamespaceId] = useState<string | null>(null);
   const [floatingNamespaceDetails, setFloatingNamespaceDetails] = useState<UnifiedNamespace | null>(null);
-  const [showFloatingDetails, setShowFloatingDetails] = useState(false);
+  const [showFloatingDetails, setShowFloatingDetails] = useState(true); // Always show panel
   const [collapsedSections, setCollapsedSections] = useState({
     accounts: false,
     methods: false,
@@ -349,6 +352,9 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
   const [isPanelAnimating, setIsPanelAnimating] = useState(false);
   const [showContent, setShowContent] = useState(false);
   const [panelTopPosition, setPanelTopPosition] = useState(100); // Panel top position in pixels
+  const [namespacePanelWidth, setNamespacePanelWidth] = useState(600); // Namespace detail panel width
+  const [isResizingPanel, setIsResizingPanel] = useState(false); // For resizing namespace panel
+  const [showEmbeddedAIAgent, setShowEmbeddedAIAgent] = useState(false); // For embedded AI agent in panel
   const [showUnifiedSchemaModal, setShowUnifiedSchemaModal] = useState(false);
   const [expandedNamespaceId, setExpandedNamespaceId] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
@@ -490,21 +496,52 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Control body scroll when floating panel is open
-  useEffect(() => {
-    if (showFloatingDetails) {
-      // Prevent background scrolling
-      document.body.style.overflow = 'hidden';
-    } else {
-      // Restore normal scrolling
-      document.body.style.overflow = '';
-    }
+  // Panel is always visible, no need to lock body scroll
 
-    // Cleanup function to ensure overflow is reset when component unmounts
-    return () => {
-      document.body.style.overflow = '';
+  // Handle mouse events for resizing namespace detail panel
+  useEffect(() => {
+    if (!isResizingPanel) return;
+    
+    // Add cursor style to body during resize
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const minWidth = 400;
+      const maxWidth = 900;
+      const newWidth = Math.min(Math.max(window.innerWidth - e.clientX, minWidth), maxWidth);
+      setNamespacePanelWidth(newWidth);
     };
-  }, [showFloatingDetails]);
+    const handleMouseUp = () => {
+      setIsResizingPanel(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizingPanel]);
+
+  // Keep panel responsive to viewport changes
+  useEffect(() => {
+    const onResize = () => {
+      if (typeof window === 'undefined') return;
+      const vw = window.innerWidth;
+      if (vw < 768) {
+        setNamespacePanelWidth(vw); // mobile: full width
+      } else if (namespacePanelWidth < 400) {
+        setNamespacePanelWidth(600);
+      }
+    };
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [namespacePanelWidth]);
 
   useEffect(() => {
     const handler = () => { fetchData(); };
@@ -512,10 +549,10 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
     return () => window.removeEventListener('refresh-unified-namespace', handler);
   }, [fetchData]);
 
-  // Calculate panel top position on window resize
+  // Calculate panel top position on mount and window resize
   useEffect(() => {
     const calculatePanelTop = () => {
-      if (typeof window !== 'undefined' && showFloatingDetails) {
+      if (typeof window !== 'undefined') {
         const tabBar = document.querySelector('.namespace-tab-bar');
         if (tabBar) {
           const rect = tabBar.getBoundingClientRect();
@@ -532,7 +569,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
       window.removeEventListener('resize', calculatePanelTop);
       window.removeEventListener('scroll', calculatePanelTop);
     };
-  }, [showFloatingDetails]);
+  }, []); // Run once on mount and setup listeners
 
   // --- Handlers ---
   const handleNamespaceSave = async (namespaceData: any) => {
@@ -731,7 +768,10 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
   };
 
   const handleNamespaceClick = async (ns: UnifiedNamespace) => {
-    // Set floating namespace details
+    // Close embedded AI agent when switching namespaces
+    setShowEmbeddedAIAgent(false);
+    
+    // Set floating namespace details (panel is always visible)
     setFloatingNamespaceDetails(ns);
     setSelectedNamespaceId(ns["namespace-id"]);
     setSelectedNamespace(ns);
@@ -744,15 +784,6 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
         setPanelTopPosition(rect.bottom);
       }
     }
-    
-    // Start opening animation
-    setIsPanelAnimating(true);
-    setShowFloatingDetails(true);
-    
-    // Show content after panel animation starts
-    setTimeout(() => {
-      setShowContent(true);
-    }, 200);
     
     // Load namespace details if not already loaded
     if (!namespaceDetailsMap[ns["namespace-id"]]) {
@@ -790,26 +821,17 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
   };
 
   const closeFloatingDetails = () => {
-    // Start closing animation
-    setIsPanelAnimating(true);
-    setShowContent(false);
-    
-    // Close after animation completes
-    setTimeout(() => {
-      setShowFloatingDetails(false);
-      setFloatingNamespaceDetails(null);
-      setSelectedNamespace(null);
-      setSelectedNamespaceId(null);
-      setPanelHeight(60); // Reset to default height
-      setIsPanelAnimating(false);
-    }, 300);
+    // Just clear selection, keep panel visible
+    setFloatingNamespaceDetails(null);
+    setSelectedNamespace(null);
+    setSelectedNamespaceId(null);
+    setShowEmbeddedAIAgent(false); // Close embedded AI agent
   };
 
   const handleSidePanelAdd = (type: string, parentData?: any) => {
-    // If parent handler is available, use it and close namespace detail panel
+    // If parent handler is available, use it (panel stays open)
     if (onAddItem) {
       onAddItem(type, parentData);
-      closeFloatingDetails(); // Close the namespace detail panel
       return;
     }
     
@@ -1123,7 +1145,11 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
 
   return (
     <div 
-      className={`p-0 ${!isDragging ? 'transition-all duration-300 ease-out' : ''} ${isCollapsed ? 'ml-0' : 'ml-0'}`}
+      className={`p-0 ${!isResizingPanel && !isDragging ? 'transition-all duration-300 ease-out' : ''} ${isCollapsed ? 'ml-0' : 'ml-0'}`}
+      style={{
+        marginRight: typeof window !== 'undefined' && window.innerWidth < 768 ? '0px' : `${namespacePanelWidth}px`,
+        cursor: isResizingPanel ? 'ew-resize' : 'default'
+      }}
       onClick={(e) => {
         // Clear selection when clicking on the background
         if (e.target === e.currentTarget) {
@@ -1387,29 +1413,37 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                       </div>
       </div>
 
-      {/* Right Side Namespace Details Panel */}
-      {showFloatingDetails && floatingNamespaceDetails && (
+      {/* Right Side Namespace Details Panel - Always Visible */}
+      {showFloatingDetails && (
         <>
-          {/* Backdrop - Light overlay */}
-          <div 
-            className="fixed inset-0 bg-black/5 z-40"
-            onClick={closeFloatingDetails}
-            style={{ top: `${panelTopPosition}px` }}
-          />
           
-          {/* Right Side Panel - Fixed to viewport, aligned with tab bar */}
-          <div className={`fixed right-0 z-50 bg-white border-l border-gray-200 shadow-2xl ${!isDragging ? 'transition-all duration-300 ease-out' : ''}`} 
+          {/* Right Side Panel - Fixed to viewport, aligned with tab bar, always sticky, resizable, always visible */}
+          <div className={`namespace-details-panel fixed right-0 z-50 bg-white border-l border-gray-200 overflow-hidden flex flex-col ${!isResizingPanel && !isDragging ? 'transition-all duration-300 ease-out' : ''}`} 
                style={{
                  top: `${panelTopPosition}px`,
-                 bottom: '0px',
-                 width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : '600px',
+                 bottom: '40px',
+                 height: `calc(100vh - ${panelTopPosition}px - 40px)`,
+                 width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100vw' : `${namespacePanelWidth}px`,
                  maxWidth: '100vw',
-                 transform: isPanelAnimating && !showContent ? 'translateX(100%)' : 'translateX(0)',
-                 opacity: isPanelAnimating && !showContent ? '0' : '1'
+                 position: 'fixed',
+                 overflow: 'hidden'
                }}>
             
-            {/* Header */}
-            <div className={`flex items-start md:items-center justify-between p-3 md:p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 transition-all duration-500 ease-out ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+            {/* Resize Handle - Left Edge */}
+            <div
+              className="hidden sm:block absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-blue-300 active:bg-blue-400 transition-colors z-30 group"
+              onMouseDown={() => setIsResizingPanel(true)}
+              title="Drag to resize panel"
+            >
+              <div className="w-1 h-12 bg-gray-300 group-hover:bg-blue-400 rounded-full mx-auto mt-12 transition-colors" />
+            </div>
+            
+            {/* Content Wrapper - Relative positioning for absolute AI section */}
+            <div className="relative flex-1 flex flex-col overflow-hidden">
+              {/* Header - Sticky within panel */}
+              <div className="sticky top-0 z-10 flex items-start md:items-center justify-between p-3 md:p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
+              {floatingNamespaceDetails ? (
+                <>
               <div className="flex items-start md:items-center gap-3 md:gap-4 flex-1 min-w-0">
                 {/* Namespace Icon */}
                 <button
@@ -1476,19 +1510,41 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                         </div>
                     </div>
               
-              {/* Close Button */}
+              {/* Clear Selection Button */}
               <button
                 onClick={closeFloatingDetails}
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white/70 rounded-lg transition-colors"
-                title="Close"
+                title="Clear selection"
               >
                 <X size={24} />
               </button>
+              </>
+              ) : (
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-gray-300 to-gray-400 rounded-xl flex items-center justify-center">
+                    <Database className="w-5 h-5 md:w-7 md:h-7 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg md:text-xl font-semibold text-gray-500">No Namespace Selected</h2>
+                    <p className="text-xs md:text-sm text-gray-400">Click a namespace to view details</p>
+                  </div>
+                </div>
+              )}
                               </div>
             
-            {/* Content */}
-            <div className={`p-3 md:p-4 overflow-y-auto ${!isDragging ? 'transition-all duration-300 ease-out' : ''} transition-all duration-500 ease-out ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} style={{ height: 'calc(100vh - ' + panelTopPosition + 'px - 100px)' }}>
-              {loadingDetails && !namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]] ? (
+              {/* Content - Scrollable area (scrolls behind AI Agent) */}
+              <div className="p-3 md:p-4 flex-1 overflow-y-auto" style={{ paddingBottom: floatingNamespaceDetails && !showEmbeddedAIAgent ? '200px' : floatingNamespaceDetails && showEmbeddedAIAgent ? '380px' : '0px' }}>
+              {!floatingNamespaceDetails ? (
+                <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                  <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mb-4">
+                    <Database className="w-10 h-10 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Select a Namespace</h3>
+                  <p className="text-sm text-gray-500 max-w-sm">
+                    Click on any namespace from the grid to view its accounts, methods, schemas, and webhooks here.
+                  </p>
+                </div>
+              ) : loadingDetails && !namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]] ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -1794,9 +1850,102 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                       </div>
                     )}
                   </div>
+
+                  {/* Removed AI Agent from scrollable area - moved to fixed bottom */}
+                </div>
+              )}
+              </div>
+
+              {/* AI Agent Section - Fixed at Bottom, Always Visible, Scrolls Over Content */}
+              {floatingNamespaceDetails && (
+                <div className="absolute bottom-0 left-0 right-0 z-20 bg-white/98 backdrop-blur-sm border-t-2 border-purple-300 shadow-2xl">
+                <div className="p-2">
+                  {/* Show compact card ONLY when workspace is closed */}
+                  {!showEmbeddedAIAgent ? (
+                    <div className="bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 rounded-lg p-2.5 md:p-3 border border-purple-200 shadow-md">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-9 h-9 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
+                            <Bot className="w-5 h-5 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-xs md:text-sm font-bold text-gray-900 leading-tight">AI Development Assistant</h3>
+                            <p className="text-[9px] md:text-[10px] text-gray-600 leading-tight">Generate lambdas, test APIs, schemas & more</p>
+                          </div>
+                        </div>
+                        
+                        {/* Quick Actions Grid - Compact */}
+                        <div className="grid grid-cols-4 gap-1.5 mb-2.5">
+                          <div className="bg-white/80 rounded-lg p-1.5 text-center border border-purple-100 hover:border-purple-300 transition-colors cursor-pointer">
+                            <Code className="w-4 h-4 text-purple-600 mx-auto mb-0.5" />
+                            <p className="text-[9px] font-medium text-gray-700">Lambda</p>
+                          </div>
+                          <div className="bg-white/80 rounded-lg p-1.5 text-center border border-purple-100 hover:border-blue-300 transition-colors cursor-pointer">
+                            <Database className="w-4 h-4 text-blue-600 mx-auto mb-0.5" />
+                            <p className="text-[9px] font-medium text-gray-700">Schema</p>
+                          </div>
+                          <div className="bg-white/80 rounded-lg p-1.5 text-center border border-purple-100 hover:border-green-300 transition-colors cursor-pointer">
+                            <Terminal className="w-4 h-4 text-green-600 mx-auto mb-0.5" />
+                            <p className="text-[9px] font-medium text-gray-700">API Test</p>
+                          </div>
+                          <div className="bg-white/80 rounded-lg p-1.5 text-center border border-purple-100 hover:border-orange-300 transition-colors cursor-pointer">
+                            <Globe className="w-4 h-4 text-orange-600 mx-auto mb-0.5" />
+                            <p className="text-[9px] font-medium text-gray-700">Scrape</p>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setShowEmbeddedAIAgent(true);
+                            toast.success(`AI Agent activated for: ${floatingNamespaceDetails["namespace-name"]}`, {
+                              description: 'Chat with AI about this namespace',
+                              duration: 2000,
+                            });
+                          }}
+                          className="w-full py-1.5 md:py-2 rounded-lg transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg font-medium text-xs bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 text-white"
+                        >
+                          <Bot className="w-4 h-4" />
+                          <span>Open AI Agent</span>
+                        </button>
+                        
+                        <div className="mt-1.5 flex items-center justify-center gap-1.5 text-xs text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="text-[9px] md:text-[10px]">Context: <span className="font-semibold text-purple-700">{floatingNamespaceDetails["namespace-name"]}</span></span>
+                          </div>
+                        </div>
+                    </div>
+                  ) : (
+                    /* Show full workspace when open - no compact card above */
+                    <div className="bg-white rounded-lg border border-purple-200 overflow-hidden shadow-lg">
+                      {/* Wrapper for AIAgentWorkspace */}
+                      <div className="h-[350px] overflow-hidden">
+                        <style dangerouslySetInnerHTML={{__html: `
+                          /* Override AIAgentWorkspace positioning for embedded mode */
+                          .embedded-ai-agent-container > div {
+                            position: relative !important;
+                            top: auto !important;
+                            right: auto !important;
+                            left: auto !important;
+                            width: 100% !important;
+                            max-width: 100% !important;
+                            height: 100% !important;
+                            border: none !important;
+                          }
+                        `}} />
+                        <div className="embedded-ai-agent-container w-full h-full">
+                          <AIAgentWorkspace
+                            namespace={floatingNamespaceDetails}
+                            onClose={() => setShowEmbeddedAIAgent(false)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 </div>
               )}
             </div>
+            {/* End Content Wrapper */}
           </div>
         </>
       )}

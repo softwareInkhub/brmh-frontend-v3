@@ -60,12 +60,14 @@ export default function FooterWithCollapseButton() {
     return () => clearInterval(interval);
   }, []);
 
-  // Check for right side panel (method details/create panel)
+  // Check for right side panel (method details/create panel AND namespace details panel)
   useEffect(() => {
     const checkRightPanel = () => {
       // IMPORTANT: Multiple namespace tabs = multiple modals in DOM!
-      // We need to check ALL panels and find the one that's actually visible
-      const rightPanels = document.querySelectorAll('.method-details-panel') as NodeListOf<HTMLElement>;
+      // We need to check ALL panels (method panels + namespace panels) and find the one that's actually visible
+      const methodPanels = document.querySelectorAll('.method-details-panel') as NodeListOf<HTMLElement>;
+      const namespacePanels = document.querySelectorAll('.namespace-details-panel') as NodeListOf<HTMLElement>;
+      const rightPanels = [...Array.from(methodPanels), ...Array.from(namespacePanels)];
       
       let foundVisiblePanel = false;
       
@@ -235,10 +237,10 @@ export default function FooterWithCollapseButton() {
         <button className="bg-gray-200 text-gray-700 px-3 py-0.5 rounded-md text-xs hover:bg-gray-300 transition">Action 2</button>
         <button className="bg-green-600 text-white px-3 py-0.5 rounded-md text-xs hover:bg-green-700 transition">Action 3</button>
         <button
-          className="bg-purple-600 text-white px-3 py-0.5 rounded-md text-xs hover:bg-purple-700 transition ml-2 flex items-center gap-1"
+          className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 text-white px-4 py-1 rounded-lg text-xs font-medium shadow-md hover:shadow-lg transition-all duration-200 ml-2 flex items-center gap-1.5"
           onClick={toggleBottomTerminal}
         >
-          <Bot size={14} />
+          <Bot size={16} />
           {bottomTerminalOpen ? 'Close AI Agent' : 'Open AI Agent'}
         </button>
       </div>
