@@ -48,139 +48,116 @@ const socialLinks = [
 
 export default function Footer() {
   return (
-    <footer id="contact" className="bg-gray-900 text-white">
-      <div className="container-custom py-16">
+    <footer id="contact" className="bg-white dark:bg-gray-950 text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-900 mt-0">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-8 lg:py-10">
         {/* Main Footer Content */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-8 mb-12">
-          {/* Brand Section */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center space-x-2 mb-4">
+        <div className="mb-5 md:mb-8">
+          {/* Brand Section - Full Width on Mobile */}
+          <div className="mb-6 md:mb-0 md:col-span-1">
+            <div className="flex items-center space-x-2 mb-3">
               <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-800 rounded-lg flex items-center justify-center">
                 <Code className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold font-display">BRMH</span>
+              <span className="text-lg font-bold font-display">BRMH</span>
             </div>
-            <p className="text-gray-400 mb-6 max-w-md">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-4 leading-relaxed max-w-md">
               Your unified API & namespace manager. Build, manage, and expose your APIs with powerful schema and method control.
             </p>
-            <div className="flex space-x-4">
+            <div className="flex space-x-2">
               {socialLinks.map((social) => (
                 <a
                   key={social.name}
                   href={social.href}
-                  className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-primary-600 transition-colors"
+                  className="w-8 h-8 bg-gray-100 dark:bg-gray-900 rounded-lg flex items-center justify-center hover:bg-primary-600 dark:hover:bg-primary-700 transition-colors text-gray-700 dark:text-gray-300 hover:text-white dark:hover:text-white"
                   aria-label={social.name}
                 >
-                  <social.icon className="w-5 h-5" />
+                  <social.icon className="w-4 h-4" />
                 </a>
               ))}
             </div>
           </div>
 
-          {/* Product Links */}
-          <div>
-            <h3 className="font-semibold mb-4">Product</h3>
-            <ul className="space-y-2">
-              {footerLinks.product.map((link) => (
-                <li key={link.name}>
-                  <a href={link.href} className="text-gray-400 hover:text-white transition-colors">
-                    {link.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Links Grid - 2 Columns on Mobile */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8 mt-6 md:mt-0">
+            {/* Product Links */}
+            <div>
+              <h3 className="text-xs font-semibold mb-2 text-gray-900 dark:text-white">Product</h3>
+              <ul className="space-y-1.5">
+                {footerLinks.product.map((link) => (
+                  <li key={link.name}>
+                    <a href={link.href} className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                      {link.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          {/* Company Links */}
-          <div>
-            <h3 className="font-semibold mb-4">Company</h3>
-            <ul className="space-y-2">
-              {footerLinks.company.map((link) => (
-                <li key={link.name}>
-                  <a href={link.href} className="text-gray-400 hover:text-white transition-colors">
-                    {link.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+            {/* Company Links */}
+            <div>
+              <h3 className="text-xs font-semibold mb-2 text-gray-900 dark:text-white">Company</h3>
+              <ul className="space-y-1.5">
+                {footerLinks.company.map((link) => (
+                  <li key={link.name}>
+                    <a href={link.href} className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                      {link.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          {/* Support Links */}
-          <div>
-            <h3 className="font-semibold mb-4">Support</h3>
-            <ul className="space-y-2">
-              {footerLinks.support.map((link) => (
-                <li key={link.name}>
-                  <a href={link.href} className="text-gray-400 hover:text-white transition-colors">
-                    {link.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+            {/* Support Links */}
+            <div>
+              <h3 className="text-xs font-semibold mb-2 text-gray-900 dark:text-white">Support</h3>
+              <ul className="space-y-1.5">
+                {footerLinks.support.map((link) => (
+                  <li key={link.name}>
+                    <a href={link.href} className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                      {link.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          {/* Legal Links */}
-          <div>
-            <h3 className="font-semibold mb-4">Legal</h3>
-            <ul className="space-y-2">
-              {footerLinks.legal.map((link) => (
-                <li key={link.name}>
-                  <a href={link.href} className="text-gray-400 hover:text-white transition-colors">
-                    {link.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            {/* Legal Links */}
+            <div>
+              <h3 className="text-xs font-semibold mb-2 text-gray-900 dark:text-white">Legal</h3>
+              <ul className="space-y-1.5">
+                {footerLinks.legal.map((link) => (
+                  <li key={link.name}>
+                    <a href={link.href} className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                      {link.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
 
-        {/* Newsletter Signup */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="bg-gray-800 rounded-xl p-8 mb-12"
-        >
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <div>
-              <h3 className="text-2xl font-bold mb-2">Stay Updated</h3>
-              <p className="text-gray-400">
-                Get the latest updates, new features, and developer tips delivered to your inbox.
-              </p>
-            </div>
-            <div className="flex space-x-4">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-              <button className="px-6 py-3 bg-primary-600 hover:bg-primary-700 rounded-lg font-medium transition-colors">
-                Subscribe
-              </button>
-            </div>
-          </div>
-        </motion.div>
-
         {/* Bottom Bar */}
-        <div className="border-t border-gray-800 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="flex items-center space-x-4 text-gray-400">
+        <div className="border-t border-gray-200 dark:border-gray-900 pt-4 md:pt-6">
+          <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center md:gap-0">
+            <div className="flex flex-col items-center md:flex-row md:justify-start gap-2 text-xs text-gray-600 dark:text-gray-400 text-center md:text-left">
               <span>&copy; 2024 BRMH. All rights reserved.</span>
               <span className="hidden md:inline">•</span>
-              <span className="hidden md:inline">Made with</span>
-              <Heart className="w-4 h-4 text-red-500 hidden md:inline" />
-              <span className="hidden md:inline">for developers</span>
+              <span className="flex items-center justify-center gap-1">
+                <span className="hidden md:inline">Made with</span>
+                <Heart className="w-3 h-3 text-red-500" />
+                <span className="hidden md:inline">for developers</span>
+              </span>
             </div>
             
-            <div className="flex items-center space-x-6 text-gray-400">
-              <a href="#status" className="flex items-center space-x-2 hover:text-white transition-colors">
+            <div className="flex flex-col sm:flex-row items-center justify-center md:justify-end gap-2 sm:gap-3 md:gap-4 text-xs text-gray-600 dark:text-gray-400">
+              <a href="#status" className="flex items-center gap-1.5 hover:text-gray-900 dark:hover:text-white transition-colors">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm">All systems operational</span>
+                <span>All systems operational</span>
               </a>
-              <a href="mailto:hello@brmh.dev" className="flex items-center space-x-2 hover:text-white transition-colors">
-                <Mail className="w-4 h-4" />
-                <span className="text-sm">hello@brmh.dev</span>
+              <a href="mailto:help@brmh.dev" className="flex items-center gap-1.5 hover:text-gray-900 dark:hover:text-white transition-colors">
+                <Mail className="w-3.5 h-3.5" />
+                <span>help@brmh.dev</span>
               </a>
             </div>
           </div>

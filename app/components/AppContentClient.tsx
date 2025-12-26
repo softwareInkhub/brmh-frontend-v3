@@ -19,7 +19,7 @@ export default function AppContentClient({ children }: { children: React.ReactNo
   return (
     <>
       <div 
-        className={`flex min-h-screen bg-gray-50 ${!hideSidebar ? 'ml-0 md:ml-20' : ''} transition-all duration-300 ease-in-out`}
+        className={`flex min-h-screen bg-gray-50 dark:bg-gray-950 ${!hideSidebar ? 'ml-0 md:ml-20' : ''} transition-all duration-300 ease-in-out`}
         style={{ 
           marginRight: '0px',
           maxWidth: '100%',

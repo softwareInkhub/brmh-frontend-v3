@@ -10,6 +10,32 @@ import {
 
 type TabKey = 'dashboard' | 'connections' | 'triggers' | 'crud-triggers' | 'templates' | 'test' | 'logs' | 'analytics'
 
+// Helper function to safely parse JSON responses
+const safeJsonParse = async (response: Response): Promise<any> => {
+  const contentType = response.headers.get('content-type') || '';
+  
+  if (contentType.includes('application/json')) {
+    try {
+      return await response.json();
+    } catch (error) {
+      const text = await response.text();
+      throw new Error(`Failed to parse JSON response: ${text.substring(0, 200)}`);
+    }
+  } else {
+    const text = await response.text();
+    // Try to parse as JSON even if content-type is wrong
+    try {
+      return JSON.parse(text);
+    } catch {
+      // If it starts with <, it's likely HTML
+      if (text.trim().startsWith('<')) {
+        throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}. Response: ${text.substring(0, 200)}`);
+      }
+      throw new Error(`Server returned non-JSON response. Content-Type: ${contentType}. Response: ${text.substring(0, 200)}`);
+    }
+  }
+};
+
 const Page = () => {
   const [active, setActive] = useState<TabKey>('dashboard')
   const [apiBase] = useState<string>(process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001')
@@ -112,26 +138,42 @@ const Page = () => {
   async function fetchConnections() {
     try {
       const res = await fetch(`${apiBase}/notify/connections`, { cache: 'no-store' })
-      const data = await res.json()
+      if (!res.ok) {
+        if (res.status === 404) {
+          setConnections([])
+          return
+        }
+      }
+      const data = await safeJsonParse(res)
       if (data?.items) {
         setConnections(data.items)
         if (data.items[0]?.id) setTrigConnectionId(data.items[0].id)
       }
     } catch (e) {
-      console.error('Failed to fetch connections:', e)
+      console.warn('Failed to fetch connections:', e instanceof Error ? e.message : e)
+      setConnections([])
     }
   }
 
   async function fetchTriggers() {
     try {
       const res = await fetch(`${apiBase}/notify/triggers`, { cache: 'no-store' })
-      const data = await res.json()
+      if (!res.ok) {
+        if (res.status === 404) {
+          setTriggers([])
+          updateStats([])
+          return
+        }
+      }
+      const data = await safeJsonParse(res)
       if (data?.items) {
         setTriggers(data.items)
         updateStats(data.items)
       }
     } catch (e) {
-      console.error('Failed to fetch triggers:', e)
+      console.warn('Failed to fetch triggers:', e instanceof Error ? e.message : e)
+      setTriggers([])
+      updateStats([])
     }
   }
 
@@ -142,10 +184,18 @@ const Page = () => {
         ? `${apiBase}/notify/logs?namespace=${encodeURIComponent(namespaceFilter)}`
         : `${apiBase}/notify/logs`
       const res = await fetch(url, { cache: 'no-store' })
-      const data = await res.json()
+      if (!res.ok) {
+        if (res.status === 404) {
+          setLogs([])
+          setLoadingLogs(false)
+          return
+        }
+      }
+      const data = await safeJsonParse(res)
       if (data?.items) setLogs(data.items)
     } catch (e) {
-      console.error('Failed to fetch logs:', e)
+      console.warn('Failed to fetch logs:', e instanceof Error ? e.message : e)
+      setLogs([])
     }
     setLoadingLogs(false)
   }
@@ -153,20 +203,36 @@ const Page = () => {
   async function fetchTables() {
     try {
       const res = await fetch(`${apiBase}/dynamodb/tables`, { cache: 'no-store' })
-      const data = await res.json()
+      if (!res.ok) {
+        if (res.status === 404) {
+          setTables([])
+          return
+        }
+      }
+      const data = await safeJsonParse(res)
       if (data?.tables) setTables(data.tables)
     } catch (e) {
-      console.error('Failed to fetch tables:', e)
+      console.warn('Failed to fetch tables (endpoint may not exist):', e instanceof Error ? e.message : e)
+      setTables([])
     }
   }
 
   async function fetchS3Folders() {
     try {
       const res = await fetch(`${apiBase}/s3/folders`, { cache: 'no-store' })
-      const data = await res.json()
+      if (!res.ok) {
+        // If endpoint doesn't exist (404), just set empty array
+        if (res.status === 404) {
+          setS3Folders([])
+          return
+        }
+      }
+      const data = await safeJsonParse(res)
       if (data?.folders) setS3Folders(data.folders)
     } catch (e) {
-      console.error('Failed to fetch S3 folders:', e)
+      // Silently handle errors - endpoint might not exist
+      console.warn('Failed to fetch S3 folders (endpoint may not exist):', e instanceof Error ? e.message : e)
+      setS3Folders([])
     }
   }
 
@@ -175,7 +241,7 @@ const Page = () => {
     setLoadingContacts(true)
     try {
       const res = await fetch(`${apiBase}/notify/contacts/${connectionId}`, { cache: 'no-store' })
-      const data = await res.json()
+      const data = await safeJsonParse(res)
       
       let contactsList = []
       if (data?.success && data?.testResult?.data) {
@@ -206,7 +272,7 @@ const Page = () => {
     setLoadingCommunities(true)
     try {
       const res = await fetch(`${apiBase}/notify/communities/${connectionId}`, { cache: 'no-store' })
-      const data = await res.json()
+      const data = await safeJsonParse(res)
       
       let communities = []
       if (data?.success && data?.testResult?.data) {
@@ -238,7 +304,7 @@ const Page = () => {
     setLoadingGroups(true)
     try {
       const res = await fetch(`${apiBase}/notify/groups/${connectionId}`, { cache: 'no-store' })
-      const data = await res.json()
+      const data = await safeJsonParse(res)
       
       let groups = []
       if (data?.success && data?.testResult?.data) {
@@ -270,7 +336,7 @@ const Page = () => {
     setLoadingSubgroups(true)
     try {
       const res = await fetch(`${apiBase}/notify/communities/${connectionId}/${communityId}/subgroups`, { cache: 'no-store' })
-      const data = await res.json()
+      const data = await safeJsonParse(res)
       
       let subgroups = []
       if (data?.success && data?.testResult?.data) {
@@ -297,7 +363,7 @@ const Page = () => {
     setLoadingNamespaces(true)
     try {
       const res = await fetch(`${apiBase}/unified/namespaces`, { cache: 'no-store' })
-      const data = await res.json()
+      const data = await safeJsonParse(res)
       if (Array.isArray(data)) {
         const formattedNamespaces = data.map(ns => ({
           id: ns['namespace-id'],
@@ -315,7 +381,7 @@ const Page = () => {
     if (!connectionId) return
     try {
       const res = await fetch(`${apiBase}/notify/test/${connectionId}`, { cache: 'no-store' })
-      const data = await res.json()
+      const data = await safeJsonParse(res)
       if (data?.success) {
         alert('✅ Connection test successful!')
       } else {
@@ -398,7 +464,7 @@ const Page = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: connName, token: connToken, baseUrl: connBaseUrl, testMode: connTestMode })
       })
-      const data = await res.json()
+      const data = await safeJsonParse(res)
       if (!res.ok || !data?.success) throw new Error(data?.error || 'Failed to save connection')
       await fetchConnections()
       alert('✅ Connection saved successfully')
@@ -448,7 +514,7 @@ const Page = () => {
           active: true
         })
       })
-      const data = await res.json()
+      const data = await safeJsonParse(res)
       if (!res.ok || !data?.success) throw new Error(data?.error || 'Failed to save trigger')
       await fetchTriggers()
       alert('✅ Trigger saved successfully')
@@ -503,7 +569,7 @@ const Page = () => {
           }
         })
       })
-      const data = await res.json()
+      const data = await safeJsonParse(res)
       if (!res.ok || !data?.success) throw new Error(data?.error || 'Test fire failed')
       await fetchLogs()
       alert('✅ Test event fired successfully')
@@ -527,7 +593,7 @@ const Page = () => {
           }
         })
       })
-      const data = await res.json()
+      const data = await safeJsonParse(res)
       if (!res.ok || !data?.success) throw new Error(data?.error || 'Trigger test failed')
       await fetchLogs()
       alert('✅ Trigger test fired successfully')
@@ -538,13 +604,13 @@ const Page = () => {
 
   // Terminal UI Components
   const StatCard = ({ label, value, icon }: { label: string, value: string | number, icon: React.ReactNode }) => (
-    <div className="bg-white border border-gray-200 rounded p-3">
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded p-3">
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{label}</div>
-          <div className="text-xl font-semibold text-gray-900">{value}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">{label}</div>
+          <div className="text-xl font-semibold text-gray-900 dark:text-white">{value}</div>
         </div>
-        <div className="text-gray-400">{icon}</div>
+        <div className="text-gray-400 dark:text-gray-500">{icon}</div>
       </div>
     </div>
   )
@@ -561,36 +627,36 @@ const Page = () => {
     const level = log.status || log.level || 'info'
     
     return (
-      <div className="px-4 py-2 text-xs hover:bg-gray-50 border-b border-gray-100 transition-colors">
-        <span className="text-gray-400">[{new Date(log.createdAt || log.timestamp).toLocaleTimeString()}]</span>
+      <div className="px-4 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800 transition-colors">
+        <span className="text-gray-400 dark:text-gray-500">[{new Date(log.createdAt || log.timestamp).toLocaleTimeString()}]</span>
         {' '}
         <span className={levelColors[level as keyof typeof levelColors]}>[{level.toUpperCase()}]</span>
         {' '}
-        <span className="text-gray-600">{log.kind || log.operation}</span>
+        <span className="text-gray-600 dark:text-gray-400">{log.kind || log.operation}</span>
         {' › '}
-        <span className="text-gray-900">{log.eventType || log.table || 'N/A'}</span>
+        <span className="text-gray-900 dark:text-gray-100">{log.eventType || log.table || 'N/A'}</span>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Terminal size={24} className="text-gray-900" />
-            <h1 className="text-lg font-semibold text-gray-900">BRMH Notification System</h1>
+            <Terminal size={24} className="text-gray-900 dark:text-white" />
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">BRMH Notification System</h1>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-xs text-gray-600">SYSTEM ONLINE</span>
+              <div className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400 animate-pulse"></div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">SYSTEM ONLINE</span>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`p-2 border rounded transition-colors ${autoRefresh ? 'border-green-500 text-green-600 bg-green-50' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                className={`p-2 border rounded transition-colors ${autoRefresh ? 'border-green-500 dark:border-green-400 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
                 {autoRefresh ? <Pause size={14} /> : <Play size={14} />}
               </button>
@@ -600,7 +666,7 @@ const Page = () => {
                   fetchTriggers()
                   fetchLogs()
                 }}
-                className="p-2 border border-gray-300 text-gray-600 hover:bg-gray-50 rounded transition-colors"
+                className="p-2 border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded transition-colors"
               >
                 <RefreshCw size={14} />
               </button>
@@ -611,15 +677,15 @@ const Page = () => {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-73px)]">
+        <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 min-h-[calc(100vh-73px)]">
           <div className="p-3">
             <div className="relative">
-              <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
+              <Search size={14} className="absolute left-3 top-2.5 text-gray-400 dark:text-gray-500" />
               <input
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 placeholder="search..."
-                className="w-full bg-gray-50 border border-gray-200 rounded pl-9 pr-3 py-2 text-xs text-gray-900 focus:border-gray-400 focus:outline-none transition-colors"
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded pl-9 pr-3 py-2 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-400 dark:focus:border-gray-600 focus:outline-none transition-colors"
               />
             </div>
           </div>
@@ -640,8 +706,8 @@ const Page = () => {
                 onClick={() => setActive(id as TabKey)}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded text-xs transition-all ${
                   active === id
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-gray-900 dark:bg-gray-800 text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
               >
                 <Icon size={16} />
@@ -651,33 +717,33 @@ const Page = () => {
           </nav>
 
           {/* Quick Stats */}
-          <div className="px-3 py-4 border-t border-gray-200 mt-4">
-            <div className="text-xs text-gray-500 uppercase tracking-wider mb-3">System Status</div>
+          <div className="px-3 py-4 border-t border-gray-200 dark:border-gray-800 mt-4">
+            <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">System Status</div>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-600">Active Triggers</span>
-                <span className="text-xs font-semibold text-gray-900">{liveStats.activeTriggers}</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Active Triggers</span>
+                <span className="text-xs font-semibold text-gray-900 dark:text-white">{liveStats.activeTriggers}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-600">Success Rate</span>
-                <span className="text-xs font-semibold text-green-600">{liveStats.successRate}%</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Success Rate</span>
+                <span className="text-xs font-semibold text-green-600 dark:text-green-400">{liveStats.successRate}%</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-600">Response Time</span>
-                <span className="text-xs font-semibold text-gray-900">{liveStats.avgResponseTime}ms</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Response Time</span>
+                <span className="text-xs font-semibold text-gray-900 dark:text-white">{liveStats.avgResponseTime}ms</span>
               </div>
             </div>
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 bg-gray-50">
+        <main className="flex-1 bg-gray-50 dark:bg-gray-950">
           {/* Dashboard */}
           {active === 'dashboard' && (
             <div className="p-6 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-1">System Dashboard</h2>
-                <p className="text-sm text-gray-600">Monitor your notification system in real-time</p>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">System Dashboard</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Monitor your notification system in real-time</p>
               </div>
               
               {/* Stats Grid */}
@@ -689,11 +755,11 @@ const Page = () => {
               </div>
 
               {/* Real-time Activity */}
-              <div className="bg-white border border-gray-200 rounded overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                  <h3 className="text-sm font-semibold text-gray-900">Real-Time Activity Monitor</h3>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Real-Time Activity Monitor</h3>
                 </div>
-                <div className="h-[400px] overflow-y-auto">
+                <div className="h-[400px] overflow-y-auto bg-white dark:bg-gray-900">
                   {logs.slice(-50).reverse().map(log => (
                     <LogLine key={log.id} log={log} />
                   ))}
@@ -703,11 +769,11 @@ const Page = () => {
 
               {/* Quick Actions */}
               <div className="flex gap-3">
-                <button onClick={() => setActive('triggers')} className="px-4 py-2 bg-gray-900 text-white rounded text-sm hover:bg-gray-800 transition-colors flex items-center gap-2">
+                <button onClick={() => setActive('triggers')} className="px-4 py-2 bg-gray-900 dark:bg-gray-800 text-white rounded text-sm hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
                   <Plus size={14} />
                   New Trigger
                 </button>
-                <button onClick={() => setActive('connections')} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
+                <button onClick={() => setActive('connections')} className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
                   <GitBranch size={14} />
                   Manage Connections
                 </button>
@@ -719,70 +785,70 @@ const Page = () => {
           {active === 'connections' && (
             <div className="p-6 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-1">WHAPI Connections</h2>
-                <p className="text-sm text-gray-600">Manage your WhatsApp API connections</p>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">WHAPI Connections</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Manage your WhatsApp API connections</p>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded p-6 space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900">Add New Connection</h3>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded p-6 space-y-4">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Add New Connection</h3>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Connection Name</label>
-                    <input value={connName} onChange={e=>setConnName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="e.g. production-whapi" />
+                    <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Connection Name</label>
+                    <input value={connName} onChange={e=>setConnName(e.target.value)} className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" placeholder="e.g. production-whapi" />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Base URL</label>
-                    <input value={connBaseUrl} onChange={e=>setConnBaseUrl(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="https://gate.whapi.cloud" />
+                    <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Base URL</label>
+                    <input value={connBaseUrl} onChange={e=>setConnBaseUrl(e.target.value)} className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" placeholder="https://gate.whapi.cloud" />
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">WHAPI Token</label>
-                  <input value={connToken} onChange={e=>setConnToken(e.target.value)} type="password" className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="Enter your WHAPI token" />
+                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">WHAPI Token</label>
+                  <input value={connToken} onChange={e=>setConnToken(e.target.value)} type="password" className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" placeholder="Enter your WHAPI token" />
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <input id="tm" type="checkbox" checked={connTestMode} onChange={e=>setConnTestMode(e.target.checked)} className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900" />
-                  <label htmlFor="tm" className="text-sm text-gray-600">Test Mode (do not send actual messages)</label>
+                  <input id="tm" type="checkbox" checked={connTestMode} onChange={e=>setConnTestMode(e.target.checked)} className="w-4 h-4 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700 rounded focus:ring-gray-900 dark:focus:ring-gray-600 bg-white dark:bg-gray-800" />
+                  <label htmlFor="tm" className="text-sm text-gray-600 dark:text-gray-400">Test Mode (do not send actual messages)</label>
                 </div>
                 
                 <div className="flex gap-2">
-                  <button disabled={saving} onClick={saveConnection} className="px-4 py-2 bg-gray-900 text-white rounded text-sm disabled:opacity-60 hover:bg-gray-800 transition-colors">
+                  <button disabled={saving} onClick={saveConnection} className="px-4 py-2 bg-gray-900 dark:bg-gray-800 text-white rounded text-sm disabled:opacity-60 hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
                     {saving ? 'Saving...' : 'Save Connection'}
                   </button>
-                  <button onClick={fetchConnections} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors">
+                  <button onClick={fetchConnections} className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                     Refresh
                   </button>
                 </div>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                  <h3 className="text-sm font-semibold text-gray-900">Saved Connections ({connections.length})</h3>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Saved Connections ({connections.length})</h3>
                 </div>
-                <div className="divide-y">
+                <div className="divide-y divide-gray-200 dark:divide-gray-800">
                   {connections.map((c) => (
-                    <div key={c.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                    <div key={c.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                       <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900">{c.name}</div>
-                        <div className="text-xs text-gray-500 mt-1">{c.id}</div>
-                        <div className="text-xs text-gray-400 mt-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{c.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{c.id}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                           {c.testMode ? '🧪 Test Mode' : '✅ Live Mode'} • {c.baseUrl}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={()=>testConnection(c.id)} className="text-xs px-3 py-1.5 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors">
+                        <button onClick={()=>testConnection(c.id)} className="text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                           Test
                         </button>
-                        <button onClick={()=>setTrigConnectionId(c.id)} className={`text-xs px-3 py-1.5 rounded transition-colors ${trigConnectionId===c.id ? 'bg-gray-900 text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
+                        <button onClick={()=>setTrigConnectionId(c.id)} className={`text-xs px-3 py-1.5 rounded transition-colors ${trigConnectionId===c.id ? 'bg-gray-900 dark:bg-gray-800 text-white' : 'border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                           {trigConnectionId===c.id ? 'Selected' : 'Use'}
                         </button>
                       </div>
                     </div>
                   ))}
                   {connections.length === 0 && (
-                    <div className="px-4 py-8 text-center text-sm text-gray-500">
+                    <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                       No connections yet. Create your first connection above.
                     </div>
                   )}
@@ -795,23 +861,23 @@ const Page = () => {
           {active === 'triggers' && (
             <div className="p-6 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-1">Notification Triggers</h2>
-                <p className="text-sm text-gray-600">Create and manage event-driven triggers</p>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">Notification Triggers</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Create and manage event-driven triggers</p>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded p-6 space-y-6">
-                <h3 className="text-sm font-semibold text-gray-900">Create New Trigger</h3>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded p-6 space-y-6">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Create New Trigger</h3>
                 
                 {/* 1. Trigger Name */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Trigger Name</label>
-                  <input value={trigName} onChange={e=>setTrigName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="Enter trigger name" />
+                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Trigger Name</label>
+                  <input value={trigName} onChange={e=>setTrigName(e.target.value)} className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" placeholder="Enter trigger name" />
                 </div>
 
                 {/* 2. Namespace Tags */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">
-                    Namespace Tags {selectedNamespaces.length > 0 && <span className="text-gray-900">({selectedNamespaces.length} selected)</span>}
+                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                    Namespace Tags {selectedNamespaces.length > 0 && <span className="text-gray-900 dark:text-white">({selectedNamespaces.length} selected)</span>}
                   </label>
                   <div className="space-y-2">
                     <div className="flex gap-2">
@@ -820,25 +886,25 @@ const Page = () => {
                           value={namespaceSearchTerm}
                           onChange={e => setNamespaceSearchTerm(e.target.value)}
                           placeholder="Search namespaces..."
-                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none pr-8"
+                          className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none pr-8"
                         />
                         {namespaceSearchTerm && (
                           <button
                             onClick={() => setNamespaceSearchTerm('')}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                           >
                             ×
                           </button>
                         )}
                       </div>
-                      <button onClick={fetchNamespaces} disabled={loadingNamespaces} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors disabled:opacity-50">
+                      <button onClick={fetchNamespaces} disabled={loadingNamespaces} className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50">
                         {loadingNamespaces ? '...' : 'Refresh'}
                       </button>
                     </div>
                     
                     {/* Filtered Results Display */}
                     {namespaceSearchTerm && (
-                      <div className="max-h-40 overflow-y-auto border border-gray-200 rounded bg-white">
+                      <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-800 rounded bg-white dark:bg-gray-900">
                         {availableNamespaces
                           .filter(ns => !selectedNamespaces.includes(ns.id))
                           .filter(ns => (ns.name || ns.id).toLowerCase().includes(namespaceSearchTerm.toLowerCase()))
@@ -853,20 +919,20 @@ const Page = () => {
                                     setSelectedNamespaces([...selectedNamespaces, ns.id]);
                                     setNamespaceSearchTerm('');
                                   }}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800 last:border-0 text-gray-900 dark:text-gray-100"
                                 >
                                   {ns.name || ns.id}
                                 </button>
                               ))
                           ) : (
-                            <div className="px-3 py-2 text-sm text-gray-500">No matches found</div>
+                            <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">No matches found</div>
                           )
                         }
                       </div>
                     )}
 
                     <div className="flex gap-2">
-                      <select value="" onChange={e => { if (e.target.value && !selectedNamespaces.includes(e.target.value)) { setSelectedNamespaces([...selectedNamespaces, e.target.value]); }}} className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" disabled={loadingNamespaces}>
+                      <select value="" onChange={e => { if (e.target.value && !selectedNamespaces.includes(e.target.value)) { setSelectedNamespaces([...selectedNamespaces, e.target.value]); }}} className="flex-1 border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" disabled={loadingNamespaces}>
                         <option value="">Select namespace...</option>
                         {availableNamespaces
                           .filter(ns => !selectedNamespaces.includes(ns.id))
@@ -874,9 +940,9 @@ const Page = () => {
                             <option key={ns.id} value={ns.id}>{ns.name || ns.id}</option>
                           ))}
                       </select>
-                      <span className="flex items-center text-xs text-gray-500">or</span>
-                      <input value={customTag} onChange={e => setCustomTag(e.target.value)} placeholder="Enter custom tag..." className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" onKeyPress={e => { if (e.key === 'Enter' && customTag.trim() && !selectedNamespaces.includes(customTag.trim())) { setSelectedNamespaces([...selectedNamespaces, customTag.trim()]); setCustomTag('') }}} />
-                      <button onClick={() => { if (customTag.trim() && !selectedNamespaces.includes(customTag.trim())) { setSelectedNamespaces([...selectedNamespaces, customTag.trim()]); setCustomTag('') }}} disabled={!customTag.trim() || selectedNamespaces.includes(customTag.trim())} className="px-4 py-2 bg-gray-900 text-white rounded text-sm hover:bg-gray-800 transition-colors disabled:opacity-50">
+                      <span className="flex items-center text-xs text-gray-500 dark:text-gray-400">or</span>
+                      <input value={customTag} onChange={e => setCustomTag(e.target.value)} placeholder="Enter custom tag..." className="flex-1 border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" onKeyPress={e => { if (e.key === 'Enter' && customTag.trim() && !selectedNamespaces.includes(customTag.trim())) { setSelectedNamespaces([...selectedNamespaces, customTag.trim()]); setCustomTag('') }}} />
+                      <button onClick={() => { if (customTag.trim() && !selectedNamespaces.includes(customTag.trim())) { setSelectedNamespaces([...selectedNamespaces, customTag.trim()]); setCustomTag('') }}} disabled={!customTag.trim() || selectedNamespaces.includes(customTag.trim())} className="px-4 py-2 bg-gray-900 dark:bg-gray-800 text-white rounded text-sm hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors disabled:opacity-50">
                         Add
                       </button>
                     </div>
@@ -885,9 +951,9 @@ const Page = () => {
                         {selectedNamespaces.map(tag => {
                           const ns = availableNamespaces.find(n => n.id === tag)
                           return (
-                            <span key={tag} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                            <span key={tag} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs rounded">
                               {ns?.name || tag}
-                              <button onClick={() => setSelectedNamespaces(selectedNamespaces.filter(t => t !== tag))} className="text-blue-600 hover:text-blue-800">×</button>
+                              <button onClick={() => setSelectedNamespaces(selectedNamespaces.filter(t => t !== tag))} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">×</button>
                             </span>
                           )
                         })}
@@ -899,15 +965,15 @@ const Page = () => {
                 {/* 3. Connection & Event Type */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Connection</label>
-                    <select value={trigConnectionId} onChange={e=>setTrigConnectionId(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none">
+                    <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Connection</label>
+                    <select value={trigConnectionId} onChange={e=>setTrigConnectionId(e.target.value)} className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none">
                       <option value="">Select connection</option>
                       {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Event Type</label>
-                    <select value={trigEvent} onChange={e=>setTrigEvent(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none">
+                    <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Event Type</label>
+                    <select value={trigEvent} onChange={e=>setTrigEvent(e.target.value)} className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none">
                       <option value="none">None (Manual Only)</option>
                       <option value="namespace_created">Namespace Created</option>
                       <option value="namespace_updated">Namespace Updated</option>
@@ -922,14 +988,14 @@ const Page = () => {
 
                 {/* 4. Trigger Type - Single Row with Icons */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-2">Trigger Type</label>
+                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-2">Trigger Type</label>
                   <div className="flex gap-3">
                     <button
                       onClick={() => setTriggerType('users')}
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 rounded transition-colors ${
                         triggerType === 'users' 
-                          ? 'border-gray-900 bg-gray-900 text-white' 
-                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                          ? 'border-gray-900 dark:border-gray-700 bg-gray-900 dark:bg-gray-800 text-white' 
+                          : 'border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600'
                       }`}
                     >
                       <Users size={18} />
@@ -939,8 +1005,8 @@ const Page = () => {
                       onClick={() => setTriggerType('community')}
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 rounded transition-colors ${
                         triggerType === 'community' 
-                          ? 'border-gray-900 bg-gray-900 text-white' 
-                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                          ? 'border-gray-900 dark:border-gray-700 bg-gray-900 dark:bg-gray-800 text-white' 
+                          : 'border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600'
                       }`}
                     >
                       <Globe size={18} />
@@ -950,8 +1016,8 @@ const Page = () => {
                       onClick={() => setTriggerType('group')}
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 rounded transition-colors ${
                         triggerType === 'group' 
-                          ? 'border-gray-900 bg-gray-900 text-white' 
-                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                          ? 'border-gray-900 dark:border-gray-700 bg-gray-900 dark:bg-gray-800 text-white' 
+                          : 'border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600'
                       }`}
                     >
                       <MessageSquare size={18} />
@@ -962,17 +1028,17 @@ const Page = () => {
 
                 {/* Recipient Configuration */}
                 {triggerType === 'users' && (
-                  <div className="space-y-4 p-4 bg-gray-50 rounded border border-gray-200">
+                  <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
                     <div className="flex items-center gap-4">
-                      <span className="text-sm text-gray-700 font-medium">Recipient Type:</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">Recipient Type:</span>
                       <div className="flex gap-4">
                         <label className="flex items-center gap-2">
-                          <input type="radio" value="manual" checked={contactMode === 'manual'} onChange={e => setContactMode('manual')} className="text-gray-900 focus:ring-gray-900" />
-                          <span className="text-sm text-gray-700">Manual Entry</span>
+                          <input type="radio" value="manual" checked={contactMode === 'manual'} onChange={e => setContactMode('manual')} className="text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-600" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">Manual Entry</span>
                         </label>
                         <label className="flex items-center gap-2">
-                          <input type="radio" value="contact" checked={contactMode === 'contact'} onChange={e => setContactMode('contact')} className="text-gray-900 focus:ring-gray-900" />
-                          <span className="text-sm text-gray-700">From Contacts</span>
+                          <input type="radio" value="contact" checked={contactMode === 'contact'} onChange={e => setContactMode('contact')} className="text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-600" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">From Contacts</span>
                         </label>
                       </div>
                     </div>
@@ -980,8 +1046,8 @@ const Page = () => {
                     {contactMode === 'manual' && (
                       <div className="grid grid-cols-4 gap-4">
                         <div>
-                          <label className="block text-xs text-gray-600 mb-1">Country Code</label>
-                          <select value={countryCode} onChange={e=>setCountryCode(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none">
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Country Code</label>
+                          <select value={countryCode} onChange={e=>setCountryCode(e.target.value)} className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none">
                             <option value="91">+91 (India)</option>
                             <option value="1">+1 (USA/Canada)</option>
                             <option value="44">+44 (UK)</option>
@@ -990,15 +1056,15 @@ const Page = () => {
                           </select>
                         </div>
                         <div className="col-span-3">
-                          <label className="block text-xs text-gray-600 mb-1">Phone Number</label>
-                          <input value={phoneNumber} onChange={e=>setPhoneNumber(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="e.g. 9876543210" />
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Phone Number</label>
+                          <input value={phoneNumber} onChange={e=>setPhoneNumber(e.target.value)} className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" placeholder="e.g. 9876543210" />
                         </div>
                       </div>
                     )}
 
                     {contactMode === 'contact' && (
                       <div className="flex gap-2">
-                        <select value={selectedContact} onChange={e=>setSelectedContact(e.target.value)} className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" disabled={loadingContacts || !trigConnectionId}>
+                        <select value={selectedContact} onChange={e=>setSelectedContact(e.target.value)} className="flex-1 border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" disabled={loadingContacts || !trigConnectionId}>
                           <option value="">Select a contact{contacts.length > 0 ? ` (${contacts.length} found)` : ''}</option>
                           {contacts.map(contact => (
                             <option key={contact.id} value={contact.id}>
@@ -1006,7 +1072,7 @@ const Page = () => {
                             </option>
                           ))}
                         </select>
-                        <button onClick={() => fetchContacts(trigConnectionId)} disabled={!trigConnectionId || loadingContacts} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors disabled:opacity-50">
+                        <button onClick={() => fetchContacts(trigConnectionId)} disabled={!trigConnectionId || loadingContacts} className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50">
                           {loadingContacts ? '...' : 'Refresh'}
                         </button>
                       </div>
@@ -1015,28 +1081,28 @@ const Page = () => {
                 )}
 
                 {triggerType === 'community' && (
-                  <div className="space-y-4 p-4 bg-gray-50 rounded border border-gray-200">
+                  <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">Community</label>
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Community</label>
                         <div className="flex gap-2">
-                          <select value={selectedCommunity} onChange={e=>setSelectedCommunity(e.target.value)} className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" disabled={loadingCommunities}>
+                          <select value={selectedCommunity} onChange={e=>setSelectedCommunity(e.target.value)} className="flex-1 border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" disabled={loadingCommunities}>
                             <option value="">Select community</option>
                             {communities.map(c => (
                               <option key={c.id} value={c.id}>{c.title || c.name || c.id}</option>
                             ))}
                           </select>
-                          <button onClick={() => fetchCommunities(trigConnectionId)} disabled={!trigConnectionId || loadingCommunities} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors disabled:opacity-50">
+                          <button onClick={() => fetchCommunities(trigConnectionId)} disabled={!trigConnectionId || loadingCommunities} className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50">
                             {loadingCommunities ? '...' : 'Refresh'}
                           </button>
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">
-                          Subgroups {selectedGroups.length > 0 && <span className="text-green-600">• {selectedGroups.length} selected</span>}
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                          Subgroups {selectedGroups.length > 0 && <span className="text-green-600 dark:text-green-400">• {selectedGroups.length} selected</span>}
                         </label>
                         <div className="flex gap-2">
-                          <select value="" onChange={e => { if (e.target.value && !selectedGroups.includes(e.target.value)) { setSelectedGroups([...selectedGroups, e.target.value]) }}} className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" disabled={loadingSubgroups || !selectedCommunity}>
+                          <select value="" onChange={e => { if (e.target.value && !selectedGroups.includes(e.target.value)) { setSelectedGroups([...selectedGroups, e.target.value]) }}} className="flex-1 border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" disabled={loadingSubgroups || !selectedCommunity}>
                             <option value="">Select subgroup to add...</option>
                             {subgroups.filter(sg => !selectedGroups.includes(sg.id)).map(sg => (
                               <option key={sg.id} value={sg.id}>
@@ -1044,7 +1110,7 @@ const Page = () => {
                               </option>
                             ))}
                           </select>
-                          <button onClick={() => fetchSubgroups(trigConnectionId, selectedCommunity)} disabled={!trigConnectionId || !selectedCommunity || loadingSubgroups} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors disabled:opacity-50">
+                          <button onClick={() => fetchSubgroups(trigConnectionId, selectedCommunity)} disabled={!trigConnectionId || !selectedCommunity || loadingSubgroups} className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50">
                             {loadingSubgroups ? '...' : 'Refresh'}
                           </button>
                         </div>
@@ -1055,10 +1121,10 @@ const Page = () => {
                         {selectedGroups.map(groupId => {
                           const group = subgroups.find(sg => sg.id === groupId)
                           return (
-                            <span key={groupId} className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                            <span key={groupId} className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs rounded">
                               {group?.type === 'announcement' ? '📢' : '💬'}
                               {group?.title || group?.name || groupId}
-                              <button onClick={() => setSelectedGroups(selectedGroups.filter(id => id !== groupId))} className="text-green-600 hover:text-green-800">×</button>
+                              <button onClick={() => setSelectedGroups(selectedGroups.filter(id => id !== groupId))} className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300">×</button>
                             </span>
                           )
                         })}
@@ -1068,15 +1134,15 @@ const Page = () => {
                 )}
 
                 {triggerType === 'group' && (
-                  <div className="space-y-4 p-4 bg-gray-50 rounded border border-gray-200">
+                  <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
                     <div className="flex gap-2">
-                      <select value={selectedGroups[0] || ''} onChange={e=>setSelectedGroups(e.target.value ? [e.target.value] : [])} className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" disabled={loadingGroups}>
+                      <select value={selectedGroups[0] || ''} onChange={e=>setSelectedGroups(e.target.value ? [e.target.value] : [])} className="flex-1 border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" disabled={loadingGroups}>
                         <option value="">Select group</option>
                         {groups.map(g => (
                           <option key={g.id} value={g.id}>{g.title || g.name || g.id}</option>
                         ))}
                       </select>
-                      <button onClick={() => fetchGroups(trigConnectionId)} disabled={!trigConnectionId || loadingGroups} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors disabled:opacity-50">
+                      <button onClick={() => fetchGroups(trigConnectionId)} disabled={!trigConnectionId || loadingGroups} className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50">
                         {loadingGroups ? '...' : 'Refresh'}
                       </button>
                     </div>
@@ -1085,54 +1151,54 @@ const Page = () => {
 
                 {/* 5. Filters */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-2">Filters (Optional)</label>
+                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-2">Filters (Optional)</label>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">HTTP Method</label>
-                      <input value={filterMethod} onChange={e=>setFilterMethod(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="e.g. POST, PUT" />
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">HTTP Method</label>
+                      <input value={filterMethod} onChange={e=>setFilterMethod(e.target.value)} className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" placeholder="e.g. POST, PUT" />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Table Name</label>
-                      <input value={filterTableName} onChange={e=>setFilterTableName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="e.g. shopify-orders" />
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Table Name</label>
+                      <input value={filterTableName} onChange={e=>setFilterTableName(e.target.value)} className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" placeholder="e.g. shopify-orders" />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Path Contains</label>
-                      <input value={filterPathContains} onChange={e=>setFilterPathContains(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="e.g. /unified/namespaces" />
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Path Contains</label>
+                      <input value={filterPathContains} onChange={e=>setFilterPathContains(e.target.value)} className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" placeholder="e.g. /unified/namespaces" />
                     </div>
                   </div>
                 </div>
 
                 {/* 6. Message Template */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Message Template</label>
-                  <textarea value={trigTemplate} onChange={e=>setTrigTemplate(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm min-h-[100px] focus:border-gray-900 focus:outline-none" placeholder="Enter message template using {{trigger}} and {{event}} context variables" />
-                  <div className="text-xs text-gray-500 mt-1">
+                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Message Template</label>
+                  <textarea value={trigTemplate} onChange={e=>setTrigTemplate(e.target.value)} className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm min-h-[100px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" placeholder="Enter message template using {{trigger}} and {{event}} context variables" />
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Available variables: {'{'}{'{'} event.type {'}'}{'}'}, {'{'}{'{'} event.tableName {'}'}{'}'}, {'{'}{'{'} event.data.body {'}'}{'}'}, {'{'}{'{'} trigger.name {'}'}{'}'}
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
-                  <button onClick={() => testFire(trigEvent)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors">
+                <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-800">
+                  <button onClick={() => testFire(trigEvent)} className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                     Test Fire
                   </button>
-                  <button disabled={saving} onClick={saveTrigger} className="px-4 py-2 bg-gray-900 text-white rounded text-sm disabled:opacity-60 hover:bg-gray-800 transition-colors">
+                  <button disabled={saving} onClick={saveTrigger} className="px-4 py-2 bg-gray-900 dark:bg-gray-800 text-white rounded text-sm disabled:opacity-60 hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
                     {saving ? 'Saving...' : 'Save Trigger'}
                   </button>
                 </div>
               </div>
 
               {/* Existing Triggers List */}
-              <div className="bg-white border border-gray-200 rounded overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                  <h3 className="text-sm font-semibold text-gray-900">Existing Triggers ({triggers.length})</h3>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Existing Triggers ({triggers.length})</h3>
                 </div>
-                <div className="divide-y">
+                <div className="divide-y divide-gray-200 dark:divide-gray-800">
                   {triggers.map(t => (
-                    <div key={t.id} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                    <div key={t.id} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-900">{t.name}</div>
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">{t.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Event: {t.eventType} • Type: {t.action?.type || 'whapi'}
                             {t.action?.type === 'whapi_message' && ` • To: ${t.action?.to}`}
                             {t.action?.type === 'whapi_community' && ` • Community: ${t.action?.communityId} • Groups: ${t.action?.groupIds?.length || 0}`}
@@ -1141,13 +1207,13 @@ const Page = () => {
                           {t.namespaceTags && t.namespaceTags.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-2">
                               {t.namespaceTags.map((tag: string) => (
-                                <span key={tag} className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded">{tag}</span>
+                                <span key={tag} className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 rounded">{tag}</span>
                               ))}
                             </div>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`text-xs px-2 py-1 rounded ${t.active === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                          <span className={`text-xs px-2 py-1 rounded ${t.active === false ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'}`}>
                             {t.active === false ? 'Inactive' : 'Active'}
                           </span>
                         </div>
@@ -1155,7 +1221,7 @@ const Page = () => {
                     </div>
                   ))}
                   {triggers.length === 0 && (
-                    <div className="px-4 py-8 text-center text-sm text-gray-500">
+                    <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                       No triggers yet. Create your first trigger above.
                     </div>
                   )}
@@ -1168,23 +1234,23 @@ const Page = () => {
           {active === 'crud-triggers' && (
             <div className="p-6 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-1">CRUD Operation Triggers</h2>
-                <p className="text-sm text-gray-600">Monitor and trigger on database operations</p>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">CRUD Operation Triggers</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Monitor and trigger on database operations</p>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded p-6 space-y-6">
-                <h3 className="text-sm font-semibold text-gray-900">Configure CRUD Triggers</h3>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded p-6 space-y-6">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Configure CRUD Triggers</h3>
                 
                 {/* Data Source Toggle */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-2">Data Source</label>
+                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-2">Data Source</label>
                   <div className="flex gap-3">
                     <button
                       onClick={() => setCrudDataSource('dynamodb')}
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 rounded transition-colors ${
                         crudDataSource === 'dynamodb' 
-                          ? 'border-gray-900 bg-gray-900 text-white' 
-                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                          ? 'border-gray-900 dark:border-gray-700 bg-gray-900 dark:bg-gray-800 text-white' 
+                          : 'border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600'
                       }`}
                     >
                       <Database size={18} />
@@ -1194,8 +1260,8 @@ const Page = () => {
                       onClick={() => setCrudDataSource('s3')}
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 rounded transition-colors ${
                         crudDataSource === 's3' 
-                          ? 'border-gray-900 bg-gray-900 text-white' 
-                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                          ? 'border-gray-900 dark:border-gray-700 bg-gray-900 dark:bg-gray-800 text-white' 
+                          : 'border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600'
                       }`}
                     >
                       <Box size={18} />
@@ -1208,18 +1274,18 @@ const Page = () => {
                 {crudDataSource === 'dynamodb' && (
                   <div className="flex gap-4">
                     <div className="flex-1 space-y-2">
-                      <label className="block text-xs text-gray-600 mb-1">Select Table</label>
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Select Table</label>
                     <div className="relative">
                       <input
                         value={tableSearchTerm}
                         onChange={e => setTableSearchTerm(e.target.value)}
                         placeholder="Search tables..."
-                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none pr-8"
+                        className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none pr-8"
                       />
                       {tableSearchTerm && (
                         <button
                           onClick={() => setTableSearchTerm('')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                         >
                           ×
                         </button>
@@ -1228,7 +1294,7 @@ const Page = () => {
                     
                     {/* Filtered Results Display */}
                     {tableSearchTerm && (
-                      <div className="max-h-40 overflow-y-auto border border-gray-200 rounded bg-white">
+                      <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-800 rounded bg-white dark:bg-gray-900">
                         {tables
                           .filter(table => table.toLowerCase().includes(tableSearchTerm.toLowerCase()))
                           .length > 0 ? (
@@ -1241,13 +1307,13 @@ const Page = () => {
                                     setSelectedTable(table);
                                     setTableSearchTerm('');
                                   }}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800 last:border-0 text-gray-900 dark:text-gray-100"
                                 >
                                   {table}
                                 </button>
                               ))
                           ) : (
-                            <div className="px-3 py-2 text-sm text-gray-500">No matches found</div>
+                            <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">No matches found</div>
                           )
                         }
                       </div>
@@ -1256,7 +1322,7 @@ const Page = () => {
                     <select 
                       value={selectedTable} 
                       onChange={e => setSelectedTable(e.target.value)} 
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+                      className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none"
                     >
                       <option value="">Select DynamoDB Table...</option>
                       {tables.map(table => (
@@ -1265,7 +1331,7 @@ const Page = () => {
                     </select>
                   </div>
                   <div className="flex items-end">
-                    <button onClick={() => fetchTables()} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
+                    <button onClick={() => fetchTables()} className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
                       <RefreshCw size={14} />
                       Refresh
                     </button>
@@ -1277,18 +1343,18 @@ const Page = () => {
                 {crudDataSource === 's3' && (
                   <div className="flex gap-4">
                     <div className="flex-1 space-y-2">
-                      <label className="block text-xs text-gray-600 mb-1">Select S3 Folder</label>
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Select S3 Folder</label>
                       <div className="relative">
                         <input
                           value={s3FolderSearchTerm}
                           onChange={e => setS3FolderSearchTerm(e.target.value)}
                           placeholder="Search S3 folders..."
-                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none pr-8"
+                          className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none pr-8"
                         />
                         {s3FolderSearchTerm && (
                           <button
                             onClick={() => setS3FolderSearchTerm('')}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                           >
                             ×
                           </button>
@@ -1297,7 +1363,7 @@ const Page = () => {
                       
                       {/* Filtered Results Display */}
                       {s3FolderSearchTerm && (
-                        <div className="max-h-40 overflow-y-auto border border-gray-200 rounded bg-white">
+                        <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-800 rounded bg-white dark:bg-gray-900">
                           {s3Folders
                             .filter(folder => folder.toLowerCase().includes(s3FolderSearchTerm.toLowerCase()))
                             .length > 0 ? (
@@ -1310,13 +1376,13 @@ const Page = () => {
                                       setSelectedS3Folder(folder);
                                       setS3FolderSearchTerm('');
                                     }}
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800 last:border-0 text-gray-900 dark:text-gray-100"
                                   >
                                     {folder}
                                   </button>
                                 ))
                             ) : (
-                              <div className="px-3 py-2 text-sm text-gray-500">No matches found</div>
+                              <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">No matches found</div>
                             )
                           }
                         </div>
@@ -1325,7 +1391,7 @@ const Page = () => {
                       <select 
                         value={selectedS3Folder} 
                         onChange={e => setSelectedS3Folder(e.target.value)} 
-                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+                        className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none"
                       >
                         <option value="">Select S3 Folder...</option>
                         {s3Folders.map(folder => (
@@ -1334,7 +1400,7 @@ const Page = () => {
                       </select>
                     </div>
                     <div className="flex items-end">
-                      <button onClick={() => fetchS3Folders()} className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
+                      <button onClick={() => fetchS3Folders()} className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
                         <RefreshCw size={14} />
                         Refresh
                       </button>
@@ -1357,7 +1423,7 @@ const Page = () => {
                           });
                           alert('CREATE configuration copied to all operations!');
                         }}
-                        className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
+                        className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded text-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center gap-2"
                       >
                         <Layers size={14} />
                         Apply CREATE Config to All
@@ -1366,18 +1432,18 @@ const Page = () => {
 
                     {/* CRUD Operations Grid */}
                     <div>
-                      <label className="block text-xs text-gray-600 mb-2">
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-2">
                         Configure Operations for: {crudDataSource === 'dynamodb' ? selectedTable : selectedS3Folder}
                       </label>
                       <div className="grid grid-cols-2 gap-6">
                         {['CREATE', 'READ', 'UPDATE', 'DELETE'].map(op => {
                           const opConfig = crudOperations[op];
                           return (
-                            <div key={op} className="border border-gray-200 rounded p-3">
+                            <div key={op} className="border border-gray-200 dark:border-gray-800 rounded p-3 bg-white dark:bg-gray-800">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
-                                  <Code size={14} className="text-gray-900" />
-                                  <span className="text-sm font-semibold text-gray-900">{op}</span>
+                                  <Code size={14} className="text-gray-900 dark:text-white" />
+                                  <span className="text-sm font-semibold text-gray-900 dark:text-white">{op}</span>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                   <input 
@@ -1389,14 +1455,14 @@ const Page = () => {
                                       [op]: { ...opConfig, enabled: e.target.checked }
                                     })}
                                   />
-                                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gray-900"></div>
+                                  <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gray-900 dark:peer-checked:bg-gray-600"></div>
                                 </label>
                               </div>
                               
                               <div className="space-y-2">
                                 {/* Recipient Type - Smaller Icons */}
                                 <div>
-                                  <label className="block text-[10px] text-gray-600 mb-1 uppercase tracking-wide">Recipient Type</label>
+                                  <label className="block text-[10px] text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Recipient Type</label>
                                   <div className="flex gap-1">
                                     <button
                                       onClick={() => setCrudOperations({
@@ -1405,8 +1471,8 @@ const Page = () => {
                                       })}
                                       className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border rounded transition-colors ${
                                         opConfig?.recipientType === 'users' 
-                                          ? 'border-gray-900 bg-gray-900 text-white' 
-                                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                          ? 'border-gray-900 dark:border-gray-700 bg-gray-900 dark:bg-gray-800 text-white' 
+                                          : 'border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600'
                                       }`}
                                     >
                                       <Users size={12} />
@@ -1419,8 +1485,8 @@ const Page = () => {
                                       })}
                                       className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border rounded transition-colors ${
                                         opConfig?.recipientType === 'community' 
-                                          ? 'border-gray-900 bg-gray-900 text-white' 
-                                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                          ? 'border-gray-900 dark:border-gray-700 bg-gray-900 dark:bg-gray-800 text-white' 
+                                          : 'border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600'
                                       }`}
                                     >
                                       <Globe size={12} />
@@ -1433,8 +1499,8 @@ const Page = () => {
                                       })}
                                       className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border rounded transition-colors ${
                                         opConfig?.recipientType === 'group' 
-                                          ? 'border-gray-900 bg-gray-900 text-white' 
-                                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                          ? 'border-gray-900 dark:border-gray-700 bg-gray-900 dark:bg-gray-800 text-white' 
+                                          : 'border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600'
                                       }`}
                                     >
                                       <MessageSquare size={12} />
@@ -1447,7 +1513,7 @@ const Page = () => {
                                 {opConfig?.recipientType === 'users' && (
                                   <div className="space-y-2">
                                     <div className="flex gap-2 text-[10px]">
-                                      <label className="flex items-center gap-1">
+                                      <label className="flex items-center gap-1 text-gray-700 dark:text-gray-300">
                                         <input 
                                           type="radio" 
                                           checked={opConfig?.contactMode === 'manual'} 
@@ -1455,11 +1521,11 @@ const Page = () => {
                                             ...crudOperations,
                                             [op]: { ...opConfig, contactMode: 'manual' }
                                           })} 
-                                          className="w-3 h-3"
+                                          className="w-3 h-3 text-gray-900 dark:text-gray-100"
                                         />
                                         <span>Manual</span>
                                       </label>
-                                      <label className="flex items-center gap-1">
+                                      <label className="flex items-center gap-1 text-gray-700 dark:text-gray-300">
                                         <input 
                                           type="radio" 
                                           checked={opConfig?.contactMode === 'contact'} 
@@ -1467,7 +1533,7 @@ const Page = () => {
                                             ...crudOperations,
                                             [op]: { ...opConfig, contactMode: 'contact' }
                                           })} 
-                                          className="w-3 h-3"
+                                          className="w-3 h-3 text-gray-900 dark:text-gray-100"
                                         />
                                         <span>Contact</span>
                                       </label>
@@ -1475,7 +1541,7 @@ const Page = () => {
                                     {opConfig?.contactMode === 'manual' ? (
                                       <input 
                                         placeholder="Phone number"
-                                        className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-[10px] focus:border-gray-900 focus:outline-none"
+                                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded px-2 py-1 text-[10px] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none"
                                         value={opConfig?.phoneNumber || ''}
                                         onChange={(e) => setCrudOperations({
                                           ...crudOperations,
@@ -1484,7 +1550,7 @@ const Page = () => {
                                       />
                                     ) : (
                                       <select 
-                                        className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-[10px] focus:border-gray-900 focus:outline-none"
+                                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded px-2 py-1 text-[10px] text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none"
                                         value={opConfig?.selectedContact || ''}
                                         onChange={(e) => setCrudOperations({
                                           ...crudOperations,
@@ -1503,7 +1569,7 @@ const Page = () => {
                                 {opConfig?.recipientType === 'community' && (
                                   <div className="space-y-2">
                                     <select 
-                                      className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-[10px] focus:border-gray-900 focus:outline-none"
+                                      className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded px-2 py-1 text-[10px] text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none"
                                       value={opConfig?.selectedCommunity || ''}
                                       onChange={(e) => setCrudOperations({
                                         ...crudOperations,
@@ -1520,7 +1586,7 @@ const Page = () => {
 
                                 {opConfig?.recipientType === 'group' && (
                                   <select 
-                                    className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-[10px] focus:border-gray-900 focus:outline-none"
+                                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded px-2 py-1 text-[10px] text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none"
                                     value={opConfig?.selectedGroups?.[0] || ''}
                                     onChange={(e) => setCrudOperations({
                                       ...crudOperations,
@@ -1535,9 +1601,9 @@ const Page = () => {
                                 )}
 
                                 <div>
-                                  <label className="block text-[10px] text-gray-600 mb-1">Connection</label>
+                                  <label className="block text-[10px] text-gray-600 dark:text-gray-400 mb-1">Connection</label>
                                   <select 
-                                    className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-[10px] focus:border-gray-900 focus:outline-none"
+                                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded px-2 py-1 text-[10px] text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none"
                                     value={opConfig?.connectionId || ''}
                                     onChange={(e) => setCrudOperations({
                                       ...crudOperations,
@@ -1552,11 +1618,11 @@ const Page = () => {
                                 </div>
                                 
                                 <div>
-                                  <label className="block text-[10px] text-gray-600 mb-1">Template</label>
+                                  <label className="block text-[10px] text-gray-600 dark:text-gray-400 mb-1">Template</label>
                                   <textarea 
                                     rows={2} 
                                     placeholder={`Template for ${op}...`}
-                                    className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-[10px] focus:border-gray-900 focus:outline-none resize-none"
+                                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded px-2 py-1 text-[10px] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none resize-none"
                                     value={opConfig?.template || ''}
                                     onChange={(e) => setCrudOperations({
                                       ...crudOperations,
@@ -1571,11 +1637,11 @@ const Page = () => {
                       </div>
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
-                      <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors">
+                    <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-800">
+                      <button className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                         Test Configuration
                       </button>
-                      <button className="px-4 py-2 bg-gray-900 text-white rounded text-sm hover:bg-gray-800 transition-colors">
+                      <button className="px-4 py-2 bg-gray-900 dark:bg-gray-800 text-white rounded text-sm hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
                         Save & Deploy
                       </button>
                     </div>
@@ -1583,7 +1649,7 @@ const Page = () => {
                 )}
 
                 {!selectedTable && !selectedS3Folder && (
-                  <div className="text-center py-8 text-sm text-gray-500">
+                  <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
                     Select a {crudDataSource === 'dynamodb' ? 'table' : 'folder'} above to configure CRUD triggers
                   </div>
                 )}
@@ -1595,55 +1661,55 @@ const Page = () => {
           {active === 'test' && (
             <div className="p-6 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-1">Test & Fire Triggers</h2>
-                <p className="text-sm text-gray-600">Test your triggers manually</p>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">Test & Fire Triggers</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Test your triggers manually</p>
               </div>
 
               <div className="grid grid-cols-2 gap-6">
-                <div className="bg-white border border-gray-200 rounded overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                    <h3 className="text-sm font-semibold text-gray-900">Saved Connections</h3>
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Saved Connections</h3>
                   </div>
-                  <div className="divide-y max-h-96 overflow-auto">
+                  <div className="divide-y divide-gray-200 dark:divide-gray-800 max-h-96 overflow-auto">
                     {connections.map(c => (
                       <div key={c.id} className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900">{c.name}</div>
-                        <div className="text-xs text-gray-500 mt-1">{c.id}</div>
-                        <div className="text-xs text-gray-400 mt-1">{c.testMode ? '🧪 Test Mode' : '✅ Live'}</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{c.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{c.id}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{c.testMode ? '🧪 Test Mode' : '✅ Live'}</div>
                       </div>
                     ))}
                     {connections.length === 0 && (
-                      <div className="px-4 py-8 text-center text-sm text-gray-500">No connections found.</div>
+                      <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No connections found.</div>
                     )}
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                    <h3 className="text-sm font-semibold text-gray-900">Saved Triggers</h3>
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Saved Triggers</h3>
                   </div>
-                  <div className="divide-y max-h-96 overflow-auto">
+                  <div className="divide-y divide-gray-200 dark:divide-gray-800 max-h-96 overflow-auto">
                     {triggers.map(t => (
                       <div key={t.id} className="px-4 py-3 flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-gray-900 truncate">{t.name}</div>
-                          <div className="text-xs text-gray-500 mt-1 truncate">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{t.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
                             {t.eventType} • {t.action?.type || 'whapi'}
                           </div>
-                          <div className="text-xs text-blue-600 mt-1 truncate">{t.id}</div>
+                          <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 truncate">{t.id}</div>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <button onClick={()=>testSpecificTrigger(t.id)} className="text-xs px-3 py-1.5 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors">
+                          <button onClick={()=>testSpecificTrigger(t.id)} className="text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                             Test
                           </button>
-                          <button onClick={() => { navigator.clipboard.writeText(`${apiBase}/notify/${t.id}`); alert('URL copied!'); }} className="text-xs px-3 py-1.5 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors">
+                          <button onClick={() => { navigator.clipboard.writeText(`${apiBase}/notify/${t.id}`); alert('URL copied!'); }} className="text-xs px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
                             Copy URL
                           </button>
                         </div>
                       </div>
                     ))}
                     {triggers.length === 0 && (
-                      <div className="px-4 py-8 text-center text-sm text-gray-500">No triggers found.</div>
+                      <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No triggers found.</div>
                     )}
                   </div>
                 </div>
@@ -1656,50 +1722,50 @@ const Page = () => {
             <div className="p-6 space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-1">Event Logs</h2>
-                  <p className="text-sm text-gray-600">Monitor all notification events</p>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">Event Logs</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Monitor all notification events</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <select value={logNamespaceFilter} onChange={e => { setLogNamespaceFilter(e.target.value); fetchLogs(e.target.value || undefined); }} className="border border-gray-300 rounded px-3 py-1.5 text-sm focus:border-gray-900 focus:outline-none">
+                  <select value={logNamespaceFilter} onChange={e => { setLogNamespaceFilter(e.target.value); fetchLogs(e.target.value || undefined); }} className="border border-gray-300 dark:border-gray-700 rounded px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none">
                     <option value="">All Namespaces</option>
                     {availableNamespaces.map(ns => (
                       <option key={ns.id} value={ns.id}>{ns.name || ns.id}</option>
                     ))}
                   </select>
-                  <button onClick={() => fetchLogs(logNamespaceFilter || undefined)} className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors">
+                  <button onClick={() => fetchLogs(logNamespaceFilter || undefined)} className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                     Refresh
                   </button>
-                  {loadingLogs && <span className="text-xs text-gray-500">Loading...</span>}
+                  {loadingLogs && <span className="text-xs text-gray-500 dark:text-gray-400">Loading...</span>}
                 </div>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                  <h3 className="text-sm font-semibold text-gray-900">Activity Log ({logs.length})</h3>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Activity Log ({logs.length})</h3>
                 </div>
-                <div className="divide-y max-h-[600px] overflow-auto">
+                <div className="divide-y divide-gray-200 dark:divide-gray-800 max-h-[600px] overflow-auto">
                   {logs.map(l => (
-                    <div key={l.id} className="px-4 py-3 text-sm hover:bg-gray-50 transition-colors">
+                    <div key={l.id} className="px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                       <div className="flex items-center justify-between">
-                        <div className="font-medium text-gray-900">{l.kind}</div>
-                        <div className={`text-xs ${l.status === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+                        <div className="font-medium text-gray-900 dark:text-white">{l.kind}</div>
+                        <div className={`text-xs ${l.status === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                           {l.status || 'ok'}
                         </div>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">{l.createdAt}</div>
-                      {l.eventType && <div className="text-xs text-gray-600 mt-1">Event: {l.eventType}</div>}
-                      {l.triggerId && <div className="text-xs text-gray-600">Trigger: {l.triggerId}</div>}
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{l.createdAt}</div>
+                      {l.eventType && <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Event: {l.eventType}</div>}
+                      {l.triggerId && <div className="text-xs text-gray-600 dark:text-gray-400">Trigger: {l.triggerId}</div>}
                       {l.namespaceTags && l.namespaceTags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {l.namespaceTags.map((tag: string) => (
-                            <span key={tag} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">{tag}</span>
+                            <span key={tag} className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded">{tag}</span>
                           ))}
                         </div>
                       )}
                     </div>
                   ))}
                   {logs.length === 0 && (
-                    <div className="px-4 py-8 text-center text-sm text-gray-500">
+                    <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                       No logs yet. Events will appear here.
                     </div>
                   )}
@@ -1712,43 +1778,43 @@ const Page = () => {
           {active === 'templates' && (
             <div className="p-6 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-1">Message Templates</h2>
-                <p className="text-sm text-gray-600">Manage reusable message templates</p>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">Message Templates</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Manage reusable message templates</p>
               </div>
 
               <div className="grid grid-cols-2 gap-6">
-                <div className="bg-white border border-gray-200 rounded p-4">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Template Library</h3>
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Template Library</h3>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between p-2 border border-gray-200 rounded hover:bg-gray-50 transition-colors">
-                      <span className="text-sm text-gray-700">Order Created</span>
-                      <button className="text-xs px-2 py-1 border border-gray-300 text-gray-700 rounded hover:bg-white transition-colors">Edit</button>
+                    <div className="flex items-center justify-between p-2 border border-gray-200 dark:border-gray-800 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Order Created</span>
+                      <button className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-white dark:hover:bg-gray-700 transition-colors">Edit</button>
                     </div>
-                    <div className="flex items-center justify-between p-2 border border-gray-200 rounded hover:bg-gray-50 transition-colors">
-                      <span className="text-sm text-gray-700">Namespace Updated</span>
-                      <button className="text-xs px-2 py-1 border border-gray-300 text-gray-700 rounded hover:bg-white transition-colors">Edit</button>
+                    <div className="flex items-center justify-between p-2 border border-gray-200 dark:border-gray-800 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Namespace Updated</span>
+                      <button className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-white dark:hover:bg-gray-700 transition-colors">Edit</button>
                     </div>
-                    <div className="flex items-center justify-between p-2 border border-gray-200 rounded hover:bg-gray-50 transition-colors">
-                      <span className="text-sm text-gray-700">Error Alert</span>
-                      <button className="text-xs px-2 py-1 border border-gray-300 text-gray-700 rounded hover:bg-white transition-colors">Edit</button>
+                    <div className="flex items-center justify-between p-2 border border-gray-200 dark:border-gray-800 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Error Alert</span>
+                      <button className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-white dark:hover:bg-gray-700 transition-colors">Edit</button>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded p-4">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Template Editor</h3>
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Template Editor</h3>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Template Name</label>
-                      <input className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-gray-900 focus:outline-none" placeholder="My Template" />
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Template Name</label>
+                      <input className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" placeholder="My Template" />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Message</label>
-                      <textarea className="w-full border border-gray-300 rounded px-3 py-2 text-sm min-h-[140px] focus:border-gray-900 focus:outline-none" placeholder="Message with variables like {{name}} and {{namespace}}" />
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Message</label>
+                      <textarea className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm min-h-[140px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-900 dark:focus:border-gray-600 focus:outline-none" placeholder="Message with variables like {{name}} and {{namespace}}" />
                     </div>
                     <div className="flex gap-2 justify-end">
-                      <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors">Reset</button>
-                      <button className="px-4 py-2 bg-gray-900 text-white rounded text-sm hover:bg-gray-800 transition-colors">Save Template</button>
+                      <button className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Reset</button>
+                      <button className="px-4 py-2 bg-gray-900 dark:bg-gray-800 text-white rounded text-sm hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors">Save Template</button>
                     </div>
                   </div>
                 </div>
@@ -1760,8 +1826,8 @@ const Page = () => {
           {active === 'analytics' && (
             <div className="p-6 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-1">System Analytics</h2>
-                <p className="text-sm text-gray-600">Performance metrics and insights</p>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">System Analytics</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Performance metrics and insights</p>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -1770,9 +1836,9 @@ const Page = () => {
                 <StatCard label="Total Events" value={logs.length} icon={<Activity size={20} />} />
               </div>
 
-              <div className="bg-white border border-gray-200 rounded p-6">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Event Distribution</h3>
-                <div className="text-sm text-gray-500">Analytics charts coming soon...</div>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded p-6">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Event Distribution</h3>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Analytics charts coming soon...</div>
               </div>
             </div>
           )}

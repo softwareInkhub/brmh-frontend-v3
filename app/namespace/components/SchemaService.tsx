@@ -94,7 +94,7 @@ function SchemaSelector({
       <div className="flex items-center gap-2">
         <input
           type="text"
-          className="border border-gray-300 p-1 rounded-md text-xs focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition outline-none bg-gray-50 placeholder-gray-400 flex-1 min-w-[200px]"
+          className="border border-gray-300 dark:border-gray-700 p-1 rounded-md text-xs focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 focus:border-blue-400 dark:focus:border-blue-500 transition outline-none bg-gray-50 dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 flex-1 min-w-[200px]"
           placeholder={placeholder}
           value={selectedSchema ? selectedSchema.description : ''}
           onFocus={() => setShowDropdown(true)}
@@ -102,7 +102,7 @@ function SchemaSelector({
         />
         <button
           type="button"
-          className="text-gray-400 hover:text-gray-700 p-1"
+          className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1"
           onClick={() => setShowDropdown(!showDropdown)}
         >
           ▼
@@ -110,11 +110,11 @@ function SchemaSelector({
       </div>
       
       {showDropdown && (
-        <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-          <div className="p-2 border-b border-gray-200">
+        <div className="absolute top-full left-0 right-0 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
             <input
               type="text"
-              className="w-full border border-gray-300 p-1 rounded text-xs"
+              className="w-full border border-gray-300 dark:border-gray-700 p-1 rounded text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="Search schemas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -140,7 +140,7 @@ function SchemaSelector({
                 <button
                   key={schema.id}
                   type="button"
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 flex flex-col"
+                  className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100 flex flex-col"
                   onClick={() => {
                     onChange(schema.id);
                     setShowDropdown(false);
@@ -304,7 +304,7 @@ function NestedFieldsEditor({ fields, onChange, level = 0, collapsedNodes, setCo
   };
 
   return (
-    <div className={level > 0 ? 'ml-4 pl-3 border-l-2 border-blue-100 bg-blue-50/10 rounded-lg py-1' : ''}>
+    <div className={level > 0 ? 'ml-4 pl-3 border-l-2 border-blue-100 dark:border-blue-900 bg-blue-50/10 dark:bg-blue-900/20 rounded-lg py-1' : ''}>
       {fields.map((field, idx) => {
         const thisPath = `${nodePath}.${field.name || idx}`;
         const isCollapsible = field.type === 'object' || field.type === 'array';
@@ -319,7 +319,7 @@ function NestedFieldsEditor({ fields, onChange, level = 0, collapsedNodes, setCo
                 {isCollapsible ? (
                   <button
                     type="button"
-                    className="text-gray-400 hover:text-gray-700 p-1 focus:outline-none"
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1 focus:outline-none"
                     onClick={() => toggleCollapse(thisPath)}
                     tabIndex={-1}
                   >
@@ -330,13 +330,13 @@ function NestedFieldsEditor({ fields, onChange, level = 0, collapsedNodes, setCo
                 )}
               </span>
             <input
-                className="border border-gray-300 p-1 rounded-md w-28 text-xs focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition outline-none bg-gray-50 placeholder-gray-400"
+                className="border border-gray-300 dark:border-gray-700 p-1 rounded-md w-28 text-xs focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 focus:border-blue-400 dark:focus:border-blue-500 transition outline-none bg-gray-50 dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100"
               placeholder="Field name"
               value={field.name ?? ''}
               onChange={e => updateField(idx, 'name', e.target.value)}
             />
             <select
-                className="border border-gray-300 p-1 rounded-md text-xs focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition outline-none bg-gray-50"
+                className="border border-gray-300 dark:border-gray-700 p-1 rounded-md text-xs focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 focus:border-blue-400 dark:focus:border-blue-500 transition outline-none bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               value={field.type ?? 'string'}
                 onChange={e => {
                   const newType = e.target.value;
@@ -354,7 +354,7 @@ function NestedFieldsEditor({ fields, onChange, level = 0, collapsedNodes, setCo
               {field.type === 'enum' && (
                 <div className="flex-1 flex flex-wrap gap-1 items-center">
                   <input
-                    className="border border-gray-300 p-1 rounded-md text-xs focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition outline-none bg-gray-50 placeholder-gray-400 flex-1 min-w-[120px]"
+                    className="border border-gray-300 dark:border-gray-700 p-1 rounded-md text-xs focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 focus:border-blue-400 dark:focus:border-blue-500 transition outline-none bg-gray-50 dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 flex-1 min-w-[120px]"
                     placeholder="Add enum value (press Enter or comma)"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ',') {
@@ -375,12 +375,12 @@ function NestedFieldsEditor({ fields, onChange, level = 0, collapsedNodes, setCo
                     {field.enumValues?.map((value, valueIdx) => (
                       <div
                         key={valueIdx}
-                        className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs"
+                        className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded-full text-xs"
                       >
                         <span>{value}</span>
                         <button
                           type="button"
-                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-200 rounded-full p-0.5"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
                           onClick={() => removeEnumValue(idx, value)}
                         >
                           ✕
@@ -408,24 +408,26 @@ function NestedFieldsEditor({ fields, onChange, level = 0, collapsedNodes, setCo
                   )}
                 </div>
               )}
-              <label className="flex items-center gap-1 text-xs ml-1 text-gray-700">
+              <label className="flex items-center gap-1 text-xs ml-1 text-gray-700 dark:text-gray-300">
               <input
                 type="checkbox"
                 checked={!!field.required}
                 onChange={e => updateField(idx, 'required', e.target.checked)}
+                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-800 dark:checked:bg-blue-600"
               />
                 <span>Required</span>
             </label>
-              <label className="flex items-center gap-1 text-xs text-gray-700">
+              <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300">
               <input
                 type="checkbox"
                 checked={!!field.allowNull}
                 onChange={e => updateField(idx, 'allowNull', e.target.checked)}
+                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-800 dark:checked:bg-blue-600"
               />
                 <span>Null</span>
             </label>
             <button
-                className="ml-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full p-1 text-xs transition"
+                className="ml-2 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full p-1 text-xs transition"
               onClick={() => removeField(idx)}
               title="Remove"
                 style={{ minWidth: 24 }}
@@ -433,7 +435,7 @@ function NestedFieldsEditor({ fields, onChange, level = 0, collapsedNodes, setCo
           </div>
             {field.type === 'object' && !isCollapsed && (
               <div className="ml-4">
-                <div className="text-xs font-semibold text-gray-600 mb-1">Object Fields:</div>
+                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Object Fields:</div>
               <NestedFieldsEditor
                 fields={field.fields || []}
                 onChange={subFields => updateSubFields(idx, subFields)}
@@ -446,9 +448,9 @@ function NestedFieldsEditor({ fields, onChange, level = 0, collapsedNodes, setCo
           )}
             {field.type === 'array' && !isCollapsed && (
               <div className="ml-4">
-                <div className="text-xs font-semibold text-gray-600 mb-1">Array Item Type:</div>
+                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Array Item Type:</div>
               <select
-                  className="border border-gray-300 p-1 rounded-md text-xs ml-1 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition outline-none bg-gray-50"
+                  className="border border-gray-300 dark:border-gray-700 p-1 rounded-md text-xs ml-1 focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 focus:border-blue-400 dark:focus:border-blue-500 transition outline-none bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 value={field.itemType ?? 'string'}
                 onChange={e => updateField(idx, 'itemType', e.target.value)}
               >
@@ -458,7 +460,7 @@ function NestedFieldsEditor({ fields, onChange, level = 0, collapsedNodes, setCo
               </select>
               {field.itemType === 'object' && (
                   <div className="mt-1 ml-4">
-                    <div className="text-xs font-semibold text-gray-600 mb-1">Object Fields:</div>
+                    <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Object Fields:</div>
                   <NestedFieldsEditor
                     fields={field.itemFields || []}
                     onChange={subFields => updateItemFields(idx, subFields)}
@@ -471,7 +473,7 @@ function NestedFieldsEditor({ fields, onChange, level = 0, collapsedNodes, setCo
               )}
               {field.itemType === 'schema' && (
                 <div className="mt-1 ml-4">
-                  <div className="text-xs font-semibold text-gray-600 mb-1">Child Schema:</div>
+                  <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Child Schema:</div>
                   <SchemaSelector
                     value={field.schemaId || ''}
                     onChange={(schemaId) => updateField(idx, 'schemaId', schemaId)}
@@ -494,7 +496,7 @@ function NestedFieldsEditor({ fields, onChange, level = 0, collapsedNodes, setCo
         );
       })}
       <button
-        className="mt-1 px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-xs flex items-center gap-1 transition border border-gray-300"
+        className="mt-1 px-2 py-1 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-xs flex items-center gap-1 transition border border-gray-300 dark:border-gray-700"
         onClick={addField}
         type="button"
       >

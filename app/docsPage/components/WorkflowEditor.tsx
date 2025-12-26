@@ -230,15 +230,15 @@ export default function WorkflowEditor({ isOpen, onClose, workflow, onSave }: Wo
   if (!isOpen) return null
 
   return (
-    <div className="w-full h-full flex flex-col bg-white">
+    <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900 dark:to-gray-900">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-sm">
                 <Workflow className="w-4 h-4 text-white" />
               </div>
-              <h2 className="text-lg font-semibold text-gray-800">Workflow Editor</h2>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Workflow Editor</h2>
             </div>
             <div className="relative">
               <input
@@ -246,33 +246,33 @@ export default function WorkflowEditor({ isOpen, onClose, workflow, onSave }: Wo
                 placeholder="Workflow name..."
                 value={workflowName}
                 onChange={(e) => setWorkflowName(e.target.value)}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 bg-white/80 backdrop-blur-sm text-sm transition-all duration-200 w-48"
+                className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500/50 dark:focus:ring-green-500/50 focus:border-green-500/50 dark:focus:border-green-500/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 w-48"
               />
             </div>
           </div>
           <div className="flex items-center space-x-1">
             <button 
-              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 text-xs font-medium"
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-800 dark:hover:text-gray-200 transition-all duration-200 text-xs font-medium"
               title="Share Workflow"
             >
               <Share2 className="w-4 h-4" />
             </button>
             <button 
-              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-all duration-200 text-xs font-medium"
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-800 dark:hover:text-gray-200 transition-all duration-200 text-xs font-medium"
               title="Export Workflow"
             >
               <Download className="w-4 h-4" />
             </button>
             <button 
               onClick={handleSave}
-              className="p-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
+              className="p-2 rounded-lg bg-green-500 dark:bg-green-600 text-white hover:bg-green-600 dark:hover:bg-green-700 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
               title="Save Workflow"
             >
               <Save className="w-4 h-4" />
             </button>
             <button 
               onClick={onClose}
-              className="p-2 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200 text-xs font-medium"
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200 text-xs font-medium"
               title="Close Editor"
             >
               <X className="w-4 h-4" />
@@ -282,8 +282,8 @@ export default function WorkflowEditor({ isOpen, onClose, workflow, onSave }: Wo
 
         <div className="flex flex-1 overflow-hidden">
           {/* Toolbar */}
-          <div className="w-64 bg-gray-50 border-r border-gray-200 p-4">
-            <h3 className="font-medium text-gray-900 mb-4">Tools</h3>
+          <div className="w-64 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-4">
+            <h3 className="font-medium text-gray-900 dark:text-white mb-4">Tools</h3>
             
             {/* Tool Selection */}
             <div className="space-y-2 mb-6">
@@ -296,8 +296,8 @@ export default function WorkflowEditor({ isOpen, onClose, workflow, onSave }: Wo
                   onClick={() => setSelectedTool(tool.id as any)}
                   className={`w-full flex items-center space-x-2 p-2 rounded-lg transition-colors ${
                     selectedTool === tool.id
-                      ? 'bg-primary-100 text-primary-700'
-                      : 'hover:bg-gray-100'
+                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
                   }`}
                 >
                   <span>{tool.icon}</span>
@@ -308,7 +308,7 @@ export default function WorkflowEditor({ isOpen, onClose, workflow, onSave }: Wo
 
             {/* Node Types */}
             <div className="space-y-2 mb-6">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Node Types</h4>
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Node Types</h4>
               {[
                 { type: 'start', label: 'Start', color: 'bg-green-500' },
                 { type: 'process', label: 'Process', color: 'bg-blue-500' },
@@ -322,25 +322,25 @@ export default function WorkflowEditor({ isOpen, onClose, workflow, onSave }: Wo
                 <button
                   key={nodeType.type}
                   onClick={() => addNode(nodeType.type as any, 100, 100)}
-                  className="w-full flex items-center justify-start space-x-2 p-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
+                  className="w-full flex items-center justify-start space-x-2 p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   <div className={`w-3 h-3 rounded-full ${nodeType.color}`}></div>
-                  <span className="text-sm">{nodeType.label}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{nodeType.label}</span>
                 </button>
               ))}
             </div>
 
             {/* Playback Controls */}
             <div className="space-y-2">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Playback</h4>
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Playback</h4>
               <div className="flex space-x-2">
                 <button
                   onClick={() => setIsPlaying(!isPlaying)}
-                  className="flex-1 flex items-center justify-center p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                  className="flex-1 flex items-center justify-center p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                 >
                   {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 </button>
-                <button className="flex-1 flex items-center justify-center p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+                <button className="flex-1 flex items-center justify-center p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
                   <RotateCcw className="w-4 h-4" />
                 </button>
               </div>
@@ -348,7 +348,7 @@ export default function WorkflowEditor({ isOpen, onClose, workflow, onSave }: Wo
           </div>
 
           {/* Canvas */}
-          <div className="flex-1 relative bg-gray-100 overflow-auto">
+          <div className="flex-1 relative bg-gray-100 dark:bg-gray-950 overflow-auto">
             <div
               className="w-full h-full min-w-[800px] min-h-[600px] relative"
               ref={canvasRef}
@@ -388,11 +388,11 @@ export default function WorkflowEditor({ isOpen, onClose, workflow, onSave }: Wo
               }}
             >
               {/* Grid Background */}
-              <div className="absolute inset-0 opacity-20 z-0">
+              <div className="absolute inset-0 opacity-20 dark:opacity-10 z-0">
                 <svg width="100%" height="100%">
                   <defs>
                     <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="gray" strokeWidth="1"/>
+                      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="gray" className="dark:stroke-gray-700" strokeWidth="1"/>
                     </pattern>
                   </defs>
                   <rect width="100%" height="100%" fill="url(#grid)" />
@@ -424,7 +424,7 @@ export default function WorkflowEditor({ isOpen, onClose, workflow, onSave }: Wo
                           x={(fromNode.x + toNode.x) / 2}
                           y={fromNode.y + 15}
                           textAnchor="middle"
-                          className="text-xs fill-gray-600"
+                          className="text-xs fill-gray-600 dark:fill-gray-400"
                         >
                           {connection.label}
                         </text>
@@ -600,7 +600,7 @@ export default function WorkflowEditor({ isOpen, onClose, workflow, onSave }: Wo
                         const size = getNodeSizeFor(node)
                         const halfW = size.w / 2
                         const halfH = size.h / 2
-                        const base = 'absolute w-2 h-2 bg-white border border-primary-500 rounded-full shadow cursor-crosshair'
+                        const base = 'absolute w-2 h-2 bg-white dark:bg-gray-800 border border-primary-500 dark:border-primary-400 rounded-full shadow cursor-crosshair'
                         return (
                           <div
                             key={side}
@@ -632,7 +632,7 @@ export default function WorkflowEditor({ isOpen, onClose, workflow, onSave }: Wo
                           n.id === node.id ? { ...n, label: e.target.value } : n
                         ))
                       }}
-                      className="text-xs bg-transparent border-none text-center text-gray-700 focus:outline-none leading-none"
+                      className="text-xs bg-transparent border-none text-center text-gray-700 dark:text-gray-300 focus:outline-none leading-none"
                     />
                   </div>
                 </motion.div>
@@ -664,19 +664,19 @@ export default function WorkflowEditor({ isOpen, onClose, workflow, onSave }: Wo
 
           {/* Properties Panel */}
           {selectedNode && (
-            <div className="w-64 bg-gray-50 border-l border-gray-200 p-4">
-              <h3 className="font-medium text-gray-900 mb-4">Properties</h3>
+            <div className="w-64 bg-gray-50 dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 p-4">
+              <h3 className="font-medium text-gray-900 dark:text-white mb-4">Properties</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Node Type
                   </label>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
                     {nodes.find(n => n.id === selectedNode)?.type}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Node Content
                   </label>
                   <textarea
@@ -688,23 +688,23 @@ export default function WorkflowEditor({ isOpen, onClose, workflow, onSave }: Wo
                       ))
                     }}
                     placeholder="Type content to display inside the node"
-                    className="w-full h-20 px-2 py-1 text-sm border border-gray-300 rounded"
+                    className="w-full h-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Position
                   </label>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
                     X: {nodes.find(n => n.id === selectedNode)?.x}, 
                     Y: {nodes.find(n => n.id === selectedNode)?.y}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Connections
                   </label>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
                     {connections.filter(c => c.from === selectedNode || c.to === selectedNode).length} connections
                   </div>
                 </div>

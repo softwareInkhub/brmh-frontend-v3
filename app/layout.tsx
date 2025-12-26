@@ -17,6 +17,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { usePathname } from 'next/navigation';
 import AppContentClient from "./components/AppContentClient";
 import AuthGuard from "./components/AuthGuard";
+import { ThemeProvider } from "./components/ThemeProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,27 +27,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body 
         className={inter.className}
         suppressHydrationWarning={true}
       >
-        <DndProvider backend={HTML5Backend}>
-          <QueryClientProvider client={queryClient}>
-            <NamespaceProvider>
-              <SidePanelProvider>
-                <AIAgentProvider>
-                  <AuthGuard>
-                    <AppContentClient>
-                      {children}
-                    </AppContentClient>
-                  </AuthGuard>
-                </AIAgentProvider>
-              </SidePanelProvider>
-            </NamespaceProvider>
-            <Toaster richColors position="top-right" />
-          </QueryClientProvider>
-        </DndProvider>
+        <ThemeProvider>
+          <DndProvider backend={HTML5Backend}>
+            <QueryClientProvider client={queryClient}>
+              <NamespaceProvider>
+                <SidePanelProvider>
+                  <AIAgentProvider>
+                    <AuthGuard>
+                      <AppContentClient>
+                        {children}
+                      </AppContentClient>
+                    </AuthGuard>
+                  </AIAgentProvider>
+                </SidePanelProvider>
+              </NamespaceProvider>
+              <Toaster richColors position="top-right" />
+            </QueryClientProvider>
+          </DndProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -820,25 +820,25 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <div className="flex gap-6 mb-8 flex-wrap justify-center">
-          <div className="flex flex-col items-center bg-white rounded-xl shadow p-8 w-56 hover:shadow-lg transition cursor-pointer" onClick={() => onOpenTab('namespace')}>
-            <Database size={40} className="text-blue-400 mb-4" />
-            <div className="font-semibold text-gray-800">New Namespace</div>
+          <div className="flex flex-col items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-8 w-56 hover:shadow-lg transition cursor-pointer" onClick={() => onOpenTab('namespace')}>
+            <Database size={40} className="text-blue-400 dark:text-blue-300 mb-4" />
+            <div className="font-semibold text-gray-800 dark:text-gray-200">New Namespace</div>
           </div>
-          <div className="flex flex-col items-center bg-white rounded-xl shadow p-8 w-56 hover:shadow-lg transition cursor-pointer" onClick={() => onOpenTab('endpoint')}>
-            <GitBranch size={40} className="text-pink-400 mb-4" />
-            <div className="font-semibold text-gray-800">New Endpoint</div>
+          <div className="flex flex-col items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-8 w-56 hover:shadow-lg transition cursor-pointer" onClick={() => onOpenTab('endpoint')}>
+            <GitBranch size={40} className="text-pink-400 dark:text-pink-300 mb-4" />
+            <div className="font-semibold text-gray-800 dark:text-gray-200">New Endpoint</div>
           </div>
-          <div className="flex flex-col items-center bg-white rounded-xl shadow p-8 w-56 hover:shadow-lg transition cursor-pointer" onClick={() => onOpenTab('schema')}>
-            <Box size={40} className="text-purple-400 mb-4" />
-            <div className="font-semibold text-gray-800">New Schema</div>
+          <div className="flex flex-col items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-8 w-56 hover:shadow-lg transition cursor-pointer" onClick={() => onOpenTab('schema')}>
+            <Box size={40} className="text-purple-400 dark:text-purple-300 mb-4" />
+            <div className="font-semibold text-gray-800 dark:text-gray-200">New Schema</div>
           </div>
-          <div className="flex flex-col items-center bg-white rounded-xl shadow p-8 w-56 hover:shadow-lg transition cursor-pointer" onClick={() => onOpenTab('markdown')}>
-            <FileText size={40} className="text-blue-400 mb-4" />
-            <div className="font-semibold text-gray-800">New Markdown</div>
+          <div className="flex flex-col items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-8 w-56 hover:shadow-lg transition cursor-pointer" onClick={() => onOpenTab('markdown')}>
+            <FileText size={40} className="text-blue-400 dark:text-blue-300 mb-4" />
+            <div className="font-semibold text-gray-800 dark:text-gray-200">New Markdown</div>
           </div>
-          <div className="flex flex-col items-center bg-white rounded-xl shadow p-8 w-56 hover:shadow-lg transition cursor-pointer" onClick={() => onOpenTab('request')}>
-            <Zap size={40} className="text-blue-300 mb-4" />
-            <div className="font-semibold text-gray-800">New Request</div>
+          <div className="flex flex-col items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-8 w-56 hover:shadow-lg transition cursor-pointer" onClick={() => onOpenTab('request')}>
+            <Zap size={40} className="text-blue-300 dark:text-blue-400 mb-4" />
+            <div className="font-semibold text-gray-800 dark:text-gray-200">New Request</div>
           </div>
           <div 
             className="flex flex-col items-center bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl shadow p-8 w-56 hover:shadow-lg transition cursor-pointer text-white" 
@@ -856,13 +856,13 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
           </div>
         </div>
         <div className="mb-4">
-          <button className="text-gray-600 text-sm font-medium px-4 py-2 rounded hover:bg-gray-100 transition flex items-center gap-1">
+          <button className="text-gray-600 dark:text-gray-400 text-sm font-medium px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center gap-1">
             More <span className="text-lg">&#9660;</span>
           </button>
         </div>
-        <div className="bg-purple-100 text-purple-700 px-6 py-3 rounded-full shadow text-sm font-medium flex items-center gap-2">
+        <div className="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-6 py-3 rounded-full shadow text-sm font-medium flex items-center gap-2">
           Support importing Swagger, Postman, cURL and more.
-          <button className="ml-2 text-purple-700 font-bold">×</button>
+          <button className="ml-2 text-purple-700 dark:text-purple-300 font-bold">×</button>
         </div>
       </div>
     );
@@ -888,23 +888,28 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
 
       <DndProvider backend={HTML5Backend}>
         <div className="flex flex-col h-full w-full">
-    <div className="bg-[#f7f8fa] min-h-screen">
+          <div className="bg-[#f7f8fa] dark:bg-gray-950 min-h-screen">
             <div className="flex h-screen">
-        {/* Mobile Overlay */}
+        {/* Mobile Overlay - click outside sidebar to close */}
         {!isCollapsed && (
           <div 
-            className="md:hidden fixed inset-0  bg-opacity-50 z-20"
+            className="md:hidden fixed inset-0 bg-black/40 z-20"
             onClick={() => setIsCollapsed(true)}
           />
         )}
 
-        {/* SidePanel (responsive) */}
+        {/* SidePanel (responsive, collapsible) */}
         <div
-          className={`${isCollapsed ? 'hidden' : 'block'} md:block fixed md:relative top-0 left-0 h-screen bg-transparent bg-red-500 z-30 overflow-auto transition-all duration-300 ease-in-out ${
-            isCollapsed 
-              ? 'w-0 min-w-0 max-w-0 opacity-0 -translate-x-full md:translate-x-0' 
+          className={`md:block fixed md:relative top-0 left-0 h-screen bg-gray-950 dark:bg-gray-900 z-30 overflow-auto transition-all duration-300 ease-in-out ${
+            isCollapsed
+              ? 'w-6 min-w-6 max-w-6 opacity-70 translate-x-0'
               : 'w-80 md:w-64 min-w-80 md:min-w-64 max-w-80 md:max-w-64 opacity-100 translate-x-0'
           }`}
+          onClick={() => {
+            if (isCollapsed) {
+              setIsCollapsed(false);
+            }
+          }}
         >
           {!isCollapsed && (
             <SidePanel
@@ -927,7 +932,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
               onDeleteSchema={async (schema) => {
                 if (confirm('Are you sure you want to delete this schema?')) {
                   try {
-                          const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/unified/schema/${schema.id}`, {
+                    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/unified/schema/${schema.id}`, {
                       method: 'DELETE',
                     });
                     if (!response.ok) throw new Error('Failed to delete schema');
@@ -940,8 +945,8 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                   }
                 }
               }}
-                            onDeleteNamespace={handleDeleteNamespace}
-          />
+              onDeleteNamespace={handleDeleteNamespace}
+            />
           )}
         </div>
         {/* Main Content */}
@@ -956,12 +961,12 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                 {/* Tab Layout: Horizontal or Vertical */}
                 {tabLayout === 'horizontal' ? (
                   <>
-                    <div className="border-b bg-white px-2 md:px-4 py-2 overflow-x-auto whitespace-nowrap relative scrollbar-thin-x">
+                    <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-2 md:px-4 py-2 overflow-x-auto whitespace-nowrap relative scrollbar-thin-x">
                       <div className="flex items-center gap-1" style={{ minWidth: 'fit-content', width: 'fit-content', display: 'inline-flex' }}>
                         {/* Sticky container for view button and Overview tab */}
-                        <div className="sticky left-0 z-10 bg-white flex items-center pr-2" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.04)' }}>
+                        <div className="sticky left-0 z-10 bg-white dark:bg-gray-900 flex items-center pr-2" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.04)' }}>
                           <button
-                            className="px-2 py-2 rounded-full transition-colors text-gray-500 hover:bg-gray-100"
+                            className="px-2 py-2 rounded-full transition-colors text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                             title={`Switch to ${tabLayout === 'horizontal' ? 'Vertical' : 'Horizontal'} Tabs View`}
                             onClick={() => setTabLayout(tabLayout === 'horizontal' ? 'vertical' : 'horizontal')}
                           >
@@ -971,7 +976,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                 <div key={tab.key} className="flex items-center group">
                   <button
                     className={`px-2 md:px-4 py-2 text-xs md:text-sm rounded-t-lg transition
-                      ${activeTab === tab.key ? 'font-medium text-gray-700 border-b-2 border-blue-600 bg-white' : 'text-gray-700 hover:bg-gray-100'}
+                      ${activeTab === tab.key ? 'font-medium text-gray-700 dark:text-gray-200 border-b-2 border-blue-600 dark:border-blue-500 bg-white dark:bg-gray-900' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}
                       ${tab.bold ? 'font-bold' : ''}
                       ${tab.italic ? 'italic' : ''}
                     `}
@@ -992,7 +997,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                             <div key={tab.key} className="flex items-center group">
                               <button
                                 className={`px-2 md:px-4 py-2 text-xs md:text-sm rounded-t-lg transition
-                                  ${activeTab === tab.key ? 'font-medium text-blue-700 border-b-2 border-blue-600 bg-white' : 'text-gray-700 hover:bg-gray-100'}
+                                  ${activeTab === tab.key ? 'font-medium text-blue-700 dark:text-blue-300 border-b-2 border-blue-600 dark:border-blue-500 bg-white dark:bg-gray-900' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}
                                   ${tab.bold ? 'font-bold' : ''}
                                   ${tab.italic ? 'italic' : ''}
                                 `}
@@ -1059,7 +1064,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
               >
                 <Plus size={16} />
               </button>
-              <button className="px-2 py-2 text-gray-500 hover:bg-gray-100 rounded-full">
+              <button className="px-2 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
                 <MoreHorizontal size={16} />
               </button>
             </div>
@@ -1450,9 +1455,9 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                 ) : (
                   <div className="flex w-full h-full">
                     {/* Vertical Tabs */}
-                    <div className="flex flex-col border-r bg-white py-2 px-1 min-w-[160px] max-w-[220px] w-[18vw] overflow-y-auto scrollbar-thin-x max-h-[90vh]">
+                    <div className="flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-2 px-1 min-w-[160px] max-w-[220px] w-[18vw] overflow-y-auto scrollbar-thin-x max-h-[90vh]">
                       <button
-                        className="mb-2 px-2 py-2 rounded-full bg-blue-100 text-blue-700 transition-colors"
+                        className="mb-2 px-2 py-2 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 transition-colors"
                         title="Switch to Horizontal Tabs View"
                         onClick={() => setTabLayout('horizontal')}
                       >
@@ -1462,7 +1467,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                         <div key={tab.key} className="flex items-center group mb-1">
                           <button
                             className={`w-full text-left px-3 py-2 text-sm rounded-lg transition
-                              ${activeTab === tab.key ? 'font-medium text-blue-700 bg-blue-50' : 'text-gray-700 hover:bg-gray-100'}
+                              ${activeTab === tab.key ? 'font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/40' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}
                               ${tab.bold ? 'font-bold' : ''}
                               ${tab.italic ? 'italic' : ''}
                             `}
@@ -1505,7 +1510,7 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
             </div>
                       ))}
                       <button
-                        className="mt-2 px-2 py-2 text-gray-500 hover:bg-gray-100 rounded-full"
+                        className="mt-2 px-2 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
                         onClick={handleAddTab}
                       >
                         <Plus size={16} />
@@ -1648,6 +1653,39 @@ function NamespacePage(props: React.PropsWithChildren<{}>) {
                   namespace={namespace}
                   onOpenSchemaTab={(schema, schemaName) => handleOpenSchemaTabFromTest(schema, schemaName, namespace, method['namespace-method-id'])}
                   refreshSidePanelData={fetchData}
+                  onNavigate={(tabKey) => {
+                    console.log('onNavigate called with tabKey:', tabKey);
+                    console.log('Available tabs:', tabs.map(t => t.key));
+                    console.log('Available methodPageTabs:', methodPageTabs.map(t => t.key));
+                    
+                    // Simple back button behavior - just switch to the tab
+                    const existingTab = tabs.find(tab => tab.key === tabKey);
+                    if (existingTab) {
+                      console.log('Tab exists, switching to:', tabKey);
+                      setActiveTab(tabKey);
+                    } else if (tabKey === 'overview') {
+                      console.log('Navigating to overview');
+                      setActiveTab('overview');
+                    } else if (tabKey.startsWith('methodPage-')) {
+                      // Try to find or create method page tab
+                      const methodTab = methodPageTabs.find(t => t.key === tabKey);
+                      console.log('Looking for method tab:', tabKey, 'Found:', !!methodTab);
+                      if (methodTab) {
+                        if (!tabs.find(t => t.key === tabKey)) {
+                          console.log('Creating new tab for method page');
+                          setTabs([...tabs, { key: tabKey, label: `Method: ${methodTab.method['namespace-method-name']}`, pinned: false }]);
+                        }
+                        console.log('Switching to method page tab:', tabKey);
+                        setActiveTab(tabKey);
+                      } else {
+                        console.log('Method tab not found, falling back to overview');
+                        setActiveTab('overview');
+                      }
+                    } else {
+                      console.log('Unknown tab key, falling back to overview');
+                      setActiveTab('overview');
+                    }
+                  }}
                 />
               </div>
             ))}

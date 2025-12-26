@@ -124,7 +124,7 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
 
   // Helper to render header variables if present
   const renderHeaderVars = (headers: any) => {
-    if (!headers || typeof headers !== 'object') return <span className="italic text-gray-400">None</span>;
+    if (!headers || typeof headers !== 'object') return <span className="italic text-gray-400 dark:text-gray-500">None</span>;
   return (
       <ul className="space-y-1 mt-1">
         {Object.entries(headers).map(([key, value]) => (
@@ -132,9 +132,9 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
             <div className="flex items-center gap-1">
               <Key size={12} className="text-blue-400 md:hidden" />
               <Key size={14} className="text-blue-400 hidden md:block" />
-              <span className="font-mono text-gray-700 break-all">{key}</span>
+              <span className="font-mono text-gray-700 dark:text-gray-300 break-all">{key}</span>
             </div>
-            <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs break-all">{String(value)}</span>
+            <span className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded text-xs break-all">{String(value)}</span>
           </li>
         ))}
       </ul>
@@ -143,7 +143,7 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
 
   // Helper to render account variables if present
   const renderAccountVars = (variables: any) => {
-    if (!variables || !Array.isArray(variables) || variables.length === 0) return <span className="italic text-gray-400">None</span>;
+    if (!variables || !Array.isArray(variables) || variables.length === 0) return <span className="italic text-gray-400 dark:text-gray-500">None</span>;
     return (
       <ul className="space-y-1 mt-1">
         {variables.map((variable: any, index: number) => (
@@ -151,9 +151,9 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
             <div className="flex items-center gap-1">
               <Key size={12} className="text-green-400 md:hidden" />
               <Key size={14} className="text-green-400 hidden md:block" />
-              <span className="font-mono text-gray-700 break-all">{variable.key}</span>
+              <span className="font-mono text-gray-700 dark:text-gray-300 break-all">{variable.key}</span>
             </div>
-            <span className="bg-green-100 text-gray-700 px-2 py-0.5 rounded text-xs break-all">{String(variable.value)}</span>
+            <span className="bg-green-100 dark:bg-green-900/30 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded text-xs break-all">{String(variable.value)}</span>
           </li>
         ))}
       </ul>
@@ -186,12 +186,12 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
     return (
       <div className="space-y-2 mt-1">
         {Object.entries(tableNameMap).map(([methodName, tableNameValue]) => (
-          <div key={methodName} className="flex items-start md:items-center gap-2 p-2 bg-gray-50 rounded-lg">
+          <div key={methodName} className="flex items-start md:items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <Database size={12} className="text-blue-400 md:hidden mt-0.5" />
             <Database size={14} className="text-blue-400 hidden md:block" />
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-medium text-gray-700 break-all">{methodName}</div>
-              <div className="text-xs text-gray-500 font-mono break-all">{tableNameValue}</div>
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 break-all">{methodName}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 font-mono break-all">{tableNameValue}</div>
             </div>
           </div>
         ))}
@@ -201,7 +201,7 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
 
   // Helper to render account headers if present
   const renderAccountHeaders = (headers: any) => {
-    if (!headers || !Array.isArray(headers) || headers.length === 0) return <span className="italic text-gray-400">None</span>;
+    if (!headers || !Array.isArray(headers) || headers.length === 0) return <span className="italic text-gray-400 dark:text-gray-500">None</span>;
     return (
       <ul className="space-y-1 mt-1">
         {headers.map((header: any, index: number) => (
@@ -209,9 +209,9 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
             <div className="flex items-center gap-1">
               <Key size={12} className="text-purple-400 md:hidden" />
               <Key size={14} className="text-purple-400 hidden md:block" />
-              <span className="font-mono text-gray-700 break-all">{header.key}</span>
+              <span className="font-mono text-gray-700 dark:text-gray-300 break-all">{header.key}</span>
             </div>
-            <span className="bg-purple-100 text-gray-700 px-2 py-0.5 rounded text-xs break-all">{String(header.value)}</span>
+            <span className="bg-purple-100 dark:bg-purple-900/30 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded text-xs break-all">{String(header.value)}</span>
           </li>
         ))}
       </ul>
@@ -308,20 +308,20 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
   };
 
   return (
-    <div className="w-full min-h-[calc(100vh-80px)] bg-gradient-to-br flex flex-col h-full p-0 m-0">
-      <div className="bg-white p-4 md:p-8 flex flex-col gap-4 md:gap-6 w-full h-full m-0">
+    <div className="w-full min-h-[calc(100vh-80px)] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 flex flex-col h-full p-0 m-0">
+      <div className="bg-white dark:bg-gray-900 p-4 md:p-8 flex flex-col gap-4 md:gap-6 w-full h-full m-0">
         {!editMode ? (
           <>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2 md:gap-3">
-                <User className="text-blue-500" size={20} className="md:hidden" />
-                <User className="text-blue-500" size={28} className="hidden md:block" />
-                <h2 className="text-lg md:text-2xl font-bold text-blue-700 tracking-tight">Account Details</h2>
+                <User className="text-blue-500 md:hidden" size={20} />
+                <User className="text-blue-500 hidden md:block" size={28} />
+                <h2 className="text-lg md:text-2xl font-bold text-blue-700 dark:text-blue-400 tracking-tight">Account Details</h2>
               </div>
               <div className="flex gap-1 md:gap-2">
                 <button
                   title="Link"
-                  className="p-1.5 md:p-2 rounded-lg bg-gray-100 text-blue-700 hover:bg-blue-50 transition-colors"
+                  className="p-1.5 md:p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
                   onClick={() => handleOAuthRedirect(editAccount)}
                 >
                   <LinkIcon size={16} className="md:hidden" />
@@ -329,7 +329,7 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
                 </button>
                 <button
                   title="Edit"
-                  className="p-1.5 md:p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                  className="p-1.5 md:p-2 rounded-lg bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
                   onClick={() => setEditMode(true)}
                 >
                   <Edit2 size={16} className="md:hidden" />
@@ -337,7 +337,7 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
                 </button>
                 <button
                   title="Delete"
-                  className="p-1.5 md:p-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                  className="p-1.5 md:p-2 rounded-lg bg-red-600 dark:bg-red-500 text-white hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
                   onClick={handleDelete}
                 >
                   <Trash2 size={16} className="md:hidden" />
@@ -347,32 +347,32 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-3 md:gap-y-4">
               <div>
-                <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><User size={14} className="text-blue-400 md:hidden" /><User size={16} className="text-blue-400 hidden md:block" /> Name</div>
-                <div className="text-base md:text-lg font-semibold text-gray-900 break-words">{editAccount["namespace-account-name"] || ''}</div>
+                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs mb-1"><User size={14} className="text-blue-400 md:hidden" /><User size={16} className="text-blue-400 hidden md:block" /> Name</div>
+                <div className="text-base md:text-lg font-semibold text-gray-900 dark:text-white break-words">{editAccount["namespace-account-name"] || ''}</div>
               </div>
               <div>
-                <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Hash size={14} className="text-purple-400 md:hidden" /><Hash size={16} className="text-purple-400 hidden md:block" /> ID</div>
-                <div className="text-sm md:text-base font-mono text-gray-700 break-all">{editAccount["namespace-account-id"] || ''}</div>
+                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs mb-1"><Hash size={14} className="text-purple-400 md:hidden" /><Hash size={16} className="text-purple-400 hidden md:block" /> ID</div>
+                <div className="text-sm md:text-base font-mono text-gray-700 dark:text-gray-300 break-all">{editAccount["namespace-account-id"] || ''}</div>
               </div>
               <div>
-                <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Globe size={14} className="text-green-400 md:hidden" /><Globe size={16} className="text-green-400 hidden md:block" /> Namespace ID</div>
-                <div className="text-sm md:text-base font-mono text-gray-700 break-all">{editAccount["namespace-id"] || (namespace && namespace["namespace-id"]) || <span className="italic text-gray-400">None</span>}</div>
+                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs mb-1"><Globe size={14} className="text-green-400 md:hidden" /><Globe size={16} className="text-green-400 hidden md:block" /> Namespace ID</div>
+                <div className="text-sm md:text-base font-mono text-gray-700 dark:text-gray-300 break-all">{editAccount["namespace-id"] || (namespace && namespace["namespace-id"]) || <span className="italic text-gray-400 dark:text-gray-500">None</span>}</div>
               </div>
               {editAccount["namespace-account-url-override"] && (
                 <div>
-                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Globe size={14} className="text-pink-400 md:hidden" /><Globe size={16} className="text-pink-400 hidden md:block" /> URL Override</div>
-                  <div className="text-sm md:text-base text-gray-700 break-all">{editAccount["namespace-account-url-override"]}</div>
+                  <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs mb-1"><Globe size={14} className="text-pink-400 md:hidden" /><Globe size={16} className="text-pink-400 hidden md:block" /> URL Override</div>
+                  <div className="text-sm md:text-base text-gray-700 dark:text-gray-300 break-all">{editAccount["namespace-account-url-override"]}</div>
                 </div>
               )}
               <div className="md:col-span-2">
-                <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Tag size={14} className="text-yellow-400 md:hidden" /><Tag size={16} className="text-yellow-400 hidden md:block" /> Tags</div>
+                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs mb-1"><Tag size={14} className="text-yellow-400 md:hidden" /><Tag size={16} className="text-yellow-400 hidden md:block" /> Tags</div>
                 <div className="flex flex-wrap gap-1 md:gap-2">
                   {Array.isArray(editAccount.tags) && editAccount.tags.length > 0 ? (
                     editAccount.tags.map((tag: string, idx: number) => (
-                      <span key={idx} className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-xs font-semibold shadow">{tag}</span>
+                      <span key={idx} className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-2 py-0.5 rounded-full text-xs font-semibold shadow">{tag}</span>
                     ))
                   ) : (
-                    <span className="italic text-gray-400">No tags</span>
+                    <span className="italic text-gray-400 dark:text-gray-500">No tags</span>
                   )}
                 </div>
               </div>
@@ -395,61 +395,61 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
                 {renderTableNames(editAccount.data?.M?.tableName || editAccount.tableName)}
               </div>
               <div className="md:col-span-2 flex items-center gap-2 mt-2">
-                <CheckCircle size={16} className="text-green-500 md:hidden" />
-                <CheckCircle size={18} className="text-green-500 hidden md:block" />
-                <span className="text-green-700 font-semibold text-sm md:text-base">Active</span>
+                <CheckCircle size={16} className="text-green-500 dark:text-green-400 md:hidden" />
+                <CheckCircle size={18} className="text-green-500 dark:text-green-400 hidden md:block" />
+                <span className="text-green-700 dark:text-green-400 font-semibold text-sm md:text-base">Active</span>
               </div>
             </div>
           </>
         ) : (
           <form onSubmit={handleSave} className="flex flex-col gap-4 md:gap-6 animate-fade-in">
             <div className="flex items-center gap-2 md:gap-3 mb-2">
-              <Edit3 className="text-blue-500" size={18} className="md:hidden" />
-              <Edit3 className="text-blue-500" size={24} className="hidden md:block" />
-              <h2 className="text-lg md:text-xl font-bold text-blue-700 tracking-tight">Edit Account</h2>
+              <Edit3 className="text-blue-500 md:hidden" size={18} />
+              <Edit3 className="text-blue-500 hidden md:block" size={24} />
+              <h2 className="text-lg md:text-xl font-bold text-blue-700 dark:text-blue-400 tracking-tight">Edit Account</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-3 md:gap-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
                 <input
                   type="text"
-                  className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm md:text-base focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition outline-none bg-blue-50 placeholder-gray-400"
+                  className="w-full border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2 text-sm md:text-base focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-500 focus:border-blue-400 dark:focus:border-blue-500 transition outline-none bg-blue-50 dark:bg-blue-900/20 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100"
                   value={editAccount["namespace-account-name"] || ''}
                   onChange={e => handleInput("namespace-account-name", e.target.value)}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">ID</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">ID</label>
                 <input
                   type="text"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm md:text-base bg-gray-100"
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm md:text-base bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   value={editAccount["namespace-account-id"] || ''}
                   readOnly
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Namespace ID</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Namespace ID</label>
                 <input
                   type="text"
-                  className="w-full border border-green-200 rounded-lg px-3 py-2 text-sm md:text-base bg-green-50"
+                  className="w-full border border-green-200 dark:border-green-800 rounded-lg px-3 py-2 text-sm md:text-base bg-green-50 dark:bg-green-900/20 text-gray-900 dark:text-gray-100"
                   value={editAccount["namespace-id"] || (namespace && namespace["namespace-id"]) || ''}
                   readOnly
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">URL Override</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">URL Override</label>
                 <input
                   type="text"
-                  className="w-full border border-pink-200 rounded-lg px-3 py-2 text-sm md:text-base bg-pink-50"
+                  className="w-full border border-pink-200 dark:border-pink-800 rounded-lg px-3 py-2 text-sm md:text-base bg-pink-50 dark:bg-pink-900/20 text-gray-900 dark:text-gray-100"
                   value={editAccount["namespace-account-url-override"] || ''}
                   readOnly
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">Tags (comma separated)</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tags (comma separated)</label>
                 <input
                   type="text"
-                  className="w-full border border-yellow-200 rounded-lg px-3 py-2 text-sm md:text-base focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition outline-none bg-yellow-50 placeholder-gray-400"
+                  className="w-full border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-2 text-sm md:text-base focus:ring-2 focus:ring-yellow-400 dark:focus:ring-yellow-500 focus:border-yellow-400 dark:focus:border-yellow-500 transition outline-none bg-yellow-50 dark:bg-yellow-900/20 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100"
                   value={Array.isArray(editAccount.tags) ? editAccount.tags.join(', ') : ''}
                   onChange={e => handleInput('tags', e.target.value.split(',').map((t: string) => t.trim()).filter(Boolean))}
                 />
@@ -462,8 +462,8 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
               )}
               <div className="md:col-span-2">
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-medium text-gray-700">Account Headers</label>
-                  <button type="button" className="text-xs text-blue-600 hover:underline" onClick={addHeaderRow}>+ Add Header</button>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Account Headers</label>
+                  <button type="button" className="text-xs text-blue-600 dark:text-blue-400 hover:underline" onClick={addHeaderRow}>+ Add Header</button>
                 </div>
                 <div className="space-y-2">
                   {(Array.isArray(editAccount['namespace-account-header']) ? editAccount['namespace-account-header'] : []).map((h: any, idx: number) => (
@@ -471,26 +471,26 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
                       <input
                         type="text"
                         placeholder="Key"
-                        className="flex-1 min-w-0 border border-gray-200 rounded px-2 py-1 text-sm"
+                        className="flex-1 min-w-0 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                         value={h.key || ''}
                         onChange={e => updateHeaderAtIndex(idx, 'key', e.target.value)}
                       />
                       <input
                         type="text"
                         placeholder="Value"
-                        className="flex-1 min-w-0 border border-gray-200 rounded px-2 py-1 text-sm"
+                        className="flex-1 min-w-0 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                         value={h.value || ''}
                         onChange={e => updateHeaderAtIndex(idx, 'value', e.target.value)}
                       />
-                      <button type="button" className="text-red-500 px-2 py-1 self-end md:self-auto" onClick={() => removeHeaderRow(idx)}><X size={14} className="md:hidden" /><X size={16} className="hidden md:block" /></button>
+                      <button type="button" className="text-red-500 dark:text-red-400 px-2 py-1 self-end md:self-auto" onClick={() => removeHeaderRow(idx)}><X size={14} className="md:hidden" /><X size={16} className="hidden md:block" /></button>
                     </div>
                   ))}
                 </div>
               </div>
               <div className="md:col-span-2">
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-medium text-gray-700">Account Variables</label>
-                  <button type="button" className="text-xs text-blue-600 hover:underline" onClick={addVariableRow}>+ Add Variable</button>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Account Variables</label>
+                  <button type="button" className="text-xs text-blue-600 dark:text-blue-400 hover:underline" onClick={addVariableRow}>+ Add Variable</button>
                 </div>
                 <div className="space-y-2">
                   {(Array.isArray(editAccount['variables']) ? editAccount['variables'] : (Array.isArray(editAccount['namespace-account-variables']) ? editAccount['namespace-account-variables'] : [])).map((v: any, idx: number) => (
@@ -498,18 +498,18 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
                       <input
                         type="text"
                         placeholder="Key"
-                        className="flex-1 min-w-0 border border-gray-200 rounded px-2 py-1 text-sm"
+                        className="flex-1 min-w-0 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                         value={v.key || ''}
                         onChange={e => updateVariableAtIndex(idx, 'key', e.target.value)}
                       />
                       <input
                         type="text"
                         placeholder="Value"
-                        className="flex-1 min-w-0 border border-gray-200 rounded px-2 py-1 text-sm"
+                        className="flex-1 min-w-0 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                         value={v.value || ''}
                         onChange={e => updateVariableAtIndex(idx, 'value', e.target.value)}
                       />
-                      <button type="button" className="text-red-500 px-2 py-1 self-end md:self-auto" onClick={() => removeVariableRow(idx)}><X size={14} className="md:hidden" /><X size={16} className="hidden md:block" /></button>
+                      <button type="button" className="text-red-500 dark:text-red-400 px-2 py-1 self-end md:self-auto" onClick={() => removeVariableRow(idx)}><X size={14} className="md:hidden" /><X size={16} className="hidden md:block" /></button>
                     </div>
                   ))}
                 </div>
@@ -518,19 +518,19 @@ export default function AccountPage({ account, namespace, openEdit, refreshSideP
             <div className="flex flex-col sm:flex-row justify-end gap-2 md:gap-3 mt-4 md:mt-6">
               <button
                 type="button"
-                className="bg-gray-200 text-gray-700 rounded-lg px-4 md:px-6 py-2 font-semibold text-sm md:text-base hover:bg-gray-300 transition"
+                className="bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg px-4 md:px-6 py-2 font-semibold text-sm md:text-base hover:bg-gray-300 dark:hover:bg-gray-700 transition"
                 onClick={() => setEditMode(false)}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg px-4 md:px-6 py-2 font-bold text-sm md:text-base shadow-lg hover:from-blue-600 hover:to-purple-600 transition"
+                className="bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-600 dark:to-purple-600 text-white rounded-lg px-4 md:px-6 py-2 font-bold text-sm md:text-base shadow-lg hover:from-blue-600 hover:to-purple-600 dark:hover:from-blue-700 dark:hover:to-purple-700 transition"
               >
                 Save
               </button>
             </div>
-            {saveMsg && <div className="text-green-600 text-sm mt-2">{saveMsg}</div>}
+            {saveMsg && <div className="text-green-600 dark:text-green-400 text-sm mt-2">{saveMsg}</div>}
           </form>
         )}
       </div>

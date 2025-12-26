@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Send, RefreshCw, Copy, Download, Check, ChevronDown, Save, ChevronRight, Home, ChevronRight as ChevronRightIcon, Play, Edit, Trash2, Hash, Type, Link, Tag, Settings, CheckCircle, Database, Search, FileText, User, Calendar, Globe, Code, Zap, Shield, Activity, BarChart3 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { schemaToFields, NestedFieldsEditor } from '@/app/namespace/components/SchemaService';
+import { useRouter } from 'next/navigation';
 
 interface AccountHeader {
   key: string;
@@ -35,6 +36,32 @@ interface Response {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
+// Helper function to safely parse JSON responses
+const safeJsonParse = async (response: Response): Promise<any> => {
+  const contentType = response.headers.get('content-type') || '';
+  
+  if (contentType.includes('application/json')) {
+    try {
+      return await response.json();
+    } catch (error) {
+      const text = await response.text();
+      throw new Error(`Failed to parse JSON response: ${text.substring(0, 200)}`);
+    }
+  } else {
+    const text = await response.text();
+    // Try to parse as JSON even if content-type is wrong
+    try {
+      return JSON.parse(text);
+    } catch {
+      // If it starts with <, it's likely HTML
+      if (text.trim().startsWith('<')) {
+        throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}. Response: ${text.substring(0, 200)}`);
+      }
+      throw new Error(`Server returned non-JSON response. Content-Type: ${contentType}. Response: ${text.substring(0, 200)}`);
+    }
+  }
+};
+
 // Recursive component for collapsible JSON display
 const CollapsibleJson = ({ data, level = 0, collapsedPaths = new Set(), onToggle }: { 
   data: any, 
@@ -67,7 +94,7 @@ const CollapsibleJson = ({ data, level = 0, collapsedPaths = new Set(), onToggle
             {isArray ? '[' : '{'}
           </span>
           {isCollapsed && (
-            <span className="text-gray-500 ml-1">
+            <span className="text-gray-400 ml-1">
               {isArray ? `${items.length} items` : `${items.length} properties`}
             </span>
           )}
@@ -83,7 +110,7 @@ const CollapsibleJson = ({ data, level = 0, collapsedPaths = new Set(), onToggle
             {isArray ? (
               items.map((item: any, index: number) => (
                 <div key={index}>
-                  <span className="text-gray-500">{indent}</span>
+                  <span className="text-gray-400">{indent}</span>
                   {typeof item === 'object' && item !== null ? (
                     <CollapsibleJson 
                       data={item} 
@@ -108,7 +135,7 @@ const CollapsibleJson = ({ data, level = 0, collapsedPaths = new Set(), onToggle
             ) : (
               items.map(([key, value]: [string, any], index: number) => (
                 <div key={key}>
-                  <span className="text-gray-500">{indent}</span>
+                  <span className="text-gray-400">{indent}</span>
                   <span className="text-blue-400">"{key}"</span>
                   <span className="text-gray-300">: </span>
                   {typeof value === 'object' && value !== null ? (
@@ -134,7 +161,7 @@ const CollapsibleJson = ({ data, level = 0, collapsedPaths = new Set(), onToggle
               ))
             )}
             <div>
-              <span className="text-gray-500">{indent}</span>
+              <span className="text-gray-400">{indent}</span>
               <span className="text-gray-300">
                 {isArray ? ']' : '}'}
               </span>
@@ -158,13 +185,14 @@ const CollapsibleJson = ({ data, level = 0, collapsedPaths = new Set(), onToggle
   );
 };
 
-export default function MethodTestPage({ method, namespace, onOpenSchemaTab, refreshSidePanelData }: { method: any, namespace: any, onOpenSchemaTab?: (schema: any, schemaName: string) => void, refreshSidePanelData?: () => Promise<void> }) {
+export default function MethodTestPage({ method, namespace, onOpenSchemaTab, refreshSidePanelData, onNavigate }: { method: any, namespace: any, onOpenSchemaTab?: (schema: any, schemaName: string) => void, refreshSidePanelData?: () => Promise<void>, onNavigate?: (tabKey: string) => void }) {
+  const router = useRouter();
   const namespaceId = namespace?.['namespace-id'] || '';
   const methodName = method?.['namespace-method-name'] || '';
+  const methodId = method?.['namespace-method-id'] || '';
   const methodType = method?.['namespace-method-type'] || '';
   const namespaceMethodUrlOverride = method?.['namespace-method-url-override'] || '';
   const saveData = !!method?.['save-data'];
-  const methodId = method?.['namespace-method-id'] || '';
   const tableName = method?.['namespace-method-tableName'] || method?.['tableName'] || '';
 
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -232,7 +260,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
         if (!response.ok) {
           throw new Error(`Failed to fetch namespace details: ${response.status}`);
         }
-        const data = await response.json();
+        const data = await safeJsonParse(response);
         setNamespaceName(data['namespace-name'] || '');
       } catch (err) {
         console.error('Error fetching namespace details:', err);
@@ -249,7 +277,14 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
       try {
         const response = await fetch(`${API_BASE_URL}/unified/namespaces/${namespaceId}/accounts`);
         if (!response.ok || !mounted) return;
-        const data = await response.json();
+        let data;
+        try {
+          data = await safeJsonParse(response);
+        } catch (error) {
+          console.error('Failed to parse accounts response:', error);
+          if (mounted) setAccounts([]);
+          return;
+        }
         if (mounted) {
           setAccounts(data || []);
           if (data && data.length > 0) {
@@ -376,7 +411,9 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
       });
       if (signal.aborted) return;
       const responseHeaders = Object.fromEntries(response.headers.entries());
-      const data = await response.json();
+      
+      // Safely parse JSON response
+      const data = await safeJsonParse(response);
       const responseObj: Response = {
         success: response.ok,
         data: data.data || data,
@@ -538,7 +575,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
         body: JSON.stringify(requestData)
       });
 
-      const data = await response.json();
+      const data = await safeJsonParse(response);
       const responseObj: Response = {
         success: response.ok,
         data: data.data || data,
@@ -585,12 +622,12 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
         }),
       });
       if (!apiResponse.ok) throw new Error('Failed to save schema');
-      const result = await apiResponse.json();
+      const result = await safeJsonParse(apiResponse);
       toast.success('Schema saved successfully');
       setShowSchemaModal(false);
       if (result.schemaId) {
         const nsRes = await fetch(`${API_BASE_URL}/unified/namespaces/${namespaceId}`);
-        const nsData = await nsRes.json();
+        const nsData = await safeJsonParse(nsRes);
         const currentSchemaIds = Array.isArray(nsData.schemaIds) ? nsData.schemaIds : [];
         const updatedSchemaIds = [...currentSchemaIds, result.schemaId];
         await fetch(`${API_BASE_URL}/unified/namespaces/${namespaceId}`, {
@@ -602,7 +639,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
       }
       if (result.schemaId && methodId) {
         const methodRes = await fetch(`${API_BASE_URL}/unified/methods/${methodId}`);
-        const methodDataRaw = await methodRes.json();
+        const methodDataRaw = await safeJsonParse(methodRes);
         const methodData = methodDataRaw.data ? methodDataRaw.data : methodDataRaw;
         const methodUpdatePayload = {
           "namespace-method-name": methodData["namespace-method-name"] || "unknown",
@@ -689,31 +726,82 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
     urlWithParams += (urlWithParams.includes('?') ? '&' : '?') + searchParams.toString();
   }
   return (
-    <div className="w-full h-full bg-white">
+    <div className="w-full h-full bg-gray-900">
       {/* Breadcrumbs */}
-      <div className="bg-gray-50 border-b border-gray-200 px-3 md:px-4 py-2">
-        <div className="flex items-center space-x-1 text-[10px] md:text-xs text-gray-600 overflow-x-auto">
-          <Home className="h-3 w-3" />
+      <div className="bg-gray-800 border-b border-gray-700 px-3 md:px-4 py-2">
+        <div className="flex items-center space-x-1 text-[10px] md:text-xs text-gray-300 overflow-x-auto">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Home button clicked, onNavigate exists:', !!onNavigate);
+              if (onNavigate) {
+                console.log('Navigating to overview');
+                onNavigate('overview');
+              } else {
+                console.warn('onNavigate function not provided');
+              }
+            }}
+            className="flex items-center hover:text-blue-400 active:text-blue-300 transition-colors cursor-pointer px-1 py-0.5 rounded hover:bg-gray-700"
+            title="Go to Overview"
+          >
+            <Home className="h-3 w-3" />
+          </button>
           <ChevronRight className="h-3 w-3" />
-          <span className="hover:text-blue-600 cursor-pointer">Namespaces</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Namespaces button clicked, onNavigate exists:', !!onNavigate);
+              if (onNavigate) {
+                console.log('Navigating to overview');
+                onNavigate('overview');
+              } else {
+                console.warn('onNavigate function not provided');
+              }
+            }}
+            className="hover:text-blue-400 active:text-blue-300 cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-gray-700"
+          >
+            Namespaces
+          </button>
           <ChevronRight className="h-3 w-3" />
-          <span className="hover:text-blue-600 cursor-pointer">{namespaceName}</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Namespace name clicked, methodId:', methodId, 'onNavigate exists:', !!onNavigate);
+              if (onNavigate && methodId) {
+                // Go back to method page tab (like back button)
+                const methodPageKey = `methodPage-${methodId}`;
+                console.log('Navigating to method page:', methodPageKey);
+                onNavigate(methodPageKey);
+              } else {
+                console.warn('Cannot navigate: onNavigate or methodId missing', { onNavigate: !!onNavigate, methodId });
+              }
+            }}
+            className="hover:text-blue-400 active:text-blue-300 cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-gray-700"
+          >
+            {namespaceName}
+          </button>
           <ChevronRight className="h-3 w-3" />
-          <span className="text-gray-900 font-medium">{methodName}</span>
+          <span className="text-gray-100 font-medium">{methodName}</span>
         </div>
       </div>
 
       {/* Layout Container */}
       <div className="h-full flex flex-col" style={{ height: 'calc(100vh - 60px)' }}>
         {/* Request Panel */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-4" style={{ maxHeight: '520px' }}>
-          <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 rounded-t-lg">
+        <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-sm mb-4" style={{ maxHeight: '520px' }}>
+          <div className="bg-gray-700 px-4 py-2 border-b border-gray-600 rounded-t-lg">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-gray-800 whitespace-nowrap">API Request</h3>
+              <h3 className="text-sm font-semibold text-gray-100 whitespace-nowrap">API Request</h3>
               <div className="flex items-center space-x-2 min-w-0">
-                <span className="text-xs text-gray-500 truncate">GET Find pet by ID</span>
-                <button className="text-xs text-gray-400 hover:text-gray-600">+</button>
-                <button className="text-xs text-gray-400 hover:text-gray-600">...</button>
+                <span className="text-xs text-gray-400 truncate">GET Find pet by ID</span>
+                <button className="text-xs text-gray-400 hover:text-gray-200">+</button>
+                <button className="text-xs text-gray-400 hover:text-gray-200">...</button>
               </div>
             </div>
           </div>
@@ -731,7 +819,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                 type="text"
                 value={urlWithParams}
                 onChange={e => setUrl(e.target.value)}
-                className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1 px-2 py-1 text-xs border border-gray-600 rounded bg-gray-700 text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter URL"
               />
             </div>
@@ -764,9 +852,9 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                         }
                       }
                     }}
-                    className="w-full px-2 py-1 text-xs bg-white border border-gray-200 rounded shadow-sm appearance-none cursor-pointer pr-6 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-2 py-1 text-xs bg-gray-700 border border-gray-600 rounded shadow-sm appearance-none cursor-pointer pr-6 text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">Account</option>
+                    <option value="" className="bg-gray-700">Account</option>
                     {accounts.map(account => (
                       <option key={account['namespace-account-id']} value={account['namespace-account-id']}>
                         {account['namespace-account-name']}
@@ -783,31 +871,31 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                   type="number"
                   value={maxIterations}
                   onChange={e => setMaxIterations(e.target.value)}
-                  className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-2 py-1 text-xs border border-gray-600 rounded bg-gray-700 text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Max iterations"
                 />
               </div>
             </div>
 
             {error && (
-              <div className="mb-2 py-1 px-2 bg-red-50 text-[#E11D48] text-xs rounded border border-red-100">
+              <div className="mb-2 py-1 px-2 bg-red-900 text-red-300 text-xs rounded border border-red-700">
                 {error}
               </div>
             )}
 
             {/* Request Configuration Sub-Tabs */}
-            <div className="border-b border-gray-200 mb-2 overflow-x-auto">
+            <div className="border-b border-gray-700 mb-2 overflow-x-auto">
               <div className="flex space-x-4 text-xs">
                 <button
                   onClick={() => setActiveTab('params')}
                   className={`px-1 py-1.5 text-xs font-medium border-b-2 transition-colors ${
                     activeTab === 'params' 
-                      ? 'border-purple-500 text-purple-600' 
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                      ? 'border-purple-400 text-purple-400' 
+                      : 'border-transparent text-gray-400 hover:text-gray-200'
                   }`}
                 >
                   Params {queryParams.filter(p => p.key && p.key.trim() !== '').length > 0 && (
-                    <span className="ml-1 bg-purple-100 text-purple-700 px-1 rounded text-xs">
+                    <span className="ml-1 bg-purple-900 text-purple-300 px-1 rounded text-xs">
                       {queryParams.filter(p => p.key && p.key.trim() !== '').length}
                     </span>
                   )}
@@ -816,8 +904,8 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                   onClick={() => setActiveTab('body')}
                   className={`px-1 py-1.5 text-xs font-medium border-b-2 transition-colors ${
                     activeTab === 'body' 
-                      ? 'border-purple-500 text-purple-600' 
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                      ? 'border-purple-400 text-purple-400' 
+                      : 'border-transparent text-gray-400 hover:text-gray-200'
                   }`}
                 >
                   Body
@@ -826,8 +914,8 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                   onClick={() => setActiveTab('headers')}
                   className={`px-1 py-1.5 text-xs font-medium border-b-2 transition-colors relative ${
                     activeTab === 'headers' 
-                      ? 'border-purple-500 text-purple-600' 
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                      ? 'border-purple-400 text-purple-400' 
+                      : 'border-transparent text-gray-400 hover:text-gray-200'
                   }`}
                 >
                   Headers
@@ -844,9 +932,9 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
             <div className="space-y-1">
               {activeTab === 'params' && (
                 <div>
-                  <div className="text-xs font-medium text-gray-700 mb-2">Query Params</div>
-                  <div className="border border-gray-200 rounded">
-                    <div className="grid grid-cols-5 gap-2 px-2 py-1 bg-gray-50 text-xs font-medium text-gray-700 border-b border-gray-200">
+                  <div className="text-xs font-medium text-gray-300 mb-2">Query Params</div>
+                  <div className="border border-gray-700 rounded">
+                    <div className="grid grid-cols-5 gap-2 px-2 py-1 bg-gray-700 text-xs font-medium text-gray-200 border-b border-gray-600">
                       <div>Name</div>
                       <div>Value</div>
                       <div>Type</div>
@@ -859,29 +947,29 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                             type="text"
                             value={param.key}
                             onChange={e => handleKeyValueChange(index, 'key', e.target.value, 'queryParams')}
-                            className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            className="px-2 py-1 text-xs border border-gray-600 rounded bg-gray-800 text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             placeholder="Add a new param"
                           />
                           <input
                             type="text"
                             value={param.value}
                             onChange={e => handleKeyValueChange(index, 'value', e.target.value, 'queryParams')}
-                            className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            className="px-2 py-1 text-xs border border-gray-600 rounded bg-gray-800 text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             placeholder="Value"
                           />
-                          <select className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="string">String</option>
-                            <option value="number">Number</option>
-                            <option value="boolean">Boolean</option>
+                          <select className="px-2 py-1 text-xs border border-gray-600 rounded bg-gray-800 text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="string" className="bg-gray-800">String</option>
+                            <option value="number" className="bg-gray-800">Number</option>
+                            <option value="boolean" className="bg-gray-800">Boolean</option>
                           </select>
                           <input
                             type="text"
-                            className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            className="px-2 py-1 text-xs border border-gray-600 rounded bg-gray-800 text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             placeholder="Description"
                           />
                           <button
                             onClick={() => handleRemoveKeyValuePair(index, 'queryParams')}
-                            className="w-5 h-5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-full transition-colors flex items-center justify-center"
+                            className="w-5 h-5 text-xs text-red-400 hover:text-red-300 hover:bg-red-900 border border-red-700 rounded-full transition-colors flex items-center justify-center"
                             title="Remove parameter"
                           >
                             ✕
@@ -890,7 +978,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                       ))}
                       <button
                         onClick={() => handleAddKeyValuePair('queryParams')}
-                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                        className="text-xs text-blue-400 hover:text-blue-300 font-medium"
                       >
                         + Add Parameter
                       </button>
@@ -901,9 +989,9 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
 
               {activeTab === 'headers' && (
                 <div>
-                  <div className="text-xs font-medium text-gray-700 mb-2">Headers</div>
-                  <div className="border border-gray-200 rounded">
-                    <div className="grid grid-cols-5 gap-2 px-2 py-1 bg-gray-50 text-xs font-medium text-gray-700 border-b border-gray-200">
+                  <div className="text-xs font-medium text-gray-300 mb-2">Headers</div>
+                  <div className="border border-gray-700 rounded">
+                    <div className="grid grid-cols-5 gap-2 px-2 py-1 bg-gray-700 text-xs font-medium text-gray-200 border-b border-gray-600">
                       <div>Name</div>
                       <div>Value</div>
                       <div>Type</div>
@@ -917,29 +1005,29 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                               type="text"
                               value={header.key}
                               onChange={e => handleKeyValueChange(index, 'key', e.target.value, 'headers')}
-                              className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              className="px-2 py-1 text-xs border border-gray-600 rounded bg-gray-800 text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                               placeholder="Header name"
                             />
                             <input
                               type="text"
                               value={header.value}
                               onChange={e => handleKeyValueChange(index, 'value', e.target.value, 'headers')}
-                              className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              className="px-2 py-1 text-xs border border-gray-600 rounded bg-gray-800 text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                               placeholder="Header value"
                             />
-                            <select className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                              <option value="string">String</option>
-                              <option value="number">Number</option>
-                              <option value="boolean">Boolean</option>
+                            <select className="px-2 py-1 text-xs border border-gray-600 rounded bg-gray-800 text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                              <option value="string" className="bg-gray-800">String</option>
+                              <option value="number" className="bg-gray-800">Number</option>
+                              <option value="boolean" className="bg-gray-800">Boolean</option>
                             </select>
                             <input
                               type="text"
-                              className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              className="px-2 py-1 text-xs border border-gray-600 rounded bg-gray-800 text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                               placeholder="Description"
                             />
                             <button
                               onClick={() => handleRemoveKeyValuePair(index, 'headers')}
-                              className="w-5 h-5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-full transition-colors flex items-center justify-center"
+                              className="w-5 h-5 text-xs text-red-400 hover:text-red-300 hover:bg-red-900 border border-red-700 rounded-full transition-colors flex items-center justify-center"
                               title="Remove header"
                             >
                               ✕
@@ -948,7 +1036,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                       ))}
                       <button
                         onClick={() => handleAddKeyValuePair('headers')}
-                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                        className="text-xs text-blue-400 hover:text-blue-300 font-medium"
                       >
                         + Add Header
                       </button>
@@ -959,11 +1047,11 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
 
               {activeTab === 'body' && (
                 <div>
-                  <div className="text-xs font-medium text-gray-700 mb-2">Request Body</div>
+                  <div className="text-xs font-medium text-gray-300 mb-2">Request Body</div>
                   <textarea
                     value={requestBody}
                     onChange={e => setRequestBody(e.target.value)}
-                    className="w-full h-24 p-2 text-xs font-mono border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full h-24 p-2 text-xs font-mono border border-gray-600 rounded bg-gray-800 text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter request body (JSON)"
                   />
                 </div>
@@ -973,7 +1061,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
             {/* Action Buttons */}
             <div className="flex flex-wrap justify-end gap-2 mt-3">
               <button
-                className="px-3 py-1 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="px-3 py-1 text-xs text-gray-300 hover:text-gray-100 border border-gray-600 rounded hover:bg-gray-700 transition-colors disabled:opacity-50"
                 onClick={() => {
                   setUrl('');
                   setRequestBody('');
@@ -1080,40 +1168,40 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
         {(showResponse || showValidate) && (
           <div className="flex flex-col md:flex-row gap-4 md:h-[370px] w-[100%]">
             {showResponse && (
-              <div className=" border border-gray-200 rounded-lg shadow-sm w-[100%] ">
-                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 rounded-t-lg ">
+              <div className=" border border-gray-700 rounded-lg shadow-sm w-[100%] ">
+                <div className="bg-gray-700 px-4 py-2 border-b border-gray-600 rounded-t-lg ">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-800">Response</h3>
+                    <h3 className="text-sm font-semibold text-gray-100">Response</h3>
                     <div className="flex items-center space-x-2">
                       {response && (
                         <div className={`px-1.5 py-0.5 rounded text-xs font-medium ${
                           response.status >= 200 && response.status < 300 
-                            ? 'bg-green-100 text-green-800' 
+                            ? 'bg-green-900 text-green-300' 
                             : response.status >= 400 
-                            ? 'bg-red-100 text-red-800' 
-                            : 'bg-yellow-100 text-yellow-800'
+                            ? 'bg-red-900 text-red-300' 
+                            : 'bg-yellow-900 text-yellow-300'
                         }`}>
                           {response.status}
                         </div>
                       )}
-                      <select className="px-1 py-0.5 text-xs border border-gray-200 rounded bg-white">
-                        <option value="json">JSON</option>
-                        <option value="xml">XML</option>
-                        <option value="text">Text</option>
+                      <select className="px-1 py-0.5 text-xs border border-gray-600 rounded bg-gray-800 text-gray-200">
+                        <option value="json" className="bg-gray-800">JSON</option>
+                        <option value="xml" className="bg-gray-800">XML</option>
+                        <option value="text" className="bg-gray-800">Text</option>
                       </select>
-                      <select className="px-1 py-0.5 text-xs border border-gray-200 rounded bg-white">
-                        <option value="utf8">utf8</option>
-                        <option value="ascii">ascii</option>
+                      <select className="px-1 py-0.5 text-xs border border-gray-600 rounded bg-gray-800 text-gray-200">
+                        <option value="utf8" className="bg-gray-800">utf8</option>
+                        <option value="ascii" className="bg-gray-800">ascii</option>
                       </select>
                     </div>
                   </div>
                 </div>
                 
-                <div className="p-3 md:p-4 h-full overflow-auto  w-[100%]">
+                <div className="p-3 md:p-4 h-full overflow-auto bg-gray-800 w-[100%]">
                   {!response && (
-                    <div className="flex items-center justify-center h-32 text-gray-500">
+                    <div className="flex items-center justify-center h-32 text-gray-400">
                       <div className="text-center">
-                        <Send className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                        <Send className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                         <p className="text-xs">No response yet. Click "Send" to test the API.</p>
                       </div>
                     </div>
@@ -1127,8 +1215,8 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                           onClick={() => setResponseTab('pretty')}
                           className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
                             responseTab === 'pretty' 
-                              ? 'bg-purple-100 text-purple-700 border border-purple-200' 
-                              : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                              ? 'bg-purple-900 text-purple-300 border border-purple-700' 
+                              : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                           }`}
                         >
                           Pretty
@@ -1137,8 +1225,8 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                           onClick={() => setResponseTab('raw')}
                           className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
                             responseTab === 'raw' 
-                              ? 'bg-purple-100 text-purple-700 border border-purple-200' 
-                              : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                              ? 'bg-purple-900 text-purple-300 border border-purple-700' 
+                              : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                           }`}
                         >
                           Raw
@@ -1147,8 +1235,8 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                           onClick={() => setResponseTab('preview')}
                           className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
                             responseTab === 'preview' 
-                              ? 'bg-purple-100 text-purple-700 border border-purple-200' 
-                              : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                              ? 'bg-purple-900 text-purple-300 border border-purple-700' 
+                              : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                           }`}
                         >
                           Preview
@@ -1157,8 +1245,8 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                           onClick={() => setResponseTab('visualize')}
                           className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
                             responseTab === 'visualize' 
-                              ? 'bg-purple-100 text-purple-700 border border-purple-200' 
-                              : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                              ? 'bg-purple-900 text-purple-300 border border-purple-700' 
+                              : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                           }`}
                         >
                           Visualize
@@ -1187,7 +1275,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                                   .split('\n')
                                   .map((line, index) => (
                                     <div key={index} className="flex">
-                                      <span className="text-gray-500 mr-3 select-none w-6 text-right">
+                                      <span className="text-gray-400 mr-3 select-none w-6 text-right">
                                         {index + 1}
                                       </span>
                                       <span className="flex-1">{line}</span>
@@ -1199,28 +1287,28 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                         )}
                         
                         {responseTab === 'preview' && (
-                          <div className="bg-white border border-gray-200 rounded p-3 max-h-64 overflow-auto">
+                          <div className="bg-gray-800 border border-gray-700 rounded p-3 max-h-64 overflow-auto">
                             <div className="space-y-2">
                               {response.body && typeof response.body === 'object' && response.body !== null ? (
                                 <div className="space-y-2">
                                   {Object.entries(response.body as Record<string, unknown>).map(([key, value]) => (
-                                    <div key={key} className="border border-gray-200 rounded p-2 bg-gray-50">
+                                    <div key={key} className="border border-gray-700 rounded p-2 bg-gray-700">
                                       <div className="flex items-center justify-between mb-1">
-                                        <span className="font-semibold text-gray-900 text-xs">{key}</span>
-                                        <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full">
+                                        <span className="font-semibold text-gray-100 text-xs">{key}</span>
+                                        <span className="text-xs bg-blue-900 text-blue-300 px-1.5 py-0.5 rounded-full">
                                           {Array.isArray(value) ? `${value.length} items` : typeof value}
                                         </span>
                                       </div>
                                       {Array.isArray(value) && value.length > 0 ? (
                                         <div className="space-y-1">
                                           {value.slice(0, 3).map((item, index) => (
-                                            <div key={index} className="bg-white p-2 rounded border border-gray-100">
+                                            <div key={index} className="bg-gray-800 p-2 rounded border border-gray-600">
                                               {typeof item === 'object' && item !== null ? (
                                                 <div className="space-y-1">
                                                   {Object.entries(item as Record<string, unknown>).slice(0, 2).map(([subKey, subValue]) => (
                                                     <div key={subKey} className="flex justify-between text-xs">
-                                                      <span className="font-medium text-gray-700">{subKey}:</span>
-                                                      <span className="text-gray-600 truncate max-w-[150px]">
+                                                      <span className="font-medium text-gray-300">{subKey}:</span>
+                                                      <span className="text-gray-400 truncate max-w-[150px]">
                                                         {String(subValue || '').length > 30 
                                                           ? String(subValue || '').substring(0, 30) + '...' 
                                                           : String(subValue || '')}
@@ -1228,38 +1316,38 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                                                     </div>
                                                   ))}
                                                   {Object.keys(item).length > 2 && (
-                                                    <div className="text-xs text-gray-500 italic">
+                                                    <div className="text-xs text-gray-400 italic">
                                                       ... and {Object.keys(item).length - 2} more fields
                                                     </div>
                                                   )}
                                                 </div>
                                               ) : (
-                                                <div className="text-xs text-gray-600">
+                                                <div className="text-xs text-gray-300">
                                                   {String(item || '')}
                                                 </div>
                                               )}
                                             </div>
                                           ))}
                                           {value.length > 3 && (
-                                            <div className="text-xs text-gray-500 italic text-center py-1 bg-white rounded border">
+                                            <div className="text-xs text-gray-400 italic text-center py-1 bg-gray-800 rounded border">
                                               ... and {value.length - 3} more items
                                             </div>
                                           )}
                                         </div>
                                       ) : (
-                                        <div className="text-sm text-gray-600">
+                                        <div className="text-sm text-gray-300">
                                           {typeof value === 'object' && value !== null ? (
                                             <div className="space-y-1">
                                               {Object.entries(value as Record<string, unknown>).slice(0, 3).map(([subKey, subValue]) => (
-                                                <div key={subKey} className="flex justify-between bg-white p-1 rounded">
-                                                  <span className="font-medium text-gray-700 text-xs">{subKey}:</span>
-                                                  <span className="text-gray-600 text-xs truncate max-w-[150px]">
+                                                <div key={subKey} className="flex justify-between bg-gray-800 p-1 rounded">
+                                                  <span className="font-medium text-gray-300 text-xs">{subKey}:</span>
+                                                  <span className="text-gray-300 text-xs truncate max-w-[150px]">
                                                     {String(subValue || '')}
                                                   </span>
                                                 </div>
                                               ))}
                                               {Object.keys(value).length > 3 && (
-                                                <div className="text-xs text-gray-500 italic text-center py-1">
+                                                <div className="text-xs text-gray-400 italic text-center py-1">
                                                   ... and {Object.keys(value).length - 3} more fields
                                                 </div>
                                               )}
@@ -1278,17 +1366,17 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                         )}
                         
                         {responseTab === 'visualize' && (
-                          <div className="bg-white border border-gray-200 rounded p-3 max-h-64 overflow-auto ">
+                          <div className="bg-gray-800 border border-gray-700 rounded p-3 max-h-64 overflow-auto ">
                             <div className="space-y-3">
                               {response.body && typeof response.body === 'object' && response.body !== null ? (
                                 <div className="space-y-3">
                                   {Object.entries(response.body as Record<string, unknown>).map(([key, value]) => (
-                                    <div key={key} className="border border-gray-200 rounded p-3">
-                                      <h4 className="font-semibold text-gray-900 mb-2 text-sm">{key}</h4>
+                                    <div key={key} className="border border-gray-700 rounded p-3">
+                                      <h4 className="font-semibold text-gray-100 mb-2 text-sm">{key}</h4>
                                       {Array.isArray(value) ? (
                                         <div className="space-y-2">
                                           <div className="flex items-center justify-between">
-                                            <span className="text-xs text-gray-600">Array with {value.length} items</span>
+                                            <span className="text-xs text-gray-300">Array with {value.length} items</span>
                                             <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                                               {value.length} items
                                             </span>
@@ -1296,15 +1384,15 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                                           {value.length > 0 && (
                                             <div className="grid grid-cols-1 gap-2">
                                               {value.slice(0, 3).map((item, index) => (
-                                                <div key={index} className="bg-gray-50 p-2 rounded text-xs">
-                                                  <div className="font-medium text-gray-700">Item {index + 1}</div>
-                                                  <div className="text-gray-600 truncate">
+                                                <div key={index} className="bg-gray-700 p-2 rounded text-xs">
+                                                  <div className="font-medium text-gray-300">Item {index + 1}</div>
+                                                  <div className="text-gray-300 truncate">
                                                     {typeof item === 'object' ? JSON.stringify(item).substring(0, 40) + '...' : String(item || '')}
                                                   </div>
                                                 </div>
                                               ))}
                                               {value.length > 3 && (
-                                                <div className="col-span-full text-center text-xs text-gray-500 py-1">
+                                                <div className="col-span-full text-center text-xs text-gray-400 py-1">
                                                   ... and {value.length - 3} more items
                                                 </div>
                                               )}
@@ -1312,17 +1400,17 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                                           )}
                                         </div>
                                       ) : (
-                                        <div className="text-sm text-gray-600">
+                                        <div className="text-sm text-gray-300">
                                           {typeof value === 'object' && value !== null ? (
                                             <div className="space-y-1">
                                               {Object.entries(value as Record<string, unknown>).slice(0, 3).map(([subKey, subValue]) => (
                                                 <div key={subKey} className="flex justify-between">
                                                   <span className="font-medium text-xs">{subKey}:</span>
-                                                  <span className="text-gray-600 text-xs">{String(subValue || '')}</span>
+                                                  <span className="text-gray-300 text-xs">{String(subValue || '')}</span>
                                                 </div>
                                               ))}
                                               {Object.keys(value).length > 3 && (
-                                                <div className="text-xs text-gray-500 italic text-center py-1">
+                                                <div className="text-xs text-gray-400 italic text-center py-1">
                                                   ... and {Object.keys(value).length - 3} more fields
                                                 </div>
                                               )}
@@ -1342,9 +1430,9 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                       </div>
 
                       {/* Response Actions */}
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-200 ">
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-700 ">
                         <div className="flex items-center space-x-2">
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-gray-400">
                             {response.body && typeof response.body === 'object' 
                               ? `${Object.keys(response.body).length} keys`
                               : '1 item'
@@ -1355,14 +1443,14 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                         <div className="flex items-center space-x-1">
                           <button
                             onClick={handleCopyResponse}
-                            className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-all duration-200"
+                            className="p-1 text-gray-400 hover:text-blue-400 hover:bg-blue-900 rounded transition-all duration-200"
                             title={`Copy ${responseTab}`}
                           >
                             {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                           </button>
                           <button
                             onClick={handleDownloadResponse}
-                            className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-all duration-200"
+                            className="p-1 text-gray-400 hover:text-blue-400 hover:bg-blue-900 rounded transition-all duration-200"
                             title={`Download ${responseTab}`}
                           >
                             <Download className="h-3 w-3" />
@@ -1370,7 +1458,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                           {response.status >= 200 && response.status < 300 && (
                             <button
                               onClick={handleSaveSchema}
-                              className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-all duration-200"
+                              className="p-1 text-gray-400 hover:text-blue-400 hover:bg-blue-900 rounded transition-all duration-200"
                               title="Save Schema"
                             >
                               <Save className="h-3 w-3" />
@@ -1385,15 +1473,15 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
             )}
 
             {showValidate && (
-              <div className=" border border-gray-200 rounded-lg shadow-sm  w-[100%] md:w-[40%]">
-                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 rounded-t-lg">
+              <div className=" border border-gray-700 rounded-lg shadow-sm  w-[100%] md:w-[40%]">
+                <div className="bg-gray-700 px-4 py-2 border-b border-gray-700 rounded-t-lg">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-800">Validate</h3>
+                    <h3 className="text-sm font-semibold text-gray-200">Validate</h3>
                     <div className="flex items-center space-x-2">
                       <div className="flex items-center space-x-1">
-                        <span className="text-xs text-gray-600">Validate</span>
+                        <span className="text-xs text-gray-300">Validate</span>
                         <div className="relative inline-block w-8 h-4 bg-gray-200 rounded-full">
-                          <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-white rounded-full transition-transform"></div>
+                          <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-gray-800 rounded-full transition-transform"></div>
                         </div>
                       </div>
                       {response && (
@@ -1413,7 +1501,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                 
                 <div className="p-4 h-full overflow-auto">
                   {!response && (
-                    <div className="flex items-center justify-center h-32 text-gray-500">
+                    <div className="flex items-center justify-center h-32 text-gray-400">
                       <div className="text-center">
                         <CheckCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                         <p className="text-xs">No validation results yet. Send a request to see validation.</p>
@@ -1457,12 +1545,12 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
       {/* Sync Modal */}
       {showSyncModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Sync Configuration</h3>
               <button
                 onClick={() => setShowSyncModal(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-400 hover:text-gray-300"
               >
                 ✕
               </button>
@@ -1471,7 +1559,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Table Name</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Table Name</label>
                   <input
                     type="text"
                     value={syncFormData.tableName}
@@ -1481,7 +1569,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ID Field</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">ID Field</label>
                   <input
                     type="text"
                     value={syncFormData.idField}
@@ -1493,7 +1581,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">URL</label>
                 <input
                   type="text"
                   value={syncFormData.url}
@@ -1504,7 +1592,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Headers (JSON)</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Headers (JSON)</label>
                 <textarea
                   value={JSON.stringify(syncFormData.headers, null, 2)}
                   onChange={(e) => {
@@ -1522,7 +1610,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Next Page In</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Next Page In</label>
                   <select
                     value={syncFormData.nextPageIn}
                     onChange={(e) => setSyncFormData({...syncFormData, nextPageIn: e.target.value})}
@@ -1533,7 +1621,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Next Page Field</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Next Page Field</label>
                   <input
                     type="text"
                     value={syncFormData.nextPageField}
@@ -1546,7 +1634,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Token Parameter (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Token Parameter (Optional)</label>
                   <input
                     type="text"
                     value={syncFormData.tokenParam}
@@ -1556,7 +1644,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Pages</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Max Pages</label>
                   <input
                     type="number"
                     value={syncFormData.maxPages || ''}
@@ -1578,7 +1666,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                     onChange={(e) => setSyncFormData({...syncFormData, stopOnExisting: e.target.checked})}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700">Stop on existing items</span>
+                  <span className="text-sm text-gray-300">Stop on existing items</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -1587,7 +1675,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
                     onChange={(e) => setSyncFormData({...syncFormData, isAbsoluteUrl: e.target.checked})}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700">Is absolute URL</span>
+                  <span className="text-sm text-gray-300">Is absolute URL</span>
                 </label>
               </div>
             </div>
@@ -1595,7 +1683,7 @@ export default function MethodTestPage({ method, namespace, onOpenSchemaTab, ref
             <div className="flex justify-end space-x-3 mt-6">
               <button
                 onClick={() => setShowSyncModal(false)}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                className="px-4 py-2 text-gray-300 border border-gray-300 rounded-md hover:bg-gray-700"
               >
                 Cancel
               </button>

@@ -17,7 +17,7 @@ interface Namespace {
 interface NamespaceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (namespace: Partial<Namespace>) => Promise<void>;
+  onSave: (namespace: Partial<Namespace> | FormData) => Promise<void>;
   namespace?: Namespace | null;
 }
 
@@ -140,36 +140,39 @@ const NamespaceModal: React.FC<NamespaceModalProps> = ({ isOpen, onClose, onSave
 
   return (
     <div 
-      className="fixed inset-0 bg-blue-900/40 backdrop-blur-sm flex items-center justify-center z-50"
+      className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50"
       onClick={onClose}
     >
-      <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4" onClick={e => e.stopPropagation()}>
+      <div
+        className="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-7 max-w-2xl w-full mx-4 shadow-2xl border border-slate-100 dark:border-slate-700/80"
+        onClick={e => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <Database className="text-blue-600" size={16} />
+            <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-500/15 flex items-center justify-center">
+              <Database className="text-blue-600 dark:text-blue-400" size={16} />
             </div>
-            <h3 className="text-xl font-semibold">
+            <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-50">
               {isEdit ? 'Edit Namespace' : 'Create New Namespace'}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
 
         <div className="space-y-4">
           {/* Icon Upload Section */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
               Namespace Icon
             </label>
             <div className="flex items-center gap-4">
               {/* Icon Preview */}
-              <div className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+              <div className="w-16 h-16 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-slate-800">
                 {iconPreview ? (
                   <img 
                     src={iconPreview} 
@@ -177,7 +180,7 @@ const NamespaceModal: React.FC<NamespaceModalProps> = ({ isOpen, onClose, onSave
                     className="w-12 h-12 object-cover rounded"
                   />
                 ) : (
-                  <Image className="w-6 h-6 text-gray-400" />
+                  <Image className="w-6 h-6 text-gray-400 dark:text-gray-500" />
                 )}
               </div>
               
@@ -194,7 +197,7 @@ const NamespaceModal: React.FC<NamespaceModalProps> = ({ isOpen, onClose, onSave
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-500/25 transition-colors"
                   >
                     <Upload className="w-4 h-4" />
                     {iconPreview ? 'Change Icon' : 'Upload Icon'}
@@ -203,13 +206,13 @@ const NamespaceModal: React.FC<NamespaceModalProps> = ({ isOpen, onClose, onSave
                     <button
                       type="button"
                       onClick={handleIconRemove}
-                      className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
                     >
                       Remove
                     </button>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Recommended: 128x128px, max 5MB
                 </p>
               </div>
@@ -217,32 +220,32 @@ const NamespaceModal: React.FC<NamespaceModalProps> = ({ isOpen, onClose, onSave
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Namespace Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={form["namespace-name"]}
               onChange={e => setForm(f => ({ ...f, "namespace-name": e.target.value }))}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
               placeholder="Enter namespace name"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Namespace URL <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500">
                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20" /></svg>
               </span>
               <input
                 type="text"
                 value={form["namespace-url"]}
                 onChange={e => setForm(f => ({ ...f, "namespace-url": e.target.value }))}
-                className="w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
                 placeholder="https://api.example.com"
               />
@@ -250,19 +253,19 @@ const NamespaceModal: React.FC<NamespaceModalProps> = ({ isOpen, onClose, onSave
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Tags</label>
             {!isEdit ? (
               <input
                 type="text"
                 value={form.tags?.join(', ') || ''}
                 onChange={handleTagInput}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter tags (comma-separated)"
               />
             ) : (
               <div className="flex flex-wrap gap-2">
                 {(form.tags || []).map((tag, idx) => (
-                  <span key={idx} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                  <span key={idx} className="bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
                     {tag}
                     <button
                       type="button"
@@ -275,7 +278,7 @@ const NamespaceModal: React.FC<NamespaceModalProps> = ({ isOpen, onClose, onSave
                 ))}
                 <input
                   type="text"
-                  className="flex-1 min-w-[120px] px-2 py-1 border rounded focus:ring-2 focus:ring-blue-200 text-xs"
+                  className="flex-1 min-w-[120px] px-2 py-1 border border-gray-300 dark:border-slate-700 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-200 text-xs"
                   placeholder="Add tag and press Enter"
                   onKeyDown={e => {
                     if (e.key === 'Enter' && e.currentTarget.value.trim()) {
@@ -290,28 +293,34 @@ const NamespaceModal: React.FC<NamespaceModalProps> = ({ isOpen, onClose, onSave
 
           {isEdit && namespace && Array.isArray(namespace["schemaIds"]) && namespace["schemaIds"].length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Schema IDs</label>
-              <ul className="list-disc pl-5 text-xs text-gray-700 bg-gray-100 rounded p-2">
-                {namespace["schemaIds"].map((id: string) => (
-                  <li key={id}>{id}</li>
-                ))}
-              </ul>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                Schema IDs
+              </label>
+              <div className="max-h-56 md:max-h-72 overflow-y-auto pr-1 rounded bg-gray-100 dark:bg-slate-800">
+                <ul className="list-disc pl-5 text-xs text-gray-700 dark:text-gray-300">
+                  {namespace["schemaIds"].map((id: string) => (
+                    <li key={id} className="py-0.5 break-all">
+                      {id}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           )}
         </div>
 
-        {error && <div className="mt-4 text-sm text-red-600">{error}</div>}
+        {error && <div className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</div>}
 
         <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+            className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className={`px-4 py-2 ${isEdit ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-lg`}
+            className={`px-4 py-2 ${isEdit ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-slate-900`}
             disabled={loading}
           >
             {loading ? (isEdit ? 'Saving...' : 'Creating...') : isEdit ? 'Update Namespace' : 'Create Namespace'}

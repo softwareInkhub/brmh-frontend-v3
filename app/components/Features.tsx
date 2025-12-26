@@ -90,31 +90,31 @@ const itemVariants = {
     y: 0,
     transition: {
       duration: 0.6,
-      ease: "easeOut"
+      ease: [0.4, 0, 0.2, 1] as const
     }
   }
 }
 
 export default function Features() {
   return (
-    <section id="features" className="py-12 md:py-20 px-4 md:px-20 bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
-      <div className="max-w-7xl mx-auto">
+    <section id="features" className="py-12 md:py-20 px-4 md:px-20 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900">
+      <div className="w-full md:px-6">
         {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12 md:mb-16"
+          className="text-center mb-6 md:mb-12 lg:mb-16"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 rounded-full text-blue-700 text-sm font-medium mb-4">
-            <Sparkles className="w-4 h-4" />
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-4 sm:py-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-700 dark:text-blue-300 text-xs font-medium mb-2 sm:mb-3 md:mb-4">
+            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
             Features
           </div>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold font-display mb-4 text-gray-900">
+          <h2 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-bold font-display mb-2 sm:mb-3 md:mb-4 px-4 sm:px-0 text-gray-900 dark:text-white leading-tight">
             Powerful Features for Modern Developers
           </h2>
-          <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xs sm:text-base md:text-lg lg:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed px-4 sm:px-0">
             Everything you need to build, manage, and scale your APIs in one unified platform
           </p>
         </motion.div>
@@ -125,40 +125,79 @@ export default function Features() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
+          className="mb-8 md:mb-0"
         >
-          {features.map((feature, index) => (
-            <motion.div
-              key={index}
-              variants={itemVariants}
-              className="group"
-            >
-              <div className={`bg-white rounded-2xl p-6 md:p-8 border-2 ${feature.borderColor} ${feature.hoverColor} transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative overflow-hidden`}>
-                {/* Background gradient overlay */}
-                <div className={`absolute inset-0 ${feature.bgColor} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-                
-                <div className="relative z-10">
-                  <div className={`w-12 h-12 ${feature.bgColor} rounded-xl flex items-center justify-center mb-4 md:mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
-                    <feature.icon className={`w-6 h-6 ${feature.color}`} />
-                  </div>
+          {/* Mobile: Horizontal Scrollable */}
+          <div className="flex sm:hidden gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide snap-x snap-mandatory">
+            {features.map((feature, index) => (
+              <motion.div
+                key={`mobile-${index}`}
+                variants={itemVariants}
+                className="group flex-shrink-0 w-[85vw] max-w-sm snap-start"
+              >
+                <div className={`bg-white dark:bg-gray-900 rounded-xl p-4 border-2 ${feature.borderColor} dark:border-gray-700 ${feature.hoverColor} dark:hover:border-gray-600 transition-all duration-300 hover:shadow-xl dark:hover:shadow-gray-900/50 relative overflow-hidden h-full flex flex-col`}>
+                  {/* Background gradient overlay */}
+                  <div className={`absolute inset-0 ${feature.bgColor} dark:opacity-0 opacity-0 group-hover:opacity-100 dark:group-hover:opacity-20 transition-opacity duration-300`}></div>
                   
-                  <h3 className="text-lg md:text-xl font-bold mb-3 text-gray-900 group-hover:text-gray-800 transition-colors">
-                    {feature.title}
-                  </h3>
-                  
-                  <p className="text-sm md:text-base text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors">
-                    {feature.description}
-                  </p>
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className={`w-10 h-10 ${feature.bgColor} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-sm flex-shrink-0`}>
+                      <feature.icon className={`w-5 h-5 ${feature.color}`} />
+                    </div>
+                    
+                    <h3 className="text-sm font-bold mb-2 text-gray-900 dark:text-gray-100 group-hover:text-gray-800 dark:group-hover:text-white transition-colors flex-shrink-0">
+                      {feature.title}
+                    </h3>
+                    
+                    <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed group-hover:text-gray-800 dark:group-hover:text-gray-200 transition-colors flex-grow">
+                      {feature.description}
+                    </p>
 
-                  {/* Learn more link */}
-                  <div className="mt-4 flex items-center text-sm font-medium text-blue-600 group-hover:text-blue-700 transition-colors">
-                    <span>Learn more</span>
-                    <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                    {/* Learn more link */}
+                    <div className="mt-3 flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors flex-shrink-0">
+                      <span>Learn more</span>
+                      <ArrowRight className="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Desktop: Grid Layout */}
+          <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 auto-rows-fr">
+            {features.map((feature, index) => (
+              <motion.div
+                key={`desktop-${index}`}
+                variants={itemVariants}
+                className="group h-full"
+              >
+                <div className={`bg-white dark:bg-gray-900 rounded-2xl p-6 md:p-8 border-2 ${feature.borderColor} dark:border-gray-700 ${feature.hoverColor} dark:hover:border-gray-600 transition-all duration-300 hover:shadow-xl dark:hover:shadow-gray-900/50 relative overflow-hidden h-full flex flex-col`}>
+                  {/* Background gradient overlay */}
+                  <div className={`absolute inset-0 ${feature.bgColor} dark:opacity-0 opacity-0 group-hover:opacity-100 dark:group-hover:opacity-20 transition-opacity duration-300`}></div>
+                  
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className={`w-12 h-12 ${feature.bgColor} rounded-xl flex items-center justify-center mb-4 md:mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm flex-shrink-0`}>
+                      <feature.icon className={`w-6 h-6 ${feature.color}`} />
+                    </div>
+                    
+                    <h3 className="text-lg md:text-xl font-bold mb-3 text-gray-900 dark:text-gray-100 group-hover:text-gray-800 dark:group-hover:text-white transition-colors flex-shrink-0">
+                      {feature.title}
+                    </h3>
+                    
+                    <p className="text-xs md:text-base text-gray-700 dark:text-gray-300 leading-relaxed group-hover:text-gray-800 dark:group-hover:text-gray-200 transition-colors flex-grow">
+                      {feature.description}
+                    </p>
+
+                    {/* Learn more link */}
+                    <div className="mt-4 flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors flex-shrink-0">
+                      <span>Learn more</span>
+                      <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </motion.div>
 
         {/* Additional Features */}
@@ -167,36 +206,36 @@ export default function Features() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-16 md:mt-20 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-3xl p-6 md:p-12 border border-blue-100"
+          className="mt-10 md:mt-16 lg:mt-20 bg-gradient-to-r from-blue-100 via-indigo-50 to-purple-100 dark:from-blue-950/50 dark:via-indigo-950/50 dark:to-purple-950/50 rounded-xl md:rounded-2xl lg:rounded-3xl p-4 sm:p-6 md:p-8 lg:p-12 border border-blue-200 dark:border-gray-700"
         >
           <div className="text-center mb-8">
-            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">Enterprise-Grade Infrastructure</h3>
-            <p className="text-gray-600">Built for scale, security, and performance</p>
+            <h3 className="text-xl sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2 leading-tight">Enterprise-Grade Infrastructure</h3>
+            <p className="text-xs sm:text-base text-gray-700 dark:text-gray-300">Built for scale, security, and performance</p>
           </div>
           
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            <div className="text-center group">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                <Shield className="w-8 h-8 text-blue-600" />
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 md:gap-8 auto-rows-fr">
+            <div className="text-center group h-full">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 dark:text-blue-400" />
               </div>
-              <h3 className="text-lg font-bold mb-2 text-gray-900">Enterprise Security</h3>
-              <p className="text-sm text-gray-600">Bank-level security with encryption, authentication, and compliance</p>
+              <h3 className="text-xs sm:text-sm font-bold mb-1.5 sm:mb-2 text-gray-900 dark:text-gray-100">Enterprise Security</h3>
+              <p className="text-[10px] sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Bank-level security with encryption, authentication, and compliance</p>
             </div>
             
-            <div className="text-center group">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                <Globe className="w-8 h-8 text-green-600" />
+            <div className="text-center group h-full">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/50 dark:to-green-800/50 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                <Globe className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 dark:text-green-400" />
               </div>
-              <h3 className="text-lg font-bold mb-2 text-gray-900">Global Infrastructure</h3>
-              <p className="text-sm text-gray-600">Deployed across multiple regions for optimal performance</p>
+              <h3 className="text-xs sm:text-sm font-bold mb-1.5 sm:mb-2 text-gray-900 dark:text-gray-100">Global Infrastructure</h3>
+              <p className="text-[10px] sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Deployed across multiple regions for optimal performance</p>
             </div>
             
-            <div className="text-center group sm:col-span-2 lg:col-span-1">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                <BarChart3 className="w-8 h-8 text-purple-600" />
+            <div className="text-center group col-span-2 sm:col-span-1 lg:col-span-1 h-full">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/50 dark:to-purple-800/50 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 dark:text-purple-400" />
               </div>
-              <h3 className="text-lg font-bold mb-2 text-gray-900">Analytics & Monitoring</h3>
-              <p className="text-sm text-gray-600">Real-time insights into API usage and performance</p>
+              <h3 className="text-xs sm:text-sm font-bold mb-1.5 sm:mb-2 text-gray-900 dark:text-gray-100">Analytics & Monitoring</h3>
+              <p className="text-[10px] sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Real-time insights into API usage and performance</p>
             </div>
           </div>
         </motion.div>

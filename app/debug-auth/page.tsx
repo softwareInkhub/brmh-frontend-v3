@@ -176,8 +176,10 @@ export default function DebugAuthPage() {
   };
 
   const redirectToAuth = () => {
-    const currentUrl = 'http://localhost:3000/';
-    const authUrl = `https://auth.brmh.in/login?next=${encodeURIComponent(currentUrl)}`;
+    const currentUrl = window.location.href.split('#')[0];
+    const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL 
+      || (window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'http://localhost:3000');
+    const authUrl = `${AUTH_URL}/login?next=${encodeURIComponent(currentUrl)}`;
     addLog(`🔀 Redirecting to: ${authUrl}`);
     window.location.href = authUrl;
   };

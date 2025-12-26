@@ -456,7 +456,7 @@ export default function HomePage() {
                       <span className="text-sm text-gray-600">HTTPS Only</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked className="sr-only peer" />
+                      <input type="checkbox" defaultChecked className="sr-only peer" />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                     </label>
                   </div>
@@ -479,74 +479,141 @@ export default function HomePage() {
       </div>
 
       {/* AWS Services & Recent Activity Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* AWS Services Overview */}
-        <Card className="p-4 md:p-6">
+        <Card className="p-5 md:p-6 bg-white border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base md:text-lg font-semibold text-gray-900">AWS Services</h2>
-            <Link href="/aws-services" className="text-xs md:text-sm text-blue-600 hover:text-blue-700">View all</Link>
+            <Link
+              href="/aws-services"
+              className="text-xs md:text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              View all
+            </Link>
           </div>
-          <div className="space-y-2 md:space-y-4">
-            <div className="flex items-center justify-between p-2 md:p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 md:gap-3">
-                <Cloud className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
-                <span className="text-xs md:text-sm font-medium">Lambda Functions</span>
+          <div className="space-y-3 md:space-y-4">
+            <div className="flex items-center justify-between p-3 md:p-4 rounded-xl bg-gray-50 border border-gray-100">
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="p-2 rounded-lg bg-blue-50">
+                  <Cloud className="w-5 h-5 md:w-6 md:h-6 text-blue-500" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs md:text-sm font-medium text-gray-800">
+                    Lambda Functions
+                  </span>
+                  <span className="text-[11px] md:text-xs text-gray-500">
+                    Active compute workloads
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs md:text-sm font-semibold">{stats.awsServices.lambda}</span>
-                <CircleDot className="w-2 h-2 md:w-3 md:h-3 text-green-500" />
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-sm md:text-base font-semibold text-gray-900">
+                  {stats.awsServices.lambda}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] md:text-xs bg-green-100 text-green-700">
+                  <CircleDot className="w-3 h-3" />
+                  Healthy
+                </span>
               </div>
             </div>
-            <div className="flex items-center justify-between p-2 md:p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 md:gap-3">
-                <Database className="w-4 h-4 md:w-5 md:h-5 text-purple-500" />
-                <span className="text-xs md:text-sm font-medium">DynamoDB Tables</span>
+            <div className="flex items-center justify-between p-3 md:p-4 rounded-xl bg-gray-50 border border-gray-100">
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="p-2 rounded-lg bg-purple-50">
+                  <Database className="w-5 h-5 md:w-6 md:h-6 text-purple-500" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs md:text-sm font-medium text-gray-800">
+                    DynamoDB Tables
+                  </span>
+                  <span className="text-[11px] md:text-xs text-gray-500">
+                    Primary data stores
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs md:text-sm font-semibold">{stats.awsServices.dynamodb}</span>
-                <CircleDot className="w-2 h-2 md:w-3 md:h-3 text-green-500" />
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-sm md:text-base font-semibold text-gray-900">
+                  {stats.awsServices.dynamodb}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] md:text-xs bg-green-100 text-green-700">
+                  <CircleDot className="w-3 h-3" />
+                  Online
+                </span>
               </div>
             </div>
-            <div className="flex items-center justify-between p-2 md:p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 md:gap-3">
-                <Code className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
-                <span className="text-xs md:text-sm font-medium">S3 Buckets</span>
+            <div className="flex items-center justify-between p-3 md:p-4 rounded-xl bg-gray-50 border border-gray-100">
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="p-2 rounded-lg bg-orange-50">
+                  <Code className="w-5 h-5 md:w-6 md:h-6 text-orange-500" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs md:text-sm font-medium text-gray-800">
+                    S3 Buckets
+                  </span>
+                  <span className="text-[11px] md:text-xs text-gray-500">
+                    Object storage endpoints
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs md:text-sm font-semibold">{stats.awsServices.s3}</span>
-                <CircleDot className="w-2 h-2 md:w-3 md:h-3 text-green-500" />
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-sm md:text-base font-semibold text-gray-900">
+                  {stats.awsServices.s3}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] md:text-xs bg-green-100 text-green-700">
+                  <CircleDot className="w-3 h-3" />
+                  Available
+                </span>
               </div>
             </div>
           </div>
         </Card>
 
         {/* Recent Executions */}
-        <Card className="p-4 md:p-6">
+        <Card className="p-5 md:p-6 bg-white border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base md:text-lg font-semibold text-gray-900">Recent Executions</h2>
-            <Link href="/executions" className="text-xs md:text-sm text-blue-600 hover:text-blue-700">View all</Link>
+            <Link
+              href="/executions"
+              className="text-xs md:text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              View all
+            </Link>
           </div>
-          <div className="space-y-2 md:space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {stats.recentExecutions.map((execution) => (
-              <div key={execution.id} className="flex items-center justify-between p-2 md:p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2 md:gap-3">
-                  <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${
-                    execution.status === 'completed' ? 'bg-green-500' :
-                    execution.status === 'in-progress' ? 'bg-blue-500' : 'bg-red-500'
-                  }`} />
-                  <span className="text-xs md:text-sm font-medium">{execution.id}</span>
+              <div
+                key={execution.id}
+                className="flex items-center justify-between p-3 md:p-4 rounded-xl bg-gray-50 border border-gray-100"
+              >
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div
+                    className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full ${
+                      execution.status === 'completed'
+                        ? 'bg-emerald-500'
+                        : execution.status === 'in-progress'
+                        ? 'bg-blue-500'
+                        : 'bg-red-500'
+                    }`}
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-xs md:text-sm font-semibold text-gray-900">
+                      {execution.id}
+                    </span>
+                    <span className="text-[11px] md:text-xs text-gray-500">
+                      {new Date(execution.timestamp).toLocaleTimeString('en-GB')}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 md:gap-4">
-                  <span className="text-[10px] md:text-xs text-gray-500">
-                    {new Date(execution.timestamp).toLocaleTimeString('en-GB')}
-                  </span>
-                  <span className={`text-[10px] md:text-xs font-medium ${
-                    execution.status === 'completed' ? 'text-green-600' :
-                    execution.status === 'in-progress' ? 'text-blue-600' : 'text-red-600'
-                  }`}>
-                    {execution.status}
-                  </span>
-                </div>
+                <span
+                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] md:text-xs font-semibold ${
+                    execution.status === 'completed'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : execution.status === 'in-progress'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {execution.status}
+                </span>
               </div>
             ))}
           </div>
@@ -554,58 +621,58 @@ export default function HomePage() {
       </div>
 
       {/* Quick Actions Section */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 items-stretch">
         <Link href="/users" className="group">
-          <Card className="p-3 md:p-4 hover:shadow-md transition-all group-hover:border-indigo-200">
+          <Card className="h-full min-h-[96px] p-3 md:p-4 bg-white border border-gray-200 hover:shadow-md transition-all group-hover:border-indigo-400">
             <div className="flex items-center gap-2 md:gap-3">
               <div className="p-1.5 md:p-2 bg-indigo-50 rounded-lg">
                 <Users className="w-4 h-4 md:w-5 md:h-5 text-indigo-500" />
               </div>
               <div>
                 <h3 className="text-xs md:text-sm font-medium text-gray-900">User Management</h3>
-                <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1">Manage users</p>
+                <p className="text-[11px] md:text-xs text-gray-500 mt-0.5 md:mt-1">Manage users</p>
               </div>
             </div>
           </Card>
         </Link>
 
         <Link href="/namespace" className="group">
-          <Card className="p-3 md:p-4 hover:shadow-md transition-all group-hover:border-blue-200">
+          <Card className="h-full min-h-[96px] p-3 md:p-4 bg-white border border-gray-200 hover:shadow-md transition-all group-hover:border-blue-400">
             <div className="flex items-center gap-2 md:gap-3">
               <div className="p-1.5 md:p-2 bg-blue-50 rounded-lg">
                 <Database className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
               </div>
               <div>
                 <h3 className="text-xs md:text-sm font-medium text-gray-900">Manage Namespaces</h3>
-                <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1">Configure namespaces</p>
+                <p className="text-[11px] md:text-xs text-gray-500 mt-0.5 md:mt-1">Configure namespaces</p>
               </div>
             </div>
           </Card>
         </Link>
 
         <Link href="/executions" className="group">
-          <Card className="p-3 md:p-4 hover:shadow-md transition-all group-hover:border-green-200">
+          <Card className="h-full min-h-[96px] p-3 md:p-4 bg-white border border-gray-200 hover:shadow-md transition-all group-hover:border-green-400">
             <div className="flex items-center gap-2 md:gap-3">
               <div className="p-1.5 md:p-2 bg-green-50 rounded-lg">
                 <Activity className="w-4 h-4 md:w-5 md:h-5 text-green-500" />
               </div>
               <div>
                 <h3 className="text-xs md:text-sm font-medium text-gray-900">View Executions</h3>
-                <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1">Monitor pipeline</p>
+                <p className="text-[11px] md:text-xs text-gray-500 mt-0.5 md:mt-1">Monitor pipeline</p>
               </div>
             </div>
           </Card>
         </Link>
 
-        <Link href="/aws-services" className="group col-span-2 md:col-span-1">
-          <Card className="p-3 md:p-4 hover:shadow-md transition-all group-hover:border-purple-200">
+        <Link href="/aws-services" className="group">
+          <Card className="h-full min-h-[96px] p-3 md:p-4 bg-white border border-gray-200 hover:shadow-md transition-all group-hover:border-purple-400">
             <div className="flex items-center gap-2 md:gap-3">
               <div className="p-1.5 md:p-2 bg-purple-50 rounded-lg">
                 <Cloud className="w-4 h-4 md:w-5 md:h-5 text-purple-500" />
               </div>
               <div>
                 <h3 className="text-xs md:text-sm font-medium text-gray-900">AWS Services</h3>
-                <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1">Manage resources</p>
+                <p className="text-[11px] md:text-xs text-gray-500 mt-0.5 md:mt-1">Manage resources</p>
               </div>
             </div>
           </Card>

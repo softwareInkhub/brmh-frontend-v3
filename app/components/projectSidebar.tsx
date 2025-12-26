@@ -117,18 +117,21 @@ const Sidebar: React.FC = () => {
       sessionStorage.removeItem('phone_signup_username');
     } catch {}
     
-    // Redirect to auth.brmh.in instead of Cognito
-    window.location.href = 'https://auth.brmh.in/login';
+    // Redirect to auth URL from environment variable with fallback
+    const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL 
+      || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'http://localhost:3000');
+    window.location.href = `${AUTH_URL}/login`;
   };
 
   return (
     <>
       {/* Mobile Hamburger Menu Button */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50  bg-white  pb-4"
+        className="md:hidden fixed top-4 left-4 z-50 w-9 h-9 flex items-center justify-center rounded-lg bg-gray-900 text-white shadow-md"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        aria-label="Toggle sidebar"
       >
-        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
       {/* Mobile Overlay */}
@@ -141,7 +144,7 @@ const Sidebar: React.FC = () => {
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 z-40 h-screen bg-white border-r border-gray-200 flex flex-col py-5
+        fixed top-0 left-0 z-40 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col py-5
         transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         w-64 md:w-20
@@ -151,7 +154,7 @@ const Sidebar: React.FC = () => {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-300 flex items-center justify-center mr-3">
             <span className="text-white font-bold text-lg">B</span>
           </div>
-          <span className="text-xl font-bold text-gray-900">BRMH</span>
+          <span className="text-xl font-bold text-gray-900 dark:text-white">BRMH</span>
         </div>
         
         {/* Desktop Logo */}
@@ -172,16 +175,16 @@ const Sidebar: React.FC = () => {
                 href={item.path}
                 className={`flex items-center gap-3 py-2.5 px-3 rounded-lg group transition-colors md:flex-col md:gap-1 md:py-2 md:w-full
                   ${pathname === item.path 
-                    ? 'bg-yellow-50 text-yellow-700 border border-yellow-200 md:bg-white md:text-blue-600 md:shadow-sm' 
-                    : 'text-gray-600 hover:text-yellow-700 hover:bg-yellow-50 md:text-gray-500 md:hover:text-blue-600 md:hover:bg-gray-100'
+                    ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700 md:bg-white dark:md:bg-gray-800 md:text-blue-700 dark:md:text-blue-300 md:shadow-sm' 
+                    : 'text-gray-700 dark:text-gray-300 hover:text-yellow-800 dark:hover:text-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 md:text-gray-600 dark:md:text-gray-300 md:hover:text-blue-700 dark:md:hover:text-blue-300 md:hover:bg-gray-100 dark:md:hover:bg-gray-800'
                   }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <div className={`${pathname === item.path ? 'text-yellow-600 md:text-blue-600' : 'text-gray-500 group-hover:text-yellow-700 md:group-hover:text-blue-600'}`}>
+                <div className={`${pathname === item.path ? 'text-yellow-700 dark:text-yellow-300 md:text-blue-700 dark:md:text-blue-300' : 'text-gray-600 dark:text-gray-300 group-hover:text-yellow-700 dark:group-hover:text-yellow-300 md:group-hover:text-blue-700 dark:md:group-hover:text-blue-300'}`}>
                   {item.icon}
                 </div>
                 <span className="font-medium text-sm md:hidden">{item.name}</span>
-                <span className="text-[11px] font-medium mt-0.5 group-hover:text-blue-600 hidden md:block" style={{fontSize:'11px'}}>{item.name}</span>
+                <span className="text-[11px] font-medium mt-0.5 text-gray-700 dark:text-gray-300 group-hover:text-blue-700 dark:group-hover:text-blue-300 hidden md:block" style={{fontSize:'11px'}}>{item.name}</span>
               </Link>
             ))}
           </div>

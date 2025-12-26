@@ -60,13 +60,13 @@ export default function AllSchemaPage({ namespace, onViewSchema, onEditSchema, o
   };
 
   return (
-    <div className="p-8 w-full">
+    <div className="p-8 w-full bg-white dark:bg-gray-950">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           All Schemas{namespace ? `: ${namespace['namespace-name']}` : ''}
         </h2>
         <button
-          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded shadow"
+          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white px-4 py-2 rounded shadow"
           onClick={() => {
             if (typeof onCreateNew === 'function') onCreateNew();
           }}
@@ -75,30 +75,30 @@ export default function AllSchemaPage({ namespace, onViewSchema, onEditSchema, o
         </button>
       </div>
       {loading ? (
-        <div>Loading...</div>
+        <div className="text-gray-600 dark:text-gray-400">Loading...</div>
       ) : (
         <div className="flex flex-wrap gap-4">
           {schemas.map(schema => (
             <div
               key={schema.id}
-              className="border border-gray-200 rounded-xl p-4 flex flex-col gap-2 min-w-0 bg-white shadow-sm hover:shadow-md transition-shadow"
+              className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col gap-2 min-w-0 bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-shadow"
               style={{ width: '260px', margin: '0' }}
             >
               <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-base font-semibold text-gray-900 truncate">{schema.schemaName}</span>
+                <span className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{schema.schemaName}</span>
                 <div className="flex gap-2">
-                  <button className="text-blue-600 hover:text-blue-800 p-1" title="View" onClick={() => onViewSchema && onViewSchema(schema, namespace)}>
+                  <button className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1" title="View" onClick={() => onViewSchema && onViewSchema(schema, namespace)}>
                     <Eye size={18} />
                   </button>
                   <button 
-                    className="text-green-600 hover:text-green-800 p-1" 
+                    className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 p-1" 
                     title="Edit"
                     onClick={() => onEditSchema && onEditSchema(schema, namespace)}
                   >
                     <Edit size={18} />
                   </button>
                   <button 
-                    className="text-red-600 hover:text-red-800 p-1" 
+                    className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-1" 
                     title="Delete"
                     onClick={() => handleDelete(schema.id)}
                   >

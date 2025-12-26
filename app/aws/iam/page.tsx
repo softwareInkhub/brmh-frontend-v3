@@ -541,10 +541,10 @@ export default function IAMPage() {
 
   if (loading) {
     return (
-      <div className="p-4">
-        <Card>
+      <div className="p-4 bg-gray-50 dark:bg-gray-950 min-h-screen">
+        <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
           <CardContent className="p-4">
-            <p>Loading IAM roles...</p>
+            <p className="text-gray-900 dark:text-gray-100">Loading IAM roles...</p>
           </CardContent>
         </Card>
       </div>
@@ -552,17 +552,32 @@ export default function IAMPage() {
   }
 
   if (error) {
+    // Check if error is about missing credentials
+    const isCredentialsError = error.toLowerCase().includes('missing credentials') || 
+                               error.toLowerCase().includes('aws_config_file') ||
+                               error.toLowerCase().includes('aws_sdk_load_config');
+    
     return (
-      <div className="p-4">
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+      <div className="p-4 bg-gray-50 dark:bg-gray-950 min-h-screen">
+        <Alert variant={isCredentialsError ? "default" : "destructive"} className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+          <AlertDescription className="text-yellow-800 dark:text-yellow-300">
+            {isCredentialsError ? (
+              <div className="space-y-2">
+                <p className="font-semibold">AWS Credentials Configuration Required</p>
+                <p className="text-sm">{error}</p>
+                <p className="text-xs mt-2">Please configure your AWS credentials in your environment variables or AWS config file.</p>
+              </div>
+            ) : (
+              error
+            )}
+          </AlertDescription>
         </Alert>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <div className="container mx-auto p-6 space-y-8 bg-gray-50 dark:bg-gray-950 min-h-screen">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-500 to-pink-500 bg-clip-text text-transparent animate-gradient">
