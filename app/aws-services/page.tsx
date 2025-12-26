@@ -15,6 +15,59 @@ const awsServices = [
   { id: 'apigateway', name: 'API Gateway', icon: <Globe className="text-rose-900" />, route: '/aws/apigateway' },
 ];
 
+const serviceCards = [
+  {
+    title: 'S3 Buckets',
+    description: 'Manage your S3 storage buckets',
+    href: '/aws/s3',
+    icon: (
+      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M3 3h18v18H3V3zm16 16V5H5v14h14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/>
+      </svg>
+    ),
+  },
+  {
+    title: 'DynamoDB Tables',
+    description: 'Manage your DynamoDB tables',
+    href: '/aws/dynamodb',
+    icon: (
+      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M3 3h18v18H3V3zm16 16V5H5v14h14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h10v2H7v-2z"/>
+      </svg>
+    ),
+  },
+  {
+    title: 'Lambda Functions',
+    description: 'Manage your Lambda functions',
+    href: '/aws/lambda',
+    icon: (
+      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+    ),
+  },
+  {
+    title: 'API Gateway',
+    description: 'Manage your API endpoints',
+    href: '/aws/apigateway',
+    icon: (
+      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M3 3h18v18H3V3zm16 16V5H5v14h14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h10v2H7v-2z"/>
+      </svg>
+    ),
+  },
+  {
+    title: 'IAM Roles',
+    description: 'Manage your IAM roles and policies',
+    href: '/aws/iam',
+    icon: (
+      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+      </svg>
+    ),
+  },
+];
+
 function AwsSidePanel({ onServiceClick }: { onServiceClick?: (service: any) => void }) {
   const [active, setActive] = React.useState<string | null>(null);
   const router = useRouter();
@@ -94,58 +147,5 @@ const awsPage = () => {
     </div>
   );
 }
-
-const serviceCards = [
-  {
-    title: 'S3 Buckets',
-    description: 'Manage your S3 storage buckets',
-    href: '/aws/s3',
-    icon: (
-      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M3 3h18v18H3V3zm16 16V5H5v14h14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/>
-      </svg>
-    ),
-  },
-  {
-    title: 'DynamoDB Tables',
-    description: 'Manage your DynamoDB tables',
-    href: '/aws/dynamodb',
-    icon: (
-      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M3 3h18v18H3V3zm16 16V5H5v14h14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h10v2H7v-2z"/>
-      </svg>
-    ),
-  },
-  {
-    title: 'Lambda Functions',
-    description: 'Manage your Lambda functions',
-    href: '/aws/lambda',
-    icon: (
-      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-      </svg>
-    ),
-  },
-  {
-    title: 'API Gateway',
-    description: 'Manage your API endpoints',
-    href: '/aws/apigateway',
-    icon: (
-      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M3 3h18v18H3V3zm16 16V5H5v14h14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h10v2H7v-2z"/>
-      </svg>
-    ),
-  },
-  {
-    title: 'IAM Roles',
-    description: 'Manage your IAM roles and policies',
-    href: '/aws/iam',
-    icon: (
-      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-      </svg>
-    ),
-  },
-];
 
 export default awsPage;
