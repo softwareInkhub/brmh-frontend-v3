@@ -19,14 +19,16 @@ function AwsSidePanel({ onServiceClick }: { onServiceClick?: (service: any) => v
   const [active, setActive] = useState<string | null>(null);
   const router = useRouter();
   return (
-    <aside className="h-full w-full bg-white flex flex-col py-4">
-      <div className="text-xs font-bold text-gray-500 px-4 mb-4">AWS Services</div>
+    <aside className="h-full w-full bg-white dark:bg-gray-900 flex flex-col py-4 border-r border-gray-200 dark:border-gray-800">
+      <div className="text-xs font-bold text-gray-500 dark:text-gray-400 px-4 mb-4">AWS Services</div>
       <ul className="space-y-1">
         {awsServices.map(service => (
           <li key={service.id}>
             <button
               className={`flex items-center w-full px-4 py-2 rounded-lg text-left transition-colors
-                ${active === service.id ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-gray-100'}`}
+                ${active === service.id 
+                  ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-semibold' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
               onClick={() => {
                 setActive(service.id);
                 router.push(service.route);
@@ -50,9 +52,10 @@ const AwsLayout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div className="flex h-screen ">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* AWS SidePanel */}
       <div
+        className="hidden md:block dark:bg-gray-900 dark:border-gray-800"
         style={{
           width: SIDEPANEL_WIDTH,
           minWidth: SIDEPANEL_WIDTH,
@@ -66,7 +69,7 @@ const AwsLayout = ({ children }: { children: React.ReactNode }) => {
         <AwsSidePanel onServiceClick={handleServiceClick} />
       </div>
       {/* Main AWS Content */}
-      <div className="flex-1 min-h-0 overflow-y-auto ">
+      <div className="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-950">
         {children}
       </div>
     </div>

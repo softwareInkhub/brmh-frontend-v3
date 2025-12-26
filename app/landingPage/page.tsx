@@ -13,11 +13,13 @@ import Header2 from '../components/Header2'
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white dark:bg-gray-950">
+      {/* Hero section - Full width */}
+      <Hero />
+      
       {/* Center content and add responsive padding/spacing */}
-      <div className="w-full max-w-7xl mx-auto px-3 md:px-6">
-        <div className="space-y-10 md:space-y-16">
-          <Hero />
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="space-y-8 md:space-y-12 lg:space-y-16">
           <Features />
           <HowItWorks />
           <Showcase />
