@@ -98,7 +98,7 @@ function AwsSidePanel({ onServiceClick }: { onServiceClick?: (service: any) => v
   );
 }
 
-const awsPage = () => {
+const AwsPage = () => {
   return (
     <div className="flex h-screen ml-20 bg-gray-50 dark:bg-gray-950">
       {/* SidePanel */}
@@ -128,23 +128,24 @@ const awsPage = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {serviceCards.map((card) => (
-              <Link
-                key={card.title}
-                href={card.href}
-                className="block p-6 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition-colors"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-600 dark:text-gray-400">
-                    {card.icon}
+              {serviceCards.map((card) => (
+                <Link
+                  key={card.title}
+                  href={card.href}
+                  className="block p-6 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition-colors"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-600 dark:text-gray-400">
+                      {card.icon}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">{card.title}</h3>
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{card.description}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">{card.title}</h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{card.description}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -152,4 +153,4 @@ const awsPage = () => {
   );
 }
 
-export default awsPage;
+export default AwsPage;
