@@ -15,21 +15,23 @@ const awsServices = [
 
 export default function AwsPage() {
   return (
-    <div className="pt-8 w-[70%]">
-      <h1 className="text-2xl font-bold mb-2">Services Overview</h1>
-      <p className="text-gray-500 mb-8">Monitor all your AWS services from one central dashboard</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {awsServices.map(service => (
-          <Link href={service.route} key={service.id}>
-            <div className="bg-white rounded-xl shadow border p-6 cursor-pointer hover:bg-blue-50 transition">
-              <div className="flex items-center gap-3 mb-2">
-                {service.icon}
-                <div className="font-semibold text-lg">{service.name}</div>
+    <div className="w-full bg-gray-50 dark:bg-gray-950 min-h-screen">
+      <div className="px-4 md:px-6 lg:px-8 py-6 md:py-8">
+        <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Services Overview</h1>
+        <p className="text-gray-500 dark:text-gray-400 mb-6 md:mb-8">Monitor all your AWS services from one central dashboard</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {awsServices.map(service => (
+            <Link href={service.route} key={service.id}>
+              <div className="bg-white dark:bg-gray-900 rounded-xl shadow border border-gray-200 dark:border-gray-800 p-5 md:p-6 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-800 transition">
+                <div className="flex items-center gap-3 mb-2">
+                  {service.icon}
+                  <div className="font-semibold text-base md:text-lg text-gray-900 dark:text-white">{service.name}</div>
+                </div>
+                <div className="text-gray-500 dark:text-gray-400 text-sm">{service.desc}</div>
               </div>
-              <div className="text-gray-500 text-sm">{service.desc}</div>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

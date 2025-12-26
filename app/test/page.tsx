@@ -545,28 +545,28 @@ export default function TestPage() {
   const getStatusIcon = (status: TestResult['status']) => {
     switch (status) {
       case 'success':
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+        return <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" />;
       case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />;
       case 'running':
-        return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />;
+        return <RefreshCw className="h-4 w-4 text-blue-500 dark:text-blue-400 animate-spin" />;
       case 'pending':
-        return <Clock className="h-4 w-4 text-gray-400" />;
+        return <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />;
       default:
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+        return <AlertCircle className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />;
     }
   };
 
   const getStatusColor = (status: TestResult['status'], statusCode?: number) => {
     if (status === 'success') {
       if (statusCode && statusCode >= 200 && statusCode < 300) {
-        return 'bg-green-50 border-green-200';
+        return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
       }
-      return 'bg-blue-50 border-blue-200';
+      return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
     }
-    if (status === 'error') return 'bg-red-50 border-red-200';
-    if (status === 'running') return 'bg-blue-50 border-blue-300';
-    return 'bg-gray-50 border-gray-200';
+    if (status === 'error') return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+    if (status === 'running') return 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700';
+    return 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800';
   };
 
   // Get current namespace from test state (which stores the actual namespace being tested)
@@ -664,20 +664,20 @@ export default function TestPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Activity className="h-6 w-6 text-blue-600" />
-              Namespace Testing Framework
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-3 sm:py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Activity className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <span className="truncate">Namespace Testing Framework</span>
             </h1>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
               Test all namespaces, accounts, and methods automatically
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
               onClick={() => setShowNamespaceSelector(true)}
               className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
@@ -713,17 +713,17 @@ export default function TestPage() {
               <>
                 <button
                   onClick={exportResults}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs sm:text-sm"
                 >
                   <Download className="h-4 w-4" />
-                  Export JSON
+                  <span className="hidden xs:inline sm:inline">Export JSON</span>
                 </button>
                 <button
                   onClick={clearResults}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs sm:text-sm"
                 >
                   <Trash2 className="h-4 w-4" />
-                  Clear
+                  <span className="hidden xs:inline sm:inline">Clear</span>
                 </button>
               </>
             )}
@@ -733,66 +733,66 @@ export default function TestPage() {
 
       {/* Stats Bar with Search */}
       {testState.results.length > 0 && (
-        <div className="bg-white border-b border-gray-200 px-6 py-3">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
             {/* Stats on the left */}
             <div className="flex items-center gap-6 flex-wrap">
               <div className="flex items-center gap-2">
-                <div className="text-sm font-medium text-gray-700">Total:</div>
-                <div className="px-2 py-1 bg-gray-100 rounded text-sm font-semibold">{stats.total}</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Total:</div>
+                <div className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm font-semibold text-gray-900 dark:text-gray-100">{stats.total}</div>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <div className="text-sm font-medium text-gray-700">Passed:</div>
-                <div className="px-2 py-1 bg-green-100 rounded text-sm font-semibold text-green-700">{stats.passed}</div>
+                <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" />
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Passed:</div>
+                <div className="px-2 py-1 bg-green-100 dark:bg-green-900/30 rounded text-sm font-semibold text-green-700 dark:text-green-300">{stats.passed}</div>
               </div>
               <div className="flex items-center gap-2">
-                <XCircle className="h-4 w-4 text-red-500" />
-                <div className="text-sm font-medium text-gray-700">Failed:</div>
-                <div className="px-2 py-1 bg-red-100 rounded text-sm font-semibold text-red-700">{stats.failed}</div>
+                <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Failed:</div>
+                <div className="px-2 py-1 bg-red-100 dark:bg-red-900/30 rounded text-sm font-semibold text-red-700 dark:text-red-300">{stats.failed}</div>
               </div>
               {stats.skipped > 0 && (
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-yellow-500" />
-                  <div className="text-sm font-medium text-gray-700">Skipped:</div>
-                  <div className="px-2 py-1 bg-yellow-100 rounded text-sm font-semibold text-yellow-700">{stats.skipped}</div>
+                  <AlertCircle className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Skipped:</div>
+                  <div className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 rounded text-sm font-semibold text-yellow-700 dark:text-yellow-300">{stats.skipped}</div>
                 </div>
               )}
               {stats.running > 0 && (
                 <div className="flex items-center gap-2">
-                  <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />
-                  <div className="text-sm font-medium text-gray-700">Running:</div>
-                  <div className="px-2 py-1 bg-blue-100 rounded text-sm font-semibold text-blue-700">{stats.running}</div>
+                  <RefreshCw className="h-4 w-4 text-blue-500 dark:text-blue-400 animate-spin" />
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Running:</div>
+                  <div className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded text-sm font-semibold text-blue-700 dark:text-blue-300">{stats.running}</div>
                 </div>
               )}
               {testState.isRunning && currentNamespace && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <span>Testing:</span>
-                  <span className="font-semibold text-gray-900">{currentNamespace['namespace-name']}</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{currentNamespace['namespace-name']}</span>
                 </div>
               )}
             </div>
 
             {/* Search on the right */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               {searchQuery && (
-                <div className="text-sm text-gray-600 whitespace-nowrap">
-                  Showing <span className="font-semibold text-gray-900">{stats.filtered}</span> of <span className="font-semibold text-gray-900">{stats.total}</span>
+                <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                  Showing <span className="font-semibold text-gray-900 dark:text-white">{stats.filtered}</span> of <span className="font-semibold text-gray-900 dark:text-white">{stats.total}</span>
                 </div>
               )}
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by namespace, account, method, or URL..."
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                     title="Clear search"
                   >
                     <X className="h-4 w-4" />
@@ -805,12 +805,12 @@ export default function TestPage() {
       )}
 
       {/* Results List */}
-      <div className="flex-1 overflow-auto px-6 py-4">
+      <div className="flex-1 overflow-auto px-4 sm:px-6 py-4 bg-gray-50 dark:bg-gray-950">
         {testState.results.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <FileText className="h-16 w-16 text-gray-300 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">No test results yet</h3>
-            <p className="text-sm text-gray-500 mb-6">
+            <FileText className="h-16 w-16 text-gray-300 dark:text-gray-700 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No test results yet</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
               Click "Start Testing" to begin testing all namespaces, accounts, and methods
             </p>
           </div>
@@ -818,14 +818,14 @@ export default function TestPage() {
           <div className="space-y-2">
             {filteredResults.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Search className="h-12 w-12 text-gray-300 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">No results found</h3>
-                <p className="text-sm text-gray-500 mb-4">
-                  No test results match your search query: <span className="font-semibold text-gray-700">"{searchQuery}"</span>
+                <Search className="h-12 w-12 text-gray-300 dark:text-gray-700 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No results found</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  No test results match your search query: <span className="font-semibold text-gray-700 dark:text-gray-300">"{searchQuery}"</span>
                 </p>
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
                 >
                   Clear search
                 </button>
@@ -847,37 +847,37 @@ export default function TestPage() {
                   key={`${result.namespaceId}-${result.accountId || 'no-account'}-${result.methodId}-${result.timestamp}`}
                   className={`border rounded-lg transition-all ${getStatusColor(result.status, result.statusCode)}`}
                 >
-                  <div className="p-4">
+                  <div className="p-4 bg-white dark:bg-gray-900">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           {getStatusIcon(result.status)}
                           <div className="flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-semibold text-gray-900">{result.namespaceName}</span>
+                              <span className="font-semibold text-gray-900 dark:text-white">{result.namespaceName}</span>
                               {result.accountName && (
                                 <>
-                                  <span className="text-gray-400">/</span>
-                                  <span className="text-gray-700">{result.accountName}</span>
+                                  <span className="text-gray-400 dark:text-gray-500">/</span>
+                                  <span className="text-gray-700 dark:text-gray-300">{result.accountName}</span>
                                 </>
                               )}
-                              <span className="text-gray-400">/</span>
-                              <span className="text-gray-700">{result.methodName}</span>
+                              <span className="text-gray-400 dark:text-gray-500">/</span>
+                              <span className="text-gray-700 dark:text-gray-300">{result.methodName}</span>
                             </div>
-                            <div className="flex items-center gap-4 mt-1 text-xs text-gray-600">
+                            <div className="flex items-center gap-4 mt-1 text-xs text-gray-600 dark:text-gray-400">
                               {result.statusCode && (
                                 <span className={`px-2 py-0.5 rounded font-medium ${
                                   result.statusCode >= 200 && result.statusCode < 300
-                                    ? 'bg-green-100 text-green-700'
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                                     : result.statusCode >= 400
-                                    ? 'bg-red-100 text-red-700'
-                                    : 'bg-yellow-100 text-yellow-700'
+                                    ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                    : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
                                 }`}>
                                   Status: {result.statusCode}
                                 </span>
                               )}
                               {result.status === 'skipped' && (
-                                <span className="px-2 py-0.5 rounded font-medium bg-yellow-100 text-yellow-700">
+                                <span className="px-2 py-0.5 rounded font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
                                   Skipped
                                 </span>
                               )}
@@ -889,8 +889,8 @@ export default function TestPage() {
                             {result.error && (
                               <div className={`mt-2 text-sm px-2 py-1 rounded ${
                                 result.status === 'skipped' 
-                                  ? 'text-yellow-700 bg-yellow-50' 
-                                  : 'text-red-600 bg-red-50'
+                                  ? 'text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-900/20' 
+                                  : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
                               }`}>
                                 {result.error}
                               </div>
@@ -909,7 +909,7 @@ export default function TestPage() {
                             }
                             setExpandedCards(newExpanded);
                           }}
-                          className="ml-2 p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                          className="ml-2 p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
                           title={isExpanded ? "Hide request details" : "Show request details"}
                         >
                           {isExpanded ? (
@@ -924,20 +924,20 @@ export default function TestPage() {
 
                   {/* Expandable Request Details */}
                   {isExpanded && hasRequestDetails && (
-                    <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
+                    <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4 space-y-3">
                       {/* Method and URL */}
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-semibold text-gray-700 uppercase">Request</span>
+                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Request</span>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           {result.requestMethod && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs font-medium">
                               {result.requestMethod}
                             </span>
                           )}
                           {result.requestUrl && (
-                            <span className="text-xs text-gray-700 font-mono break-all bg-white px-2 py-1 rounded border border-gray-200">
+                            <span className="text-xs text-gray-700 dark:text-gray-300 font-mono break-all bg-white dark:bg-gray-900 px-2 py-1 rounded border border-gray-200 dark:border-gray-700">
                               {result.requestUrl}
                             </span>
                           )}
@@ -948,19 +948,19 @@ export default function TestPage() {
                       {result.queryParams && Object.keys(result.queryParams).length > 0 && (
                         <div>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-gray-700 uppercase">Query Parameters</span>
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Query Parameters</span>
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(JSON.stringify(result.queryParams, null, 2));
                                 toast.success('Query params copied to clipboard');
                               }}
-                              className="p-1 text-gray-500 hover:text-gray-700"
+                              className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                               title="Copy query params"
                             >
                               <Copy className="h-3 w-3" />
                             </button>
                           </div>
-                          <pre className="text-xs bg-white p-2 rounded border border-gray-200 overflow-x-auto">
+                          <pre className="text-xs bg-white dark:bg-gray-900 p-2 rounded border border-gray-200 dark:border-gray-700 overflow-x-auto text-gray-900 dark:text-gray-100">
                             {JSON.stringify(result.queryParams, null, 2)}
                           </pre>
                         </div>
@@ -970,19 +970,19 @@ export default function TestPage() {
                       {result.requestHeaders && Object.keys(result.requestHeaders).length > 0 && (
                         <div>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-gray-700 uppercase">Headers</span>
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Headers</span>
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(JSON.stringify(result.requestHeaders, null, 2));
                                 toast.success('Headers copied to clipboard');
                               }}
-                              className="p-1 text-gray-500 hover:text-gray-700"
+                              className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                               title="Copy headers"
                             >
                               <Copy className="h-3 w-3" />
                             </button>
                           </div>
-                          <pre className="text-xs bg-white p-2 rounded border border-gray-200 overflow-x-auto max-h-40 overflow-y-auto">
+                          <pre className="text-xs bg-white dark:bg-gray-900 p-2 rounded border border-gray-200 dark:border-gray-700 overflow-x-auto max-h-40 overflow-y-auto text-gray-900 dark:text-gray-100">
                             {JSON.stringify(result.requestHeaders, null, 2)}
                           </pre>
                         </div>
@@ -992,19 +992,19 @@ export default function TestPage() {
                       {result.requestBody && (
                         <div>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-gray-700 uppercase">Request Body</span>
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Request Body</span>
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(JSON.stringify(result.requestBody, null, 2));
                                 toast.success('Request body copied to clipboard');
                               }}
-                              className="p-1 text-gray-500 hover:text-gray-700"
+                              className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                               title="Copy request body"
                             >
                               <Copy className="h-3 w-3" />
                             </button>
                           </div>
-                          <pre className="text-xs bg-white p-2 rounded border border-gray-200 overflow-x-auto max-h-60 overflow-y-auto">
+                          <pre className="text-xs bg-white dark:bg-gray-900 p-2 rounded border border-gray-200 dark:border-gray-700 overflow-x-auto max-h-60 overflow-y-auto text-gray-900 dark:text-gray-100">
                             {JSON.stringify(result.requestBody, null, 2)}
                           </pre>
                         </div>
@@ -1014,19 +1014,19 @@ export default function TestPage() {
                       {result.response && (
                         <div>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-gray-700 uppercase">Response</span>
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Response</span>
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(JSON.stringify(result.response, null, 2));
                                 toast.success('Response copied to clipboard');
                               }}
-                              className="p-1 text-gray-500 hover:text-gray-700"
+                              className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                               title="Copy response"
                             >
                               <Copy className="h-3 w-3" />
                             </button>
                           </div>
-                          <pre className="text-xs bg-white p-2 rounded border border-gray-200 overflow-x-auto max-h-60 overflow-y-auto">
+                          <pre className="text-xs bg-white dark:bg-gray-900 p-2 rounded border border-gray-200 dark:border-gray-700 overflow-x-auto max-h-60 overflow-y-auto text-gray-900 dark:text-gray-100">
                             {JSON.stringify(result.response, null, 2)}
                           </pre>
                         </div>
@@ -1043,15 +1043,15 @@ export default function TestPage() {
 
       {/* Namespace Selector Modal */}
       {showNamespaceSelector && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => {
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50" onClick={() => {
           setShowNamespaceSelector(false);
           setNamespaceSearchQuery('');
         }}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-gray-200 dark:border-gray-800" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Select Namespaces to Test</h2>
-                <p className="text-sm text-gray-600 mt-1">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Select Namespaces to Test</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   Choose which namespaces to include in the test run
                 </p>
               </div>
@@ -1060,13 +1060,13 @@ export default function TestPage() {
                   setShowNamespaceSelector(false);
                   setNamespaceSearchQuery('');
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between gap-4">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -1094,7 +1094,7 @@ export default function TestPage() {
                     }
                     setSelectedNamespaces(newSelected);
                   }}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
                 >
                   {(() => {
                     const filtered = namespaceSearchQuery.trim()
@@ -1110,24 +1110,24 @@ export default function TestPage() {
                     return allFilteredSelected ? 'Deselect All' : 'Select All';
                   })()}
                 </button>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
                   ({selectedNamespaces.size} of {namespaces.length} selected)
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                   <input
                     type="text"
                     value={namespaceSearchQuery}
                     onChange={(e) => setNamespaceSearchQuery(e.target.value)}
                     placeholder="Search namespaces..."
-                    className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                   />
                   {namespaceSearchQuery && (
                     <button
                       onClick={() => setNamespaceSearchQuery('')}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -1138,7 +1138,7 @@ export default function TestPage() {
 
             <div className="flex-1 overflow-y-auto px-6 py-4">
               {namespaces.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   No namespaces found
                 </div>
               ) : (() => {
@@ -1153,7 +1153,7 @@ export default function TestPage() {
 
                 if (filteredNamespaces.length === 0) {
                   return (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                       No namespaces match "{namespaceSearchQuery}"
                     </div>
                   );
@@ -1179,22 +1179,22 @@ export default function TestPage() {
                         }}
                         className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                           isSelected
-                            ? 'bg-blue-50 border-blue-300'
-                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                            ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700'
+                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
                         }`}
                       >
                         <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
                           isSelected
-                            ? 'bg-blue-600 border-blue-600'
-                            : 'border-gray-300'
+                            ? 'bg-blue-600 dark:bg-blue-500 border-blue-600 dark:border-blue-500'
+                            : 'border-gray-300 dark:border-gray-600'
                         }`}>
                           {isSelected && <Check className="h-3 w-3 text-white" />}
                         </div>
                         <div className="flex-1">
-                          <div className="font-semibold text-gray-900">
+                          <div className="font-semibold text-gray-900 dark:text-white">
                             {namespace['namespace-name'] || 'Unnamed Namespace'}
                           </div>
-                          <div className="text-xs text-gray-500 mt-0.5">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             ID: {namespaceId}
                           </div>
                         </div>
@@ -1206,13 +1206,13 @@ export default function TestPage() {
               })()}
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-end gap-3">
               <button
                 onClick={() => {
                   setShowNamespaceSelector(false);
                   setNamespaceSearchQuery('');
                 }}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 Cancel
               </button>
@@ -1226,7 +1226,7 @@ export default function TestPage() {
                   setNamespaceSearchQuery('');
                   toast.success(`${selectedNamespaces.size} namespace(s) selected for testing`);
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
               >
                 Apply ({selectedNamespaces.size} selected)
               </button>

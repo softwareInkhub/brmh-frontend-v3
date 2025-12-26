@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { ChevronDown, ChevronRight, Plus, Search, Filter, Database, Users, Terminal, FileCode, Folder, Layers, List, Box, FileText, Globe, Settings, User, Edit2, Trash2, Download, Upload, RefreshCw, LayoutDashboard } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Search, Filter, Database, Users, Terminal, FileCode, Folder, Layers, List, Box, FileText, Globe, Settings, User, Edit2, Trash2, Download, Upload, RefreshCw, LayoutDashboard, ChevronLeft } from 'lucide-react';
 import NamespacePreviewModal from '../Modals/NamespacePreviewModal';
 import { useDrag } from 'react-dnd';
+import { useSidePanel } from '@/app/components/SidePanelContext';
 
 interface SidePanelProps {
   namespaces: any[];
@@ -156,6 +157,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
   const [expandedSection, setExpandedSection] = useState<Record<string, { accounts: boolean; methods: boolean; schemas: boolean; webhooks: boolean; lambdas: boolean }>>({});
   const [viewingNamespace, setViewingNamespace] = useState<any>(null);
   const [expandedNamespaces, setExpandedNamespaces] = useState(true);
+  const { setIsCollapsed } = useSidePanel();
 
   const toggle = (section: keyof typeof expanded) => setExpanded(e => ({ ...e, [section]: !e[section] }));
   const toggleNs = (nsId: string) => {
@@ -187,24 +189,44 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
     : [];
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-100 h-full flex flex-col shadow-sm p-1 pb-8 overflow-y-auto select-none scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 custom-scrollbar">
-      {/* Header */}
-      <div className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 rounded-lg px-3 py-2 mb-2">
-        <LayoutDashboard className="text-blue-600" size={20} />
-        <span className="font-bold text-lg text-gray-900">BRMH</span>
-      </div>
-      {/* Search/Filter/Add Row */}
-      <div className="flex items-center px-3 py-2 space-x-2 border-b border-gray-100 bg-white">
-        <div className="flex-1 flex items-center bg-white border border-gray-300 rounded-lg px-2 py-1.5 focus-within:border-blue-500 focus-within:shadow-sm transition-all">
-          <Search size={14} className="text-gray-400" />
-          <input
-            className="flex-1 bg-transparent px-1.5 py-0.5 text-sm outline-none placeholder-gray-500"
-            placeholder="Search..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+    <aside className="w-64 bg-white dark:bg-slate-950 border-r border-gray-100 dark:border-slate-800 h-full flex flex-col shadow-sm p-1 pb-8 overflow-y-auto select-none scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-700 scrollbar-track-gray-100 dark:scrollbar-track-slate-900 custom-scrollbar">
+      {/* Sticky Header + Search */}
+      <div className="sticky top-0 z-20 bg-white dark:bg-slate-950 pb-2 border-b border-gray-100 dark:border-slate-800">
+        {/* Header with collapse button */}
+        <div className="flex items-center justify-between gap-2 px-3 py-2.5 mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-300 flex items-center justify-center shadow-sm">
+              <span className="text-white font-bold text-sm">B</span>
+            </div>
+            <span className="font-bold text-lg text-gray-900 dark:text-white">BRMH</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(true)}
+            className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-600 dark:text-gray-300 transition-colors"
+            title="Collapse sidebar"
+          >
+            <ChevronLeft size={18} />
+          </button>
         </div>
-        <button className="p-1 rounded hover:bg-gray-100" title="Filter (coming soon)"><Filter size={14} className="text-gray-400" /></button>
+        {/* Search/Filter/Add Row */}
+        <div className="flex items-center px-3 py-2 space-x-2">
+          <div className="flex-1 flex items-center bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20 dark:focus-within:ring-blue-400/20 transition-all">
+            <Search size={14} className="text-gray-400 dark:text-gray-400 mr-2 flex-shrink-0" />
+            <input
+              className="flex-1 bg-transparent text-sm outline-none placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100"
+              placeholder="Search..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <button 
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" 
+            title="Filter (coming soon)"
+          >
+            <Filter size={14} className="text-gray-500 dark:text-gray-400" />
+          </button>
+        </div>
       </div>
       {/* Overview
       <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 w-full text-sm">
@@ -213,7 +235,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
       </button> */}
       {/* Endpoints Section */}
       <div>
-        <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500 mt-4">
+        <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500 dark:text-gray-400 mt-4">
           <button
             className="flex items-center gap-1"
             onClick={() => setExpandedNamespaces(exp => !exp)}
@@ -225,17 +247,17 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
           </button>
           <button
             onClick={() => onAdd('namespace')}
-            className="ml-1 p-1 rounded hover:bg-blue-50"
+            className="ml-1 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
             title="Add Namespace"
             type="button"
           >
-            <Plus size={16} className="text-blue-500" />
+            <Plus size={16} className="text-blue-500 dark:text-blue-400" />
           </button>
         </div>
         {expandedNamespaces && (
           <div className="pl-2">
             {filteredNamespaces.length === 0 && (
-              <div className="text-xs text-gray-400 pl-2 py-2">No namespaces found</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 pl-2 py-2">No namespaces found</div>
             )}
             {filteredNamespaces.map((ns, nsIdx) => (
               <DraggableNamespace
@@ -243,9 +265,9 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                 namespace={ns}
               >
                 <div className="mb-1">
-                  <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500">
+                  <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500 dark:text-gray-400">
                     <button
-                      className="flex items-center gap-1 px-1 py-1 hover:bg-gray-100 rounded"
+                      className="flex items-center gap-1 px-1 py-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
                       onClick={e => {
                         e.stopPropagation();
                         toggleNs(ns['namespace-id']);
@@ -256,7 +278,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                       {expandedNs[ns['namespace-id']] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     </button>
                     <button
-                      className="flex items-center gap-2 px-2 py-1 w-full text-gray-700 hover:bg-gray-50 text-sm font-medium hover:underline cursor-pointer"
+                      className="flex items-center gap-2 px-2 py-1 w-full text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium hover:underline cursor-pointer"
                       onClick={e => {
                         e.stopPropagation();
                         // Open namespace tab
@@ -283,8 +305,8 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                           }}
                         />
                       ) : null}
-                      <Folder size={16} className={`text-gray-600 ${ns['icon-url'] ? 'hidden' : ''}`} />
-                      <span className="font-medium text-xs text-gray-900 truncate">
+                      <Folder size={16} className={`text-gray-600 dark:text-gray-400 ${ns['icon-url'] ? 'hidden' : ''}`} />
+                      <span className="font-medium text-xs text-gray-900 dark:text-gray-100 truncate">
                         {ns['namespace-name']}
                       </span>
                     </button>
@@ -293,7 +315,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                     <div className="ml-6 mt-1 space-y-1">
                       {/* Accounts */}
                       <div>
-                        <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500">
+                        <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500 dark:text-gray-400">
                           <button
                             className="flex items-center gap-1 group hover:underline cursor-pointer"
                             onClick={() => {
@@ -310,7 +332,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                           </button>
                           <button
                             onClick={() => onAdd('account', ns)}
-                            className="p-1 rounded hover:bg-blue-50"
+                            className="p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
                             title="Add Account"
                             type="button"
                           >
@@ -323,7 +345,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                               <button
                                 key={acc['namespace-account-id'] || accIdx}
                                 onClick={() => onAdd('accountPage', { account: acc, namespace: ns })}
-                                className="flex items-center gap-2 px-4 py-2 w-full text-gray-700 hover:bg-gray-50 text-sm group"
+                                className="flex items-center gap-2 px-4 py-2 w-full text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm group"
                               >
                                 <User size={16} className="text-blue-500" />
                                 <span>{acc['namespace-account-name']}</span>
@@ -343,7 +365,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                       </div>
                       {/* Methods */}
                       <div>
-                        <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500">
+                        <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500 dark:text-gray-400">
                           <button
                             className="flex items-center gap-1 group hover:underline cursor-pointer"
                             onClick={() => {
@@ -360,7 +382,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                           </button>
                           <button
                             onClick={() => onAdd('method', ns)}
-                            className="p-1 rounded hover:bg-blue-50"
+                            className="p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
                             title="Add Method"
                             type="button"
                           >
@@ -376,10 +398,10 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                                 namespace={ns}
                                 onClick={() => onItemClick('method', method)}
                               >
-                                <button className="flex items-center gap-2 px-4 py-2 w-full text-gray-700 hover:bg-gray-50 text-sm group">
+                                <button className="flex items-center gap-2 px-4 py-2 w-full text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm group">
                                   {methodIcon(method['namespace-method-type'])}
                                   <span className={`font-bold text-xs ${methodColor(method['namespace-method-type'])}`}>{method['namespace-method-type']}</span>
-                                  <span className="truncate group-hover:text-blue-600 text-xs">{method['namespace-method-name']}</span>
+                                  <span className="truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 text-xs">{method['namespace-method-name']}</span>
                                   <span
                                     className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
                                     onClick={e => {
@@ -397,7 +419,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                       </div>
                       {/* Schemas */}
                       <div>
-                        <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500">
+                        <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500 dark:text-gray-400">
                           <button
                             className="flex items-center gap-1 group hover:underline cursor-pointer"
                             onClick={() => {
@@ -414,7 +436,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                           </button>
                           <button
                             onClick={() => onAdd('schema', ns)}
-                            className="p-1 rounded hover:bg-purple-50"
+                            className="p-1 rounded hover:bg-purple-50 dark:hover:bg-purple-900/30"
                             title="Add Schema"
                             type="button"
                           >
@@ -434,9 +456,9 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                                 schema={schema}
                                 onClick={() => onItemClick('schema', schema)}
                               >
-                                <button className="flex items-center gap-2 px-4 py-2 w-full text-gray-700 hover:bg-gray-50 text-sm group">
-                                  <FileCode size={16} className="text-purple-500" />
-                                  <span>{schema.schemaName}</span>
+                                <button className="flex items-center gap-2 px-4 py-2 w-full text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm group">
+                                  <FileCode size={16} className="text-purple-500 dark:text-purple-400" />
+                                  <span className="text-xs">{schema.schemaName}</span>
                                 </button>
                               </DraggableSchema>
                             ))}
@@ -445,7 +467,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                       </div>
                       {/* Webhooks */}
                       <div>
-                        <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500">
+                        <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500 dark:text-gray-400">
                           <button
                             className="flex items-center gap-1 group hover:underline cursor-pointer"
                             onClick={() => {
@@ -462,7 +484,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                           </button>
                           <button
                             onClick={() => onAdd('webhook', ns)}
-                            className="p-1 rounded hover:bg-pink-50"
+                            className="p-1 rounded hover:bg-pink-50 dark:hover:bg-pink-900/30"
                             title="Add Webhook"
                             type="button"
                           >
@@ -476,20 +498,20 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                                 <button
                                   key={wh['webhook-id'] || whIdx}
                                   onClick={() => onAdd('webhookPage', { webhook: wh, namespace: ns })}
-                                  className="flex items-center gap-2 px-4 py-2 w-full text-gray-700 hover:bg-pink-50 text-sm group"
+                                  className="flex items-center gap-2 px-4 py-2 w-full text-gray-700 dark:text-gray-300 hover:bg-pink-50 dark:hover:bg-pink-900/30 text-sm group"
                                 >
                                   <span className="truncate group-hover:text-pink-600 text-xs">{wh['webhook-name']}</span>
                                 </button>
                               ))
                             ) : (
-                              <div className="text-xs text-gray-400 pl-2 py-2">No webhooks found</div>
+                              <div className="text-xs text-gray-400 dark:text-gray-500 pl-2 py-2">No webhooks found</div>
                             )}
                           </div>
                         )}
                       </div>
                       {/* Lambdas */}
                       <div>
-                        <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500">
+                        <div className="flex items-center justify-between gap-2 py-1 pr-4 text-xs text-gray-500 dark:text-gray-400">
                           <button
                             className="flex items-center gap-1 group hover:underline cursor-pointer"
                             onClick={() => {
@@ -506,7 +528,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                           </button>
                           <button
                             onClick={() => onAdd('lambda', ns)}
-                            className="p-1 rounded hover:bg-blue-50"
+                            className="p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
                             title="Add Lambda"
                             type="button"
                           >
@@ -520,13 +542,13 @@ const SidePanel: React.FC<SidePanelProps> = ({ namespaces, accounts, schemas, me
                                 <button
                                   key={lambda.id || lambdaIdx}
                                   onClick={() => onAdd('lambdaPage', { lambda: lambda, namespace: ns })}
-                                  className="flex items-center gap-2 px-4 py-2 w-full text-gray-700 hover:bg-blue-50 text-sm group"
+                                  className="flex items-center gap-2 px-4 py-2 w-full text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-sm group"
                                 >
                                   <span className="truncate group-hover:text-blue-600 text-xs">{lambda.functionName}</span>
                                 </button>
                               ))
                             ) : (
-                              <div className="text-xs text-gray-400 pl-2 py-2">No lambdas found</div>
+                              <div className="text-xs text-gray-400 dark:text-gray-500 pl-2 py-2">No lambdas found</div>
                             )}
                           </div>
                         )}
@@ -569,5 +591,11 @@ export default SidePanel;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     background: #f3f4f6;
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-track {
+    background: #020617;
   }
 `}</style> 

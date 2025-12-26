@@ -53,13 +53,20 @@ export default function DynamoDBPage() {
         setLoadingProgress(0);
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/dynamodb/tables`);
-      const data = await response.json();
+      const awsUrl = process.env.NEXT_PUBLIC_AWS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
       
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to fetch tables");
+      if (!awsUrl) {
+        throw new Error("AWS URL is not configured");
       }
 
+      const response = await fetch(`${awsUrl}/api/dynamodb/tables`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: Failed to fetch tables`);
+      }
+
+      const data = await response.json();
       console.log("Tables response:", data);
       
       if (!Array.isArray(data.tables)) {
@@ -74,7 +81,8 @@ export default function DynamoDBPage() {
       setIsInitialLoad(false);
     } catch (error) {
       console.error("Error fetching tables:", error);
-      toast.error("Failed to fetch DynamoDB tables. Check console for details.");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to fetch DynamoDB tables: ${errorMessage}`);
     } finally {
       setLoading(false);
       setLoadingProgress(100);
@@ -231,7 +239,13 @@ export default function DynamoDBPage() {
     if (tableDetails[tableName]) return; // Skip if already loaded
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/api/dynamodb/tables`, {
+      const awsUrl = process.env.NEXT_PUBLIC_AWS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+      
+      if (!awsUrl) {
+        throw new Error("AWS URL is not configured");
+      }
+
+      const response = await fetch(`${awsUrl}/api/dynamodb/tables`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -240,7 +254,22 @@ export default function DynamoDBPage() {
       });
       
       if (!response.ok) {
-        throw new Error("Failed to fetch table details");
+        // Handle 404 specifically
+        if (response.status === 404) {
+          console.warn(`Table details not found for ${tableName} (404)`);
+          // Don't show error toast for 404, just log it
+          return;
+        }
+        
+        // Try to parse error response
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { error: response.statusText || `HTTP ${response.status}` };
+        }
+        
+        throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: Failed to fetch table details`);
       }
 
       const details = await response.json();
@@ -249,8 +278,17 @@ export default function DynamoDBPage() {
         [tableName]: details
       }));
     } catch (error) {
-      console.error("Error fetching table details:", error);
-      toast.error(`Failed to load details for ${tableName}`);
+      // Only show toast for non-404 errors
+      if (error instanceof Error && !error.message.includes('404')) {
+        console.error("Error fetching table details:", error);
+        const errorMessage = error.message;
+        // Only show toast for significant errors, not for missing endpoints
+        if (!errorMessage.includes('Not Found') && !errorMessage.includes('404')) {
+          toast.error(`Failed to load details for ${tableName}: ${errorMessage}`);
+        }
+      } else {
+        console.warn(`Table details endpoint not available for ${tableName}`);
+      }
     }
   };
 
@@ -261,19 +299,19 @@ export default function DynamoDBPage() {
   // Loading skeleton component
   const TableSkeleton = () => (
     <div className="animate-pulse">
-      <div className="flex items-center px-6 py-4 border-b border-gray-200">
-        <div className="w-6 h-4 bg-gray-200 rounded"></div>
-        <div className="ml-4 w-48 h-4 bg-gray-200 rounded"></div>
+      <div className="flex items-center px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+        <div className="w-6 h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        <div className="ml-4 w-48 h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
         <div className="ml-auto flex space-x-16">
-          <div className="w-20 h-4 bg-gray-200 rounded"></div>
-          <div className="w-20 h-4 bg-gray-200 rounded"></div>
-          <div className="w-20 h-4 bg-gray-200 rounded"></div>
-          <div className="w-20 h-4 bg-gray-200 rounded"></div>
-          <div className="w-20 h-4 bg-gray-200 rounded"></div>
+          <div className="w-20 h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="w-20 h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="w-20 h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="w-20 h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="w-20 h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
         </div>
       </div>
-      </div>
-    );
+    </div>
+  );
 
   return (
     <div className="flex-1 h-[89vh] overflow-hidden">
@@ -349,41 +387,41 @@ export default function DynamoDBPage() {
         </div>
 
         {/* Tables List */}
-        <div className="flex-1   overflow-hidden flex flex-col bg-white rounded-lg border border-gray-200 mt-2 md:mt-4">
+        <div className="flex-1   overflow-hidden flex flex-col bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 mt-2 md:mt-4">
           {/* Table Header - Responsive for both Mobile and Desktop */}
-          <div className="flex items-center px-3 py-2 md:px-4 md:py-3 bg-gray-50 border-b border-gray-200 text-xs md:text-sm">
+          <div className="flex items-center px-3 py-2 md:px-4 md:py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-xs md:text-sm">
             <div className="w-4 md:w-6 flex items-center justify-center">
               <input
                 type="checkbox"
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 md:h-4 md:w-4"
+                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 h-3.5 w-3.5 md:h-4 md:w-4"
                 checked={selectedTables.size === filteredTables.length && filteredTables.length > 0}
                 onChange={(e) => handleSelectAll(e.target.checked)}
               />
             </div>
             <div className="flex-1 min-w-0 pl-4 ">
-              <div className="text-xs md:text-sm font-medium text-gray-500">Name</div>
+              <div className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">Name</div>
             </div>
             <div className="w-[100px] md:w-[120px] flex justify-center">
-              <div className="text-xs md:text-sm font-medium text-gray-500">Status</div>
+              <div className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">Status</div>
             </div>
             {/* Desktop-only columns */}
             <div className="hidden lg:flex w-[120px] justify-center">
-              <div className="text-xs md:text-sm font-medium text-gray-500">Partition key</div>
+              <div className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">Partition key</div>
             </div>
             <div className="hidden lg:flex w-[100px] justify-center">
-              <div className="text-xs md:text-sm font-medium text-gray-500">Sort key</div>
+              <div className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">Sort key</div>
             </div>
             <div className="hidden lg:flex w-[100px] justify-center">
-              <div className="text-xs md:text-sm font-medium text-gray-500">Indexes</div>
+              <div className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">Indexes</div>
             </div>
             <div className="hidden xl:flex w-[150px] justify-center">
-              <div className="text-xs md:text-sm font-medium text-gray-500">Replication Regions</div>
+              <div className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">Replication Regions</div>
             </div>
             <div className="hidden lg:flex w-[150px] justify-center">
-              <div className="text-xs md:text-sm font-medium text-gray-500">Deletion protection</div>
+              <div className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">Deletion protection</div>
             </div>
             <div className="hidden md:flex w-[120px] justify-center">
-              <div className="text-xs md:text-sm font-medium text-gray-500">Read/Write</div>
+              <div className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">Read/Write</div>
             </div>
             <div className="w-6 md:w-8"></div>
           </div>
@@ -396,12 +434,12 @@ export default function DynamoDBPage() {
                   <TableSkeleton key={i} />
                 ))}
                 {isInitialLoad && (
-                  <div className="px-3 py-2 md:px-4 md:py-3 bg-blue-50 border-t border-blue-100">
+                  <div className="px-3 py-2 md:px-4 md:py-3 bg-blue-50 dark:bg-blue-900/20 border-t border-blue-100 dark:border-blue-800">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs md:text-sm text-blue-600">Loading tables...</span>
-                      <div className="w-20 md:w-48 h-1.5 md:h-2 bg-blue-100 rounded-full overflow-hidden">
+                      <span className="text-xs md:text-sm text-blue-600 dark:text-blue-400">Loading tables...</span>
+                      <div className="w-20 md:w-48 h-1.5 md:h-2 bg-blue-100 dark:bg-blue-900/40 rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-blue-600 transition-all duration-500"
+                          className="h-full bg-blue-600 dark:bg-blue-500 transition-all duration-500"
                           style={{ width: `${loadingProgress}%` }}
                         ></div>
                       </div>
@@ -410,7 +448,7 @@ export default function DynamoDBPage() {
                 )}
               </div>
             ) : filteredTables.length > 0 ? (
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {filteredTables.map((table) => {
                   const details = tableDetails[table.TableName];
                   const isExpanded = expandedTable === table.TableName;
@@ -418,25 +456,25 @@ export default function DynamoDBPage() {
                   return (
                     <div 
                       key={table.TableName} 
-                      className="px-3 py-2 md:px-4 md:py-3 hover:bg-gray-50 cursor-pointer"
+                      className="px-3 py-2 md:px-4 md:py-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
                       onClick={() => handleRowClick(table.TableName)}
                     >
                       <div className="flex items-center min-w-0">
                         <div className="w-4 md:w-6 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 md:h-4 md:w-4"
+                            className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 h-3.5 w-3.5 md:h-4 md:w-4"
                             checked={selectedTables.has(table.TableName)}
                             onChange={(e) => handleSelectTable(table.TableName, e.target.checked)}
                           />
                         </div>
                         <div className="flex-1 min-w-0 pl-4">
                           <div className="flex items-center gap-1.5 md:gap-2">
-                            <span className="text-xs md:text-sm font-medium text-blue-600 truncate">
+                            <span className="text-xs md:text-sm font-medium text-blue-600 dark:text-blue-400 truncate">
                               {table.TableName}
                             </span>
                           </div>
-                          <div className="mt-0.5 md:mt-1 flex items-center gap-1.5 text-[10px] md:text-xs text-gray-500">
+                          <div className="mt-0.5 md:mt-1 flex items-center gap-1.5 text-[10px] md:text-xs text-gray-500 dark:text-gray-400">
                             <span>{!details ? '...' : details.KeySchema?.find(k => k.KeyType === 'HASH')?.AttributeName || '-'}</span>
                             <span>•</span>
                             <span>{!details ? '...' : details.BillingModeSummary?.BillingMode === 'PAY_PER_REQUEST' ? 'On-demand' : 'Provisioned'}</span>
@@ -445,45 +483,45 @@ export default function DynamoDBPage() {
                         <div className="w-[100px] md:w-[120px] flex justify-center">
                           <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] md:text-xs font-medium ${
                             (details?.TableStatus || table.TableStatus) === 'ACTIVE' 
-                              ? 'bg-green-100 text-green-700' 
-                              : 'bg-yellow-100 text-yellow-700'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
+                              : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
                           }`}>
                             {(details?.TableStatus || table.TableStatus) === 'ACTIVE' ? 'Active' : details?.TableStatus || table.TableStatus}
                           </span>
                         </div>
                         <div className="hidden lg:flex w-[120px] justify-center">
-                          <span className="text-sm text-gray-600">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
                             {!details ? '...' : details.KeySchema?.find(k => k.KeyType === 'HASH')?.AttributeName || '-'}
                           </span>
                         </div>
                         <div className="hidden lg:flex w-[100px] justify-center">
-                          <span className="text-sm text-gray-600">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
                             {!details ? '...' : details.KeySchema?.find(k => k.KeyType === 'RANGE')?.AttributeName || '-'}
                           </span>
                         </div>
                         <div className="hidden lg:flex w-[100px] justify-center">
-                          <span className="text-sm text-gray-600">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
                             {!details ? '...' : 
                               ((details.GlobalSecondaryIndexes?.length || 0) + 
                                (details.LocalSecondaryIndexes?.length || 0))}
                           </span>
                         </div>
                         <div className="hidden xl:flex w-[150px] justify-center">
-                          <span className="text-sm text-gray-600">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
                             {!details ? '...' : details.ReplicaDescriptions?.length || 0}
                           </span>
                         </div>
                         <div className="hidden lg:flex w-[150px] justify-center">
-                          <span className="inline-flex items-center gap-1 text-sm text-gray-600">
+                          <span className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                             <span className={`h-2 w-2 rounded-full ${
-                              !details ? 'bg-gray-300' :
-                              details.DeletionProtectionEnabled ? 'bg-green-400' : 'bg-gray-300'
+                              !details ? 'bg-gray-300 dark:bg-gray-600' :
+                              details.DeletionProtectionEnabled ? 'bg-green-400 dark:bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
                             }`}></span>
                             {!details ? '...' : details.DeletionProtectionEnabled ? 'On' : 'Off'}
                           </span>
                         </div>
                         <div className="hidden md:flex w-[120px] justify-center">
-                          <span className="text-sm text-gray-600">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
                             {!details ? '...' : 
                               details.BillingModeSummary?.BillingMode === 'PAY_PER_REQUEST' 
                                 ? 'On-demand' 
@@ -491,7 +529,7 @@ export default function DynamoDBPage() {
                           </span>
                         </div>
                         <div className="w-6 md:w-8 flex items-center justify-center">
-                          <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400 flex-shrink-0" />
+                          <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                         </div>
                       </div>
                     </div>
@@ -500,10 +538,10 @@ export default function DynamoDBPage() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full py-6 md:py-8">
-                <div className="p-2 md:p-3 rounded-full bg-gray-100 mb-2 md:mb-3">
-                  <Database className="w-5 h-5 md:w-6 md:h-6 text-gray-400" />
+                <div className="p-2 md:p-3 rounded-full bg-gray-100 dark:bg-gray-800 mb-2 md:mb-3">
+                  <Database className="w-5 h-5 md:w-6 md:h-6 text-gray-400 dark:text-gray-500" />
                 </div>
-                <p className="text-xs md:text-sm text-gray-500">
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
                   {searchTerm ? 'No tables match your search' : 'No tables found'}
                 </p>
               </div>
@@ -514,13 +552,13 @@ export default function DynamoDBPage() {
 
       {/* Create Table Dialog - Mobile Responsive */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="w-[calc(100%-32px)] md:w-[90vw] max-w-[425px] rounded-lg mx-4">
+        <DialogContent className="w-[calc(100%-32px)] md:w-[90vw] max-w-[425px] rounded-lg mx-4 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
           <DialogHeader>
-            <DialogTitle className="text-base md:text-xl font-semibold text-gray-900">Create New Table</DialogTitle>
+            <DialogTitle className="text-base md:text-xl font-semibold text-gray-900 dark:text-white">Create New Table</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 md:gap-4 py-3 md:py-4">
             <div className="space-y-1.5 md:space-y-2">
-              <label htmlFor="tableName" className="text-xs md:text-sm font-medium text-gray-700">
+              <label htmlFor="tableName" className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                 Table Name
               </label>
               <Input
@@ -528,7 +566,7 @@ export default function DynamoDBPage() {
                 placeholder="Enter table name"
                 value={newTableName}
                 onChange={(e) => setNewTableName(e.target.value)}
-                className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                className="border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
               />
             </div>
           </div>
@@ -536,14 +574,14 @@ export default function DynamoDBPage() {
             <Button
               variant="outline"
               onClick={() => setShowCreateDialog(false)}
-              className="w-full sm:w-auto border-gray-200 hover:bg-gray-50"
+              className="w-full sm:w-auto border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
             >
               Cancel
             </Button>
             <Button
               onClick={handleCreateTable}
               disabled={creatingTable}
-              className="w-full sm:w-auto bg-blue-600 text-white hover:bg-blue-700"
+              className="w-full sm:w-auto bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600"
             >
               {creatingTable ? (
                 <>

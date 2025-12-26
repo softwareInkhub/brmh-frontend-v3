@@ -23,12 +23,17 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         ? (process.env.NEXT_PUBLIC_AWS_URL || 'https://brmh.in')
         : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001');
       
+      // Get auth URL from environment variable with fallback logic
+      // Priority: .env > default localhost:3000 (auth app) > fallback
+      const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL  || 'http://localhost:3000';
+      
       addDebugLog(`🔍 Starting auth check for path: ${pathname}`);
       addDebugLog(`📍 Current URL: ${window.location.href.substring(0, 100)}`);
       addDebugLog(`🌐 API Base URL: ${API_BASE_URL} (${isProduction ? 'production' : 'development'})`);
+      addDebugLog(`🔐 Auth URL: ${AUTH_URL}`);
       
-      // Skip auth check for public routes
-      const publicRoutes = ['/authPage', '/login', '/callback', '/register', '/landingPage', '/debug-auth'];
+      // Skip auth check for public routes (removed /login as it's not a route in main app)
+      const publicRoutes = ['/authPage', '/callback', '/register', '/landingPage', '/debug-auth'];
       const isPublicRoute = publicRoutes.some(route => pathname === route || pathname?.startsWith(route));
       
       if (isPublicRoute) {
@@ -143,9 +148,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           addDebugLog(`⚠️ Cookie auth check failed: ${error}`);
         }
         
-        // No tokens and no valid cookies, redirect to auth.brmh.in
+        // No tokens and no valid cookies, redirect to auth URL
         const currentUrl = window.location.href.split('#')[0]; // Remove hash before redirect
-        const authUrl = `https://auth.brmh.in/login?next=${encodeURIComponent(currentUrl)}`;
+        const authUrl = `${AUTH_URL}/login?next=${encodeURIComponent(currentUrl)}`;
         addDebugLog(`❌ No authentication found, will redirect to auth in 2 seconds...`);
         addDebugLog(`🔀 Redirect URL: ${authUrl}`);
         
@@ -186,7 +191,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           addDebugLog(`🗑️ Clearing invalid tokens...`);
           localStorage.clear();
           const currentUrl = window.location.href.split('#')[0]; // Remove hash before redirect
-          const authUrl = `https://auth.brmh.in/login?next=${encodeURIComponent(currentUrl)}`;
+          const authUrl = `${AUTH_URL}/login?next=${encodeURIComponent(currentUrl)}`;
           addDebugLog(`🔀 Will redirect to auth in 2 seconds: ${authUrl}`);
           
           setTimeout(() => {

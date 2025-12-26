@@ -72,14 +72,16 @@ function AwsSidePanel({ onServiceClick }: { onServiceClick?: (service: any) => v
   const [active, setActive] = React.useState<string | null>(null);
   const router = useRouter();
   return (
-    <aside className="h-full w-full bg-white flex flex-col py-4">
-      <div className="text-xs font-bold text-gray-500 px-4 mb-4">AWS Services</div>
+    <aside className="h-full w-full bg-white dark:bg-gray-900 flex flex-col py-4 border-r border-gray-200 dark:border-gray-800">
+      <div className="text-xs font-bold text-gray-500 dark:text-gray-400 px-4 mb-4">AWS Services</div>
       <ul className="space-y-1">
         {awsServices.map(service => (
           <li key={service.id}>
             <button
               className={`flex items-center w-full px-4 py-2 rounded-lg text-left transition-colors
-                ${active === service.id ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-gray-100'}`}
+                ${active === service.id 
+                  ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-semibold' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
               onClick={() => {
                 setActive(service.id);
                 router.push(service.route);
@@ -98,9 +100,10 @@ function AwsSidePanel({ onServiceClick }: { onServiceClick?: (service: any) => v
 
 const awsPage = () => {
   return (
-    <div className="flex h-screen ml-20">
+    <div className="flex h-screen ml-20 bg-gray-50 dark:bg-gray-950">
       {/* SidePanel */}
       <div
+        className="dark:bg-gray-900 dark:border-gray-800"
         style={{
           width: SIDEPANEL_WIDTH,
           minWidth: SIDEPANEL_WIDTH,
@@ -114,29 +117,30 @@ const awsPage = () => {
         <AwsSidePanel onServiceClick={() => {}} />
       </div>
       {/* Main Content */}
-      <div className="flex-1 min-h-0 overflow-y-auto pl-8">
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">AWS Services Overview</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Manage and monitor your AWS services from one central dashboard
-            </p>
-          </div>
+      <div className="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-950">
+        <div className="px-4 md:px-6 lg:px-8 py-6 md:py-8">
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">AWS Services Overview</h1>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Manage and monitor your AWS services from one central dashboard
+              </p>
+            </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {serviceCards.map((card) => (
               <Link
                 key={card.title}
                 href={card.href}
-                className="block p-6 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                className="block p-6 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition-colors"
               >
                 <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-gray-100 rounded-lg text-gray-600">
+                  <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-600 dark:text-gray-400">
                     {card.icon}
                   </div>
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900">{card.title}</h3>
-                    <p className="mt-1 text-sm text-gray-500">{card.description}</p>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">{card.title}</h3>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{card.description}</p>
                   </div>
                 </div>
               </Link>

@@ -1091,8 +1091,8 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
       <div className="flex items-center justify-between mb-6 max-w-7xl mx-auto px-4">
         <div className="flex items-center gap-3">
           <div className="hidden md:block">
-            <h2 className="text-xl font-semibold">Namespace</h2>
-            <p className="text-sm text-gray-500">Select a namespace to view details</p>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Namespace</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Select a namespace to view details</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -1100,23 +1100,23 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
             <input
               type="text"
               placeholder="Search..."
-              className="pl-10 pr-4 py-[4px] border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-50 max-w-xs"
+              className="pl-10 pr-4 py-[4px] border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 w-50 max-w-xs"
               value={search.text}
               onChange={e => setSearch(prev => ({ ...prev, text: e.target.value }))}
             />
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
           </div>
         
           <div className="flex items-center gap-2">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+              className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}
             >
               <Grid size={16} />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+              className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}
             >
               <ListIcon size={16} />
             </button>
@@ -1155,12 +1155,12 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
               return (
               <React.Fragment key={ns["namespace-id"]}>
                 <div
-                  className={`bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200 flex items-center gap-3 p-4 group ${
+                  className={`bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 cursor-pointer hover:shadow-md transition-all duration-200 flex items-center gap-3 p-4 group ${
                     selectedNamespaceId === ns["namespace-id"] 
-                      ? 'ring-2 ring-blue-500 border-blue-300' 
+                      ? 'ring-2 ring-blue-500 dark:ring-blue-500 border-blue-300 dark:border-blue-500' 
                       : expandedNamespaceId === ns["namespace-id"] 
-                        ? 'ring-2 ring-green-500 border-green-300' 
-                        : 'hover:border-gray-300'
+                        ? 'ring-2 ring-green-500 dark:ring-green-500 border-green-300 dark:border-green-500' 
+                        : 'hover:border-gray-300 dark:hover:border-gray-600'
                   } ${shouldHideActionButtons ? 'p-3' : 'p-4'}`}
                   onClick={() => handleNamespaceClick(ns)}
                   onMouseEnter={() => {
@@ -1187,14 +1187,14 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                         }}
                       />
                     ) : null}
-                    <div className={`w-8 h-8 rounded bg-gray-100 flex items-center justify-center ${ns["icon-url"] ? 'hidden' : ''}`}>
-                      <Database size={16} className="text-gray-600" />
+                    <div className={`w-8 h-8 rounded bg-gray-100 dark:bg-gray-800 flex items-center justify-center ${ns["icon-url"] ? 'hidden' : ''}`}>
+                      <Database size={16} className="text-gray-600 dark:text-gray-300" />
                     </div>
                   </div>
                   
                   {/* Name */}
                   <div className="flex-1 min-w-0">
-                    <h4 className={`font-medium text-gray-900 truncate ${shouldHideActionButtons ? 'text-xs' : 'text-sm'}`}>{ns["namespace-name"]}</h4>
+                    <h4 className={`font-medium text-gray-900 dark:text-white truncate ${shouldHideActionButtons ? 'text-xs' : 'text-sm'}`}>{ns["namespace-name"]}</h4>
                     {viewMode === 'list' && (
                       <div className="mt-1 flex items-center gap-3 min-w-0">
                         {ns["namespace-url"] && (
@@ -1274,7 +1274,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
           />
           
           {/* Panel */}
-          <div className={`fixed bottom-0 z-40 bg-white border-t-2 border-blue-200 shadow-2xl rounded-t-2xl ${!isDragging ? 'transition-all duration-300 ease-out' : ''}`} 
+          <div className={`fixed bottom-0 z-40 bg-white dark:bg-gray-900 border-t-2 border-blue-200 dark:border-blue-800 shadow-2xl rounded-t-2xl ${!isDragging ? 'transition-all duration-300 ease-out' : ''}`} 
                style={{
                  left: typeof window !== 'undefined' && window.innerWidth < 768 ? '0px' : (isCollapsed ? '80px' : '336px'), // Full width on mobile
                  right: '0px', // Remove empty space on right
@@ -1286,15 +1286,15 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                }}>
             {/* Drag Handle */}
             <div 
-              className={`flex justify-center pt-2 pb-1 cursor-ns-resize hover:bg-gray-50 transition-colors border-t border-gray-100 ${isDragging ? 'bg-blue-50' : ''}`}
+              className={`flex justify-center pt-2 pb-1 cursor-ns-resize hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-t border-gray-100 dark:border-gray-700 ${isDragging ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
               onMouseDown={handleDragStart}
               title="Drag to resize panel height"
             >
-              <div className={`w-12 h-1 rounded-full transition-colors ${isDragging ? 'bg-blue-500' : 'bg-gray-300 hover:bg-gray-400'}`}></div>
+              <div className={`w-12 h-1 rounded-full transition-colors ${isDragging ? 'bg-blue-500 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'}`}></div>
                               </div>
             
             {/* Header */}
-            <div className={`flex items-start md:items-center justify-between p-4 md:p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 transition-all duration-500 ease-out ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+            <div className={`flex items-start md:items-center justify-between p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/40 dark:to-indigo-900/40 transition-all duration-500 ease-out ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               <div className="flex items-start md:items-center gap-3 md:gap-4 flex-1 min-w-0">
                 {/* Namespace Icon */}
                 <button
@@ -1320,14 +1320,14 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                 
                 {/* Namespace Info */}
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-lg md:text-2xl font-bold text-gray-900 truncate">{floatingNamespaceDetails["namespace-name"]}</h2>
-                  <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 text-xs md:text-sm text-gray-600 mt-1">
+                  <h2 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">{floatingNamespaceDetails["namespace-name"]}</h2>
+                  <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">
                     {floatingNamespaceDetails["namespace-url"] && (
                       <a 
                         href={floatingNamespaceDetails["namespace-url"]} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 truncate flex items-center gap-1 group"
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 truncate flex items-center gap-1 group"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Globe size={14} />
@@ -1347,12 +1347,12 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                         <span className="hidden md:inline">•</span>
                         <div className="flex items-center gap-1 flex-wrap">
                             {floatingNamespaceDetails.tags.slice(0, 2).map((tag: string, index: number) => (
-                            <span key={index} className="px-2 py-1 bg-white text-gray-700 rounded-full text-xs border border-blue-200">
+                            <span key={index} className="px-2 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-xs border border-blue-200 dark:border-blue-700">
                               {tag}
                             </span>
                           ))}
                           {floatingNamespaceDetails.tags.length > 2 && (
-                            <span key="floating-namespace-more" className="text-xs text-gray-500">+{floatingNamespaceDetails.tags.length - 2}</span>
+                            <span key="floating-namespace-more" className="text-xs text-gray-500 dark:text-gray-400">+{floatingNamespaceDetails.tags.length - 2}</span>
                           )}
                         </div>
                     </div>
@@ -1364,7 +1364,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
               {/* Close Button */}
               <button
                 onClick={closeFloatingDetails}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white/70 rounded-lg transition-colors"
+                className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-800/70 rounded-lg transition-colors"
                 title="Close"
               >
                 <X size={24} />
@@ -1376,8 +1376,8 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
               {loadingDetails && !namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]] ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
-                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-500">Loading namespace details...</p>
+                    <div className="w-8 h-8 border-4 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-500 dark:text-gray-400">Loading namespace details...</p>
                             </div>
                         </div>
               ) : (
@@ -1387,20 +1387,20 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                     <div className="flex items-center justify-between mb-4">
                       <button 
                         onClick={() => toggleSectionCollapse('accounts')}
-                        className="flex items-center gap-2 text-base md:text-lg font-semibold text-gray-800 hover:text-blue-600 transition-colors"
+                        className="flex items-center gap-2 text-base md:text-lg font-semibold text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                       >
                         {collapsedSections.accounts ? (
-                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-blue-600 dark:text-blue-400" />
                         ) : (
-                          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+                          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-blue-600 dark:text-blue-400" />
                         )}
-                        <Users className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+                        <Users className="w-4 h-4 md:w-5 md:h-5 text-blue-600 dark:text-blue-400" />
                         <span className="hidden sm:inline">Accounts ({namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.accounts?.length || 0})</span>
                         <span className="sm:hidden">({namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.accounts?.length || 0})</span>
                       </button>
                       <button 
                         onClick={() => handleSidePanelAdd('account', floatingNamespaceDetails)}
-                        className="px-2 md:px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs md:text-sm flex items-center gap-1"
+                        className="px-2 md:px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors text-xs md:text-sm flex items-center gap-1"
                       >
                         <UserPlus size={12} className="md:hidden" />
                         <UserPlus size={14} className="hidden md:block" />
@@ -1412,32 +1412,32 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                     {!collapsedSections.accounts && (
                       <>
                         {!namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.accounts?.length ? (
-                          <div className="text-center py-8 text-gray-500">
-                            <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                             <p>No accounts found</p>
                       </div>
                         ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.accounts?.map(account => (
-                              <div key={account["namespace-account-id"]} className="p-3 md:p-4 bg-blue-50 rounded-lg border border-blue-200 hover:shadow-md transition-shadow">
+                              <div key={account["namespace-account-id"]} className="p-3 md:p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800 hover:shadow-md transition-shadow">
                                 <div className="flex items-center gap-2 md:gap-3">
-                                  <div className="w-6 h-6 md:w-8 md:h-8 bg-white rounded-lg flex items-center justify-center border border-blue-200 flex-shrink-0">
-                                    <User className="w-3 h-3 md:w-4 md:h-4 text-blue-600" />
+                                  <div className="w-6 h-6 md:w-8 md:h-8 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center border border-blue-200 dark:border-blue-700 flex-shrink-0">
+                                    <User className="w-3 h-3 md:w-4 md:h-4 text-blue-600 dark:text-blue-400" />
                             </div>
                                   <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-gray-900 truncate text-sm md:text-base">{account["namespace-account-name"]}</h4>
-                                    <p className="text-xs md:text-sm text-gray-500 truncate">{account["namespace-account-url-override"]}</p>
+                                    <h4 className="font-medium text-gray-900 dark:text-white truncate text-sm md:text-base">{account["namespace-account-name"]}</h4>
+                                    <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate">{account["namespace-account-url-override"]}</p>
                                   </div>
                                 </div>
                                 {account.tags && account.tags.length > 0 && (
                                   <div className="mt-2 flex flex-wrap gap-1">
                                     {account.tags.slice(0, 2).map((tag: string, index: number) => (
-                                      <span key={index} className="px-2 py-0.5 bg-white text-blue-700 rounded-full text-xs">
+                                      <span key={index} className="px-2 py-0.5 bg-white dark:bg-gray-800 text-blue-700 dark:text-blue-300 rounded-full text-xs">
                                         {tag}
                                       </span>
                                     ))}
                                     {account.tags.length > 2 && (
-                                      <span key={`${account["namespace-account-id"]}-more`} className="px-2 py-0.5 bg-white text-blue-700 rounded-full text-xs">+{account.tags.length - 2}</span>
+                                      <span key={`${account["namespace-account-id"]}-more`} className="px-2 py-0.5 bg-white dark:bg-gray-800 text-blue-700 dark:text-blue-300 rounded-full text-xs">+{account.tags.length - 2}</span>
                                   )}
                                 </div>
                                 )}
@@ -1454,20 +1454,20 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                     <div className="flex items-center justify-between mb-4">
                   <button
                         onClick={() => toggleSectionCollapse('methods')}
-                        className="flex items-center gap-2 text-base md:text-lg font-semibold text-gray-800 hover:text-green-600 transition-colors"
+                        className="flex items-center gap-2 text-base md:text-lg font-semibold text-gray-800 dark:text-gray-200 hover:text-green-600 dark:hover:text-green-400 transition-colors"
                       >
                         {collapsedSections.methods ? (
-                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
+                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-green-600 dark:text-green-400" />
                         ) : (
-                          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
+                          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-green-600 dark:text-green-400" />
                         )}
-                        <Terminal className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
+                        <Terminal className="w-4 h-4 md:w-5 md:h-5 text-green-600 dark:text-green-400" />
                         <span className="hidden sm:inline">Methods ({namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.methods?.length || 0})</span>
                         <span className="sm:hidden">({namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.methods?.length || 0})</span>
                       </button>
                       <button
                         onClick={() => handleSidePanelAdd('method', floatingNamespaceDetails)}
-                        className="px-2 md:px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs md:text-sm flex items-center gap-1"
+                        className="px-2 md:px-3 py-1.5 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-xs md:text-sm flex items-center gap-1"
                       >
                         <Plus size={12} className="md:hidden" />
                         <Plus size={14} className="hidden md:block" />
@@ -1479,27 +1479,27 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                     {!collapsedSections.methods && (
                       <>
                         {!namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.methods?.length ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <Terminal className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <Terminal className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                         <p>No methods found</p>
                             </div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {namespaceDetailsMap[floatingNamespaceDetails["namespace-id"]]?.methods?.map(method => (
-                          <div key={method["namespace-method-id"]} className="p-3 md:p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+                          <div key={method["namespace-method-id"]} className="p-3 md:p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                             <div className="flex items-center gap-2 md:gap-3">
-                              <div className="w-6 h-6 md:w-8 md:h-8 bg-white rounded-lg flex items-center justify-center border border-gray-200 flex-shrink-0">
-                                <Terminal className="w-3 h-3 md:w-4 md:h-4 text-gray-600" />
+                              <div className="w-6 h-6 md:w-8 md:h-8 bg-white dark:bg-gray-700 rounded-lg flex items-center justify-center border border-gray-200 dark:border-gray-600 flex-shrink-0">
+                                <Terminal className="w-3 h-3 md:w-4 md:h-4 text-gray-600 dark:text-gray-300" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-gray-900 truncate text-sm md:text-base">{method["namespace-method-name"]}</h4>
+                                <h4 className="font-medium text-gray-900 dark:text-white truncate text-sm md:text-base">{method["namespace-method-name"]}</h4>
                                 <div className="flex items-center gap-1 md:gap-2 mt-1">
                                   <span className={`px-1.5 md:px-2 py-0.5 rounded-full text-xs font-medium ${
-                                    method["namespace-method-type"] === 'GET' ? 'bg-green-100 text-green-700' :
-                                    method["namespace-method-type"] === 'POST' ? 'bg-blue-100 text-blue-700' :
-                                    method["namespace-method-type"] === 'PUT' ? 'bg-yellow-100 text-yellow-700' :
-                                    method["namespace-method-type"] === 'DELETE' ? 'bg-red-100 text-red-700' :
-                                    'bg-gray-100 text-gray-700'
+                                    method["namespace-method-type"] === 'GET' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                                    method["namespace-method-type"] === 'POST' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                                    method["namespace-method-type"] === 'PUT' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                                    method["namespace-method-type"] === 'DELETE' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                                    'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                                   }`}>
                                     {method["namespace-method-type"]}
                                   </span>
@@ -1509,12 +1509,12 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                             {method.tags && method.tags.length > 0 && (
                               <div className="mt-2 flex flex-wrap gap-1">
                                 {method.tags.slice(0, 2).map((tag: string, index: number) => (
-                                  <span key={index} className="px-2 py-0.5 bg-white text-gray-700 rounded-full text-xs">
+                                  <span key={index} className="px-2 py-0.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs">
                                     {tag}
                                   </span>
                                 ))}
                                 {method.tags.length > 2 && (
-                                  <span key={`${method["namespace-method-id"]}-more`} className="px-2 py-0.5 bg-white text-gray-700 rounded-full text-xs">+{method.tags.length - 2}</span>
+                                  <span key={`${method["namespace-method-id"]}-more`} className="px-2 py-0.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs">+{method.tags.length - 2}</span>
                                 )}
                 </div>
                             )}
@@ -1531,20 +1531,20 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                     <div className="flex items-center justify-between mb-4">
                   <button
                         onClick={() => toggleSectionCollapse('schemas')}
-                        className="flex items-center gap-2 text-base md:text-lg font-semibold text-gray-800 hover:text-purple-600 transition-colors"
+                        className="flex items-center gap-2 text-base md:text-lg font-semibold text-gray-800 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                       >
                         {collapsedSections.schemas ? (
-                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
+                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-purple-600 dark:text-purple-400" />
                         ) : (
-                          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
+                          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-purple-600 dark:text-purple-400" />
                         )}
-                        <FileCode className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
+                        <FileCode className="w-4 h-4 md:w-5 md:h-5 text-purple-600 dark:text-purple-400" />
                         <span className="hidden sm:inline">Schemas ({schemas.filter(s => s.namespaceId === floatingNamespaceDetails["namespace-id"]).length})</span>
                         <span className="sm:hidden">({schemas.filter(s => s.namespaceId === floatingNamespaceDetails["namespace-id"]).length})</span>
                       </button>
                       <button 
                         onClick={() => handleSidePanelAdd('schema', floatingNamespaceDetails)}
-                        className="px-2 md:px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs md:text-sm flex items-center gap-1"
+                        className="px-2 md:px-3 py-1.5 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors text-xs md:text-sm flex items-center gap-1"
                       >
                         <FilePlus size={12} className="md:hidden" />
                         <FilePlus size={14} className="hidden md:block" />
@@ -1556,32 +1556,32 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                     {!collapsedSections.schemas && (
                       <>
                         {!schemas.filter(s => s.namespaceId === floatingNamespaceDetails["namespace-id"]).length ? (
-                          <div className="text-center py-8 text-gray-500">
-                            <FileCode className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <FileCode className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                             <p>No schemas found</p>
                               </div>
                         ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {schemas.filter(s => s.namespaceId === floatingNamespaceDetails["namespace-id"]).map(schema => (
-                              <div key={schema.id} className="p-3 md:p-4 bg-purple-50 rounded-lg border border-purple-200 hover:shadow-md transition-shadow">
+                              <div key={schema.id} className="p-3 md:p-4 bg-purple-50 dark:bg-purple-900/30 rounded-lg border border-purple-200 dark:border-purple-800 hover:shadow-md transition-shadow">
                                 <div className="flex items-center gap-2 md:gap-3">
-                                  <div className="w-6 h-6 md:w-8 md:h-8 bg-white rounded-lg flex items-center justify-center border border-purple-200 flex-shrink-0">
-                                    <FileCode className="w-3 h-3 md:w-4 md:h-4 text-purple-600" />
+                                  <div className="w-6 h-6 md:w-8 md:h-8 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center border border-purple-200 dark:border-purple-700 flex-shrink-0">
+                                    <FileCode className="w-3 h-3 md:w-4 md:h-4 text-purple-600 dark:text-purple-400" />
                               </div>
                                   <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-gray-900 truncate text-sm md:text-base">{schema.schemaName}</h4>
-                                    <p className="text-xs md:text-sm text-gray-500 truncate">{schema.originalType || 'object'}</p>
+                                    <h4 className="font-medium text-gray-900 dark:text-white truncate text-sm md:text-base">{schema.schemaName}</h4>
+                                    <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate">{schema.originalType || 'object'}</p>
                             </div>
                           </div>
                                 {schema.tags && schema.tags.length > 0 && (
                                   <div className="mt-2 flex flex-wrap gap-1">
                                     {schema.tags.slice(0, 2).map((tag: string, index: number) => (
-                                      <span key={index} className="px-1.5 py-0.5 bg-white text-purple-700 rounded-full text-xs">
+                                      <span key={index} className="px-1.5 py-0.5 bg-white dark:bg-gray-800 text-purple-700 dark:text-purple-300 rounded-full text-xs">
                                         {tag}
                                       </span>
                                     ))}
                                     {schema.tags.length > 2 && (
-                                      <span className="text-xs text-gray-500">+{schema.tags.length - 2}</span>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">+{schema.tags.length - 2}</span>
                                     )}
                 </div>
                                 )}
@@ -1598,20 +1598,20 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                     <div className="flex items-center justify-between mb-4">
                       <button 
                         onClick={() => toggleSectionCollapse('webhooks')}
-                        className="flex items-center gap-2 text-base md:text-lg font-semibold text-gray-800 hover:text-orange-600 transition-colors"
+                        className="flex items-center gap-2 text-base md:text-lg font-semibold text-gray-800 dark:text-gray-200 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
                       >
                         {collapsedSections.webhooks ? (
-                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
+                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-orange-600 dark:text-orange-400" />
                         ) : (
-                          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
+                          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-orange-600 dark:text-orange-400" />
                         )}
-                        <Globe className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
+                        <Globe className="w-4 h-4 md:w-5 md:h-5 text-orange-600 dark:text-orange-400" />
                         <span className="hidden sm:inline">Webhooks (0)</span>
                         <span className="sm:hidden">(0)</span>
                       </button>
                       <button 
                         onClick={() => handleSidePanelAdd('webhook', floatingNamespaceDetails)}
-                        className="px-2 md:px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-xs md:text-sm flex items-center gap-1"
+                        className="px-2 md:px-3 py-1.5 bg-orange-600 dark:bg-orange-500 text-white rounded-lg hover:bg-orange-700 dark:hover:bg-orange-600 transition-colors text-xs md:text-sm flex items-center gap-1"
                       >
                         <Globe size={12} className="md:hidden" />
                         <Globe size={14} className="hidden md:block" />
@@ -1621,8 +1621,8 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
       </div>
                     
                     {!collapsedSections.webhooks && (
-                      <div className="text-center py-8 text-gray-500">
-                        <Globe className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <Globe className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                         <p>No webhooks configured</p>
                         <p className="text-xs mt-1">Webhooks will appear here when configured for this namespace</p>
                       </div>
@@ -1772,46 +1772,46 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
       {/* Account Modal */}
       {showAccountModal && (
         <div 
-          className="fixed inset-0 bg-blue-900/40 backdrop-blur-sm flex items-center justify-center z-50"
+          className="fixed inset-0 bg-blue-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={() => setShowAccountModal(false)}
         >
-          <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-xl font-semibold mb-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 max-w-2xl w-full mx-4 shadow-2xl border-2 border-gray-300 dark:border-gray-700" onClick={e => e.stopPropagation()}>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
               {editingAccount ? 'Edit Account' : 'Create Account'}
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200 mb-2">
                   Account Name *
                 </label>
                 <input
                   type="text"
                   value={accountForm["namespace-account-name"]}
                   onChange={e => setAccountForm(f => ({ ...f, "namespace-account-name": e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2.5 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 font-medium"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200 mb-2">
                   URL Override
                 </label>
                 <input
                   type="text"
                   value={accountForm["namespace-account-url-override"]}
                   onChange={e => setAccountForm(f => ({ ...f, "namespace-account-url-override": e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2.5 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 font-medium"
                 />
               </div>
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                <div className="flex justify-between items-center mb-3">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200">
                     Headers
                   </label>
                   <button
                     type="button"
                     onClick={() => setAccountForm(f => ({ ...f, "namespace-account-header": [...f["namespace-account-header"], { key: '', value: '' }] }))}
-                    className="text-sm text-blue-600 hover:text-blue-700"
+                    className="text-sm font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
                   >
                     + Add Header
                   </button>
@@ -1828,7 +1828,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                           updated[index] = { ...header, key: e.target.value };
                           setAccountForm(f => ({ ...f, "namespace-account-header": updated }));
                         }}
-                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="flex-1 px-3 py-2 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                       />
                       <input
                         type="text"
@@ -1839,7 +1839,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                           updated[index] = { ...header, value: e.target.value };
                           setAccountForm(f => ({ ...f, "namespace-account-header": updated }));
                         }}
-                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="flex-1 px-3 py-2 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                       />
                       <button
                         type="button"
@@ -1847,7 +1847,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                           const updated = accountForm["namespace-account-header"].filter((_, i) => i !== index);
                           setAccountForm(f => ({ ...f, "namespace-account-header": updated }));
                         }}
-                        className="px-2 py-2 text-red-600 hover:text-red-700 rounded-lg hover:bg-red-50"
+                        className="px-3 py-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 font-bold text-lg"
                       >
                         ×
                       </button>
@@ -1856,14 +1856,14 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                 </div>
               </div>
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                <div className="flex justify-between items-center mb-3">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200">
                     Variables
                   </label>
                   <button
                     type="button"
                     onClick={() => setAccountForm(f => ({ ...f, variables: [...f.variables, { key: '', value: '' }] }))}
-                    className="text-sm text-blue-600 hover:text-blue-700"
+                    className="text-sm font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
                   >
                     + Add Variable
                   </button>
@@ -1880,7 +1880,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                           updated[index] = { ...variable, key: e.target.value };
                           setAccountForm(f => ({ ...f, variables: updated }));
                         }}
-                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="flex-1 px-3 py-2 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                       />
                       <input
                         type="text"
@@ -1891,7 +1891,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                           updated[index] = { ...variable, value: e.target.value };
                           setAccountForm(f => ({ ...f, variables: updated }));
                         }}
-                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="flex-1 px-3 py-2 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                       />
                       <button
                         type="button"
@@ -1899,7 +1899,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                           const updated = accountForm.variables.filter((_, i) => i !== index);
                           setAccountForm(f => ({ ...f, variables: updated }));
                         }}
-                        className="px-2 py-2 text-red-600 hover:text-red-700 rounded-lg hover:bg-red-50"
+                        className="px-3 py-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 font-bold text-lg"
                       >
                         ×
                       </button>
@@ -1908,30 +1908,31 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200 mb-2">
                   Tags (comma-separated)
                 </label>
                 <input
                   type="text"
                   value={accountForm.tags.join(', ')}
                   onChange={e => setAccountForm(f => ({ ...f, tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean) }))}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2.5 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 font-medium"
                 />
               </div>
             </div>
+            {accountError && <div className="mt-4 p-3 text-sm font-semibold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-lg border-2 border-red-200 dark:border-red-800">{accountError}</div>}
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setShowAccountModal(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                className="px-5 py-2.5 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 font-semibold border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveAccount}
-                className={`px-4 py-2 ${editingAccount ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-lg`}
+                className={`px-5 py-2.5 font-semibold rounded-lg text-white ${editingAccount ? 'bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600' : 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600'}`}
                 disabled={accountLoading}
               >
-                {editingAccount ? 'Update Account' : 'Create Account'}
+                {accountLoading ? 'Saving...' : editingAccount ? 'Update Account' : 'Create Account'}
               </button>
             </div>
           </div>
@@ -1941,34 +1942,34 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
       {/* Method Modal */}
       {showMethodModal && (
         <div 
-          className="fixed inset-0 bg-blue-900/40 backdrop-blur-sm flex items-center justify-center z-50"
+          className="fixed inset-0 bg-blue-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={() => setShowMethodModal(false)}
         >
-          <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-xl font-semibold mb-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 max-w-2xl w-full mx-4 shadow-2xl border-2 border-gray-300 dark:border-gray-700" onClick={e => e.stopPropagation()}>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
               {editingMethod ? 'Edit Method' : 'Create Method'}
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200 mb-2">
                   Method Name *
                 </label>
                 <input
                   type="text"
                   value={methodForm["namespace-method-name"]}
                   onChange={e => setMethodForm(f => ({ ...f, "namespace-method-name": e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2.5 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 font-medium"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200 mb-2">
                   Method Type *
                 </label>
                 <select
                   value={methodForm["namespace-method-type"]}
                   onChange={e => setMethodForm(f => ({ ...f, "namespace-method-type": e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2.5 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium"
                 >
                   <option value="GET">GET</option>
                   <option value="POST">POST</option>
@@ -1978,25 +1979,25 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200 mb-2">
                   URL Override
                 </label>
                 <input
                   type="text"
                   value={methodForm["namespace-method-url-override"]}
                   onChange={e => setMethodForm(f => ({ ...f, "namespace-method-url-override": e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2.5 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 font-medium"
                 />
               </div>
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                <div className="flex justify-between items-center mb-3">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200">
                     Query Parameters
                   </label>
                   <button
                     type="button"
                     onClick={() => setMethodForm(f => ({ ...f, "namespace-method-queryParams": [...f["namespace-method-queryParams"], { key: '', value: '' }] }))}
-                    className="text-sm text-blue-600 hover:text-blue-700"
+                    className="text-sm font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
                   >
                     + Add Query Parameter
                   </button>
@@ -2013,7 +2014,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                           updated[index] = { ...param, key: e.target.value };
                           setMethodForm(f => ({ ...f, "namespace-method-queryParams": updated }));
                         }}
-                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="flex-1 px-3 py-2 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                       />
                       <input
                         type="text"
@@ -2024,7 +2025,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                           updated[index] = { ...param, value: e.target.value };
                           setMethodForm(f => ({ ...f, "namespace-method-queryParams": updated }));
                         }}
-                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="flex-1 px-3 py-2 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                       />
                       <button
                         type="button"
@@ -2032,7 +2033,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                           const updated = methodForm["namespace-method-queryParams"].filter((_, i) => i !== index);
                           setMethodForm(f => ({ ...f, "namespace-method-queryParams": updated }));
                         }}
-                        className="px-2 py-2 text-red-600 hover:text-red-700 rounded-lg hover:bg-red-50"
+                        className="px-3 py-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 font-bold text-lg"
                       >
                         ×
                       </button>
@@ -2041,14 +2042,14 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                 </div>
               </div>
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                <div className="flex justify-between items-center mb-3">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200">
                     Headers
                   </label>
                   <button
                     type="button"
                     onClick={() => setMethodForm(f => ({ ...f, "namespace-method-header": [...f["namespace-method-header"], { key: '', value: '' }] }))}
-                    className="text-sm text-blue-600 hover:text-blue-700"
+                    className="text-sm font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
                   >
                     + Add Header
                   </button>
@@ -2065,7 +2066,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                           updated[index] = { ...header, key: e.target.value };
                           setMethodForm(f => ({ ...f, "namespace-method-header": updated }));
                         }}
-                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="flex-1 px-3 py-2 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                       />
                       <input
                         type="text"
@@ -2076,7 +2077,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                           updated[index] = { ...header, value: e.target.value };
                           setMethodForm(f => ({ ...f, "namespace-method-header": updated }));
                         }}
-                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="flex-1 px-3 py-2 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                       />
                       <button
                         type="button"
@@ -2084,7 +2085,7 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                           const updated = methodForm["namespace-method-header"].filter((_, i) => i !== index);
                           setMethodForm(f => ({ ...f, "namespace-method-header": updated }));
                         }}
-                        className="px-2 py-2 text-red-600 hover:text-red-700 rounded-lg hover:bg-red-50"
+                        className="px-3 py-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 font-bold text-lg"
                       >
                         ×
                       </button>
@@ -2093,42 +2094,43 @@ const UnifiedNamespace: React.FC<UnifiedNamespaceProps> = ({ externalModalTrigge
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200 mb-2">
                   Tags (comma-separated)
                 </label>
                 <input
                   type="text"
                   value={methodForm.tags.join(', ')}
                   onChange={e => setMethodForm(f => ({ ...f, tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean) }))}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2.5 border-2 border-gray-400 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-600 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 font-medium"
                 />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   id="save-data-edit"
                   checked={methodForm["save-data"]}
                   onChange={e => setMethodForm(f => ({ ...f, "save-data": e.target.checked }))}
-                  className="rounded text-blue-600 focus:ring-blue-500"
+                  className="w-5 h-5 rounded border-2 border-gray-400 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800"
                 />
-                <label htmlFor="save-data-edit" className="text-sm text-gray-700">
+                <label htmlFor="save-data-edit" className="text-sm font-semibold text-gray-900 dark:text-gray-200">
                   Save Data
                 </label>
               </div>
             </div>
+            {methodError && <div className="mt-4 p-3 text-sm font-semibold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-lg border-2 border-red-200 dark:border-red-800">{methodError}</div>}
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setShowMethodModal(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                className="px-5 py-2.5 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 font-semibold border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveMethod}
-                className={`px-4 py-2 ${editingMethod ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-lg`}
+                className={`px-5 py-2.5 font-semibold rounded-lg text-white ${editingMethod ? 'bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600' : 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600'}`}
                 disabled={methodLoading}
               >
-                {editingMethod ? 'Update Method' : 'Create Method'}
+                {methodLoading ? 'Saving...' : editingMethod ? 'Update Method' : 'Create Method'}
               </button>
             </div>
           </div>

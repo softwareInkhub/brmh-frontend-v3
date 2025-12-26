@@ -3,6 +3,10 @@ import type { NextRequest } from 'next/server';
 
 const PUBLIC_FILE = /\.(.*)$/;
 
+// Get auth URL from environment variable with fallback logic
+// Priority: .env > default localhost:3000 (auth app)
+const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:3000';
+
 export function middleware(req: NextRequest) {
   const { pathname, href } = req.nextUrl;
 
@@ -39,7 +43,7 @@ export function middleware(req: NextRequest) {
   // Redirect to auth page with return URL (production only)
   const nextUrl = encodeURIComponent(href);
   console.log('[Middleware] No auth token found, redirecting to auth page');
-  return NextResponse.redirect(`https://auth.brmh.in/login?next=${nextUrl}`);
+  return NextResponse.redirect(`${AUTH_URL}/login?next=${nextUrl}`);
 }
 
 export const config = {

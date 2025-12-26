@@ -33,7 +33,8 @@ interface PaginationState {
 }
 
 export default function TableItemsPage({ params }: { params: Promise<{ tableName: string }> }) {
-  const { tableName } = use(params);
+  const resolvedParams = use(params);
+  const tableName = resolvedParams?.tableName;
   const router = useRouter();
   const [items, setItems] = useState<TableItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,10 +56,22 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    if (!tableName || tableName === 'undefined') {
+      console.error('Invalid table name:', tableName);
+      toast.error('Invalid table name. Redirecting...');
+      router.push('/aws/dynamodb');
+      return;
+    }
     fetchItems();
   }, [tableName]);
 
   const fetchItems = async (isLoadMore = false) => {
+    if (!tableName || tableName === 'undefined') {
+      console.error('Cannot fetch items: tableName is invalid');
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isLoadMore) {
         setLoadingMore(true);
@@ -66,16 +79,51 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
         setLoading(true);
       }
 
+      const awsUrl = process.env.NEXT_PUBLIC_AWS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+      
+      if (!awsUrl) {
+        throw new Error("AWS URL is not configured");
+      }
+
       const queryParams = new URLSearchParams();
       if (isLoadMore && pagination.lastEvaluatedKey) {
         queryParams.set('exclusiveStartKey', JSON.stringify(pagination.lastEvaluatedKey));
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/tables/${tableName}/items?${queryParams}`);
-      const responseData = await response.json();
+      let response;
+      try {
+        response = await fetch(`${awsUrl}/tables/${tableName}/items?${queryParams}`, {
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        });
+      } catch (fetchError: any) {
+        // Handle network errors
+        if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
+          throw new Error("Request timeout. Please check your connection and try again.");
+        }
+        if (fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
+          throw new Error("Network error. Please check if the server is running and accessible.");
+        }
+        throw fetchError;
+      }
+
+      // Handle 404 gracefully
+      if (response.status === 404) {
+        console.warn(`Items endpoint not found for table ${tableName}`);
+        setItems([]);
+        setPagination({ hasMore: false });
+        return;
+      }
+
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        throw new Error("Invalid response format from server");
+      }
       
       if (!response.ok) {
-        throw new Error(responseData.error || "Failed to fetch items");
+        const errorMsg = responseData?.error || responseData?.message || `HTTP ${response.status}: Failed to fetch items`;
+        throw new Error(errorMsg);
       }
 
       console.log('API Response:', responseData);
@@ -93,7 +141,24 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
       setItems(prev => isLoadMore ? [...prev, ...items] : items);
     } catch (error) {
       console.error("Error fetching items:", error);
-      toast.error("Failed to fetch table items. Check console for details.");
+      
+      // Only show toast for significant errors, not for missing endpoints
+      if (error instanceof Error) {
+        const errorMsg = error.message;
+        // Don't show toast for 404 or missing endpoints
+        if (!errorMsg.includes('404') && !errorMsg.includes('Not Found') && !errorMsg.includes('not found')) {
+          toast.error(`Failed to fetch table items: ${errorMsg}`);
+        } else {
+          console.warn(`Items endpoint not available for table ${tableName}`);
+          // Set empty state gracefully
+          if (!isLoadMore) {
+            setItems([]);
+            setPagination({ hasMore: false });
+          }
+        }
+      } else {
+        toast.error("Failed to fetch table items. Please try again later.");
+      }
     } finally {
       if (isLoadMore) {
         setLoadingMore(false);
@@ -143,18 +208,41 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
 
     try {
       setCreatingItem(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/tables/${tableName}/items`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ Item: item }),
-      });
+      const awsUrl = process.env.NEXT_PUBLIC_AWS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+      
+      if (!awsUrl) {
+        throw new Error("AWS URL is not configured");
+      }
 
-      const responseData = await response.json();
+      let response;
+      try {
+        response = await fetch(`${awsUrl}/tables/${tableName}/items`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ Item: item }),
+          signal: AbortSignal.timeout(10000)
+        });
+      } catch (fetchError: any) {
+        if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
+          throw new Error("Request timeout. Please try again.");
+        }
+        if (fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
+          throw new Error("Network error. Please check your connection.");
+        }
+        throw fetchError;
+      }
+
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        throw new Error("Invalid response format from server");
+      }
       
       if (!response.ok) {
-        throw new Error(responseData.error || "Failed to create item");
+        throw new Error(responseData.error || responseData.message || `HTTP ${response.status}: Failed to create item`);
       }
 
       toast.success("Item created successfully");
@@ -164,7 +252,8 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
       fetchItems();
     } catch (error) {
       console.error("Error creating item:", error);
-      toast.error("Failed to create item. Check console for details.");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to create item: ${errorMessage}`);
     } finally {
       setCreatingItem(false);
     }
@@ -175,18 +264,37 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
     if (!confirmed) return;
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/tables/${tableName}/items`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          Key: { id: itemId }
-        })
-      });
+      const awsUrl = process.env.NEXT_PUBLIC_AWS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+      
+      if (!awsUrl) {
+        throw new Error("AWS URL is not configured");
+      }
+
+      let response;
+      try {
+        response = await fetch(`${awsUrl}/tables/${tableName}/items`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            Key: { id: itemId }
+          }),
+          signal: AbortSignal.timeout(10000)
+        });
+      } catch (fetchError: any) {
+        if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
+          throw new Error("Request timeout. Please try again.");
+        }
+        if (fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
+          throw new Error("Network error. Please check your connection.");
+        }
+        throw fetchError;
+      }
 
       if (!response.ok) {
-        throw new Error('Failed to delete item');
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: Failed to delete item`);
       }
 
       toast.success('Item deleted successfully');
@@ -194,7 +302,8 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
       fetchItems();
     } catch (error) {
       console.error('Error deleting item:', error);
-      toast.error('Failed to delete item');
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to delete item: ${errorMessage}`);
     }
   };
 
@@ -243,18 +352,41 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
         ReturnValues: 'ALL_NEW'
       };
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/tables/${tableName}/items`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const awsUrl = process.env.NEXT_PUBLIC_AWS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+      
+      if (!awsUrl) {
+        throw new Error("AWS URL is not configured");
+      }
 
-      const responseData = await response.json();
+      let response;
+      try {
+        response = await fetch(`${awsUrl}/tables/${tableName}/items`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(10000)
+        });
+      } catch (fetchError: any) {
+        if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
+          throw new Error("Request timeout. Please try again.");
+        }
+        if (fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
+          throw new Error("Network error. Please check your connection.");
+        }
+        throw fetchError;
+      }
+
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        throw new Error("Invalid response format from server");
+      }
       
       if (!response.ok) {
-        throw new Error(responseData.error || "Failed to update item");
+        throw new Error(responseData.error || responseData.message || `HTTP ${response.status}: Failed to update item`);
       }
 
       toast.success("Item updated successfully");
@@ -263,7 +395,8 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
       fetchItems();
     } catch (error) {
       console.error("Error updating item:", error);
-      toast.error("Failed to update item. Check console for details.");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to update item: ${errorMessage}`);
     } finally {
       setUpdatingItem(false);
     }
@@ -370,24 +503,44 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
     let successCount = 0;
     let errorCount = 0;
 
+    const awsUrl = process.env.NEXT_PUBLIC_AWS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+    
+    if (!awsUrl) {
+      toast.error("AWS URL is not configured");
+      return;
+    }
+
     for (const itemId of selectedItems) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_AWS_URL}/tables/${tableName}/items`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            Key: { id: itemId }
-          })
-        });
+        let response;
+        try {
+          response = await fetch(`${awsUrl}/tables/${tableName}/items`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              Key: { id: itemId }
+            }),
+            signal: AbortSignal.timeout(10000)
+          });
+        } catch (fetchError: any) {
+          if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
+            throw new Error("Request timeout");
+          }
+          if (fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
+            throw new Error("Network error");
+          }
+          throw fetchError;
+        }
 
         if (!response.ok) {
-          throw new Error('Failed to delete item');
+          const errorData = await response.json().catch(() => ({ error: response.statusText }));
+          throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`);
         }
         successCount++;
       } catch (error) {
-        console.error('Error deleting item:', error);
+        console.error(`Error deleting item ${itemId}:`, error);
         errorCount++;
       }
     }
@@ -470,19 +623,19 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
             <div className="flex items-center gap-1 md:gap-2">
               <div className="relative flex-1">
                 <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                  <Search className="h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
+                  <Search className="h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400 dark:text-gray-500" />
                 </div>
                 <Input
                   type="text"
                   placeholder="Search items..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-7 md:pl-9 h-7 md:h-9 text-xs md:text-sm border-transparent bg-white/10 text-white placeholder:text-white/60 rounded-md md:rounded-lg focus:border-white/30 focus:ring-0 transition-all duration-300 w-full min-w-0"
+                  className="pl-7 md:pl-9 h-7 md:h-9 text-xs md:text-sm border-transparent bg-white/10 dark:bg-white/5 text-white placeholder:text-white/60 dark:placeholder:text-white/40 rounded-md md:rounded-lg focus:border-white/30 dark:focus:border-white/20 focus:ring-0 transition-all duration-300 w-full min-w-0"
                 />
               </div>
               <Button
                 onClick={() => setShowAddDialog(true)}
-                className="bg-white text-blue-600 hover:bg-blue-50 transition-all duration-300 h-7 w-7 p-0 md:h-9 md:w-auto md:px-3"
+                className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 transition-all duration-300 h-7 w-7 p-0 md:h-9 md:w-auto md:px-3"
               >
                 <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 <span className="hidden md:inline ml-1.5 text-sm">Create Item</span>
@@ -492,24 +645,24 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
         </div>
 
         {/* Items List */}
-        <div className="flex-1 overflow-hidden flex flex-col bg-white rounded-lg border border-gray-200 mt-2 md:mt-4">
+        <div className="flex-1 overflow-hidden flex flex-col bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 mt-2 md:mt-4">
           {/* Items Header */}
-          <div className="flex items-center px-3 py-2 md:px-4 md:py-3 bg-gray-50 border-b border-gray-200 text-xs md:text-sm">
+          <div className="flex items-center px-3 py-2 md:px-4 md:py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-xs md:text-sm">
             <div className="w-4 md:w-6 flex items-center justify-center">
               <input
                 type="checkbox"
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 md:h-4 md:w-4"
+                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 h-3.5 w-3.5 md:h-4 md:w-4"
                 checked={selectedItems.size === filteredItems.length && filteredItems.length > 0}
                 onChange={(e) => handleSelectAll(e.target.checked)}
               />
             </div>
             <div className="flex-1 min-w-0 pl-4 grid grid-cols-3 gap-4">
-              <div className="text-xs md:text-sm font-medium text-gray-500">ID (String)</div>
-              <div className="text-xs md:text-sm font-medium text-gray-500">data</div>
-              <div className="text-xs md:text-sm font-medium text-gray-500">type</div>
+              <div className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">ID (String)</div>
+              <div className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">data</div>
+              <div className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">type</div>
             </div>
             <div className="w-24 md:w-32 flex justify-center">
-              <div className="text-xs md:text-sm font-medium text-gray-500">Actions</div>
+              <div className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">Actions</div>
             </div>
           </div>
 
@@ -517,59 +670,59 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
           <div className="flex-1 overflow-y-auto" onScroll={handleScroll}>
             {loading ? (
               <div className="flex items-center justify-center h-32">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                <Loader2 className="h-6 w-6 animate-spin text-blue-600 dark:text-blue-400" />
               </div>
             ) : filteredItems.length > 0 ? (
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {filteredItems.map((item, index) => (
                   <div
                     key={`${item.id}-${index}`}
-                    className="flex items-center px-3 py-2 md:px-4 md:py-3 hover:bg-gray-50 cursor-pointer"
+                    className="flex items-center px-3 py-2 md:px-4 md:py-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
                     onClick={() => handleItemClick(item)}
                   >
                     <div className="w-4 md:w-6 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 md:h-4 md:w-4"
+                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 h-3.5 w-3.5 md:h-4 md:w-4"
                         checked={selectedItems.has(item.id)}
                         onChange={(e) => handleSelectItem(e, item.id)}
                       />
                     </div>
                     <div className="flex-1 min-w-0 pl-4 grid grid-cols-3 gap-4">
                       <div className="flex items-center">
-                        <span className="text-xs md:text-sm font-medium text-blue-600 truncate">
+                        <span className="text-xs md:text-sm font-medium text-blue-600 dark:text-blue-400 truncate">
                           {item.id}
                         </span>
                       </div>
-                      <div className="text-xs md:text-sm text-gray-600 font-mono whitespace-nowrap overflow-hidden">
+                      <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400 font-mono whitespace-nowrap overflow-hidden">
                         {JSON.stringify(item, null, 2)}
                       </div>
-                      <div className="text-xs md:text-sm text-gray-600">
+                      <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                         {item.type || '-'}
                       </div>
                     </div>
                     <div className="w-24 md:w-32 flex items-center justify-end gap-1">
                       <Button
                         onClick={(e) => handleEditClick(e, item)}
-                        className="h-6 w-6 p-0 rounded-md bg-gray-100 hover:bg-gray-200"
+                        className="h-6 w-6 p-0 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
                       >
-                        <ChevronRight className="h-3.5 w-3.5 text-gray-600" />
+                        <ChevronRight className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
                       </Button>
                     </div>
                   </div>
                 ))}
                 {loadingMore && (
                   <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                    <Loader2 className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400" />
                   </div>
                 )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-32">
-                <div className="p-2 md:p-3 rounded-full bg-gray-100 mb-2">
-                  <Database className="w-5 h-5 md:w-6 md:h-6 text-gray-400" />
+                <div className="p-2 md:p-3 rounded-full bg-gray-100 dark:bg-gray-800 mb-2">
+                  <Database className="w-5 h-5 md:w-6 md:h-6 text-gray-400 dark:text-gray-500" />
                 </div>
-                <p className="text-xs md:text-sm text-gray-500">
+                <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
                   {searchTerm ? 'No items match your search' : 'No items found'}
                 </p>
               </div>
@@ -580,25 +733,25 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
 
       {/* Add Item Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-lg">
-          <DialogHeader className="p-3 md:p-4 border-b border-gray-100">
-            <DialogTitle className="text-base md:text-xl font-semibold text-gray-900">
+        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-lg bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+          <DialogHeader className="p-3 md:p-4 border-b border-gray-100 dark:border-gray-800">
+            <DialogTitle className="text-base md:text-xl font-semibold text-gray-900 dark:text-white">
               Add New Item
             </DialogTitle>
-            <DialogDescription className="text-xs md:text-sm text-gray-500">
-              Create a new item in the {tableName} table. Fill in the required fields below.
+            <DialogDescription className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+              Create a new item in the {tableName || 'table'} table. Fill in the required fields below.
             </DialogDescription>
           </DialogHeader>
           <div className="p-3 md:p-4 space-y-3 md:space-y-4 overflow-y-auto max-h-[60vh]">
             <div className="space-y-3 md:space-y-4">
               <div className="grid gap-1.5 md:gap-2">
-                <label className="text-xs md:text-sm font-medium text-gray-700">
+                <label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                   ID (required)
                 </label>
                 <Input
                   value={newItem.id}
                   onChange={(e) => setNewItem({ ...newItem, id: e.target.value })}
-                  className="h-8 md:h-9 text-xs md:text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  className="h-8 md:h-9 text-xs md:text-sm border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   placeholder="Enter item ID"
                 />
               </div>
@@ -611,7 +764,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
                         placeholder="Attribute name"
                         value={field.key}
                         onChange={(e) => handleFieldChange(index, { key: e.target.value })}
-                        className="h-8 md:h-9 text-xs md:text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                        className="h-8 md:h-9 text-xs md:text-sm border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       />
                     </div>
                     <div className="col-span-9 md:col-span-5">
@@ -619,14 +772,14 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
                         placeholder="Value"
                         value={field.value}
                         onChange={(e) => handleFieldChange(index, { value: e.target.value })}
-                        className="h-8 md:h-9 text-xs md:text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                        className="h-8 md:h-9 text-xs md:text-sm border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       />
                     </div>
                     <div className="col-span-2 md:col-span-2">
                       <select
                         value={field.type}
                         onChange={(e) => handleFieldChange(index, { type: e.target.value as AttributeField['type'] })}
-                        className="w-full h-8 md:h-9 rounded-md border border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-xs md:text-sm"
+                        className="w-full h-8 md:h-9 rounded-md border border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 text-xs md:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       >
                         <option value="String">String</option>
                         <option value="Number">Number</option>
@@ -665,7 +818,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
               </Button>
             </div>
           </div>
-          <DialogFooter className="p-3 md:p-4 border-t border-gray-100 flex-row space-x-2">
+          <DialogFooter className="p-3 md:p-4 border-t border-gray-100 dark:border-gray-800 flex-row space-x-2">
             <Button
               variant="outline"
               onClick={() => {
@@ -673,14 +826,14 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
                 setNewFields([]);
                 setNewItem({ id: "" });
               }}
-              className="flex-1 h-8 md:h-9 text-xs md:text-sm border-gray-200 hover:bg-gray-50"
+              className="flex-1 h-8 md:h-9 text-xs md:text-sm border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
             >
               Cancel
             </Button>
             <Button
               onClick={handleAddItem}
               disabled={creatingItem || !newItem.id.trim()}
-              className="flex-1 h-8 md:h-9 text-xs md:text-sm bg-blue-600 text-white hover:bg-blue-700"
+              className="flex-1 h-8 md:h-9 text-xs md:text-sm bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600"
             >
               {creatingItem ? (
                 <>
@@ -697,12 +850,12 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
 
       {/* Edit Item Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden rounded-lg">
-          <DialogHeader className="p-3 md:p-4 border-b border-gray-100">
-            <DialogTitle className="text-base md:text-xl font-semibold text-gray-900">
+        <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden rounded-lg bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+          <DialogHeader className="p-3 md:p-4 border-b border-gray-100 dark:border-gray-800">
+            <DialogTitle className="text-base md:text-xl font-semibold text-gray-900 dark:text-white">
               Edit Item
             </DialogTitle>
-            <DialogDescription className="text-xs md:text-sm text-gray-500">
+            <DialogDescription className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
               Update the item fields below. ID cannot be changed.
             </DialogDescription>
           </DialogHeader>
@@ -710,14 +863,14 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
             <div className="space-y-3 md:space-y-4">
               {editingItem && Object.entries(editingItem).map(([key, value], index) => (
                 <div key={index} className="grid gap-1.5 md:gap-2">
-                  <label className="text-xs md:text-sm font-medium text-gray-700">
+                  <label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                     {key}
                   </label>
                   {key === 'id' ? (
                     <Input
                       value={value}
                       disabled
-                      className="h-8 md:h-9 text-xs md:text-sm bg-gray-50 text-gray-500 border-gray-200"
+                      className="h-8 md:h-9 text-xs md:text-sm bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700"
                     />
                   ) : typeof value === 'object' ? (
                     <div className="relative">
@@ -737,7 +890,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
                             });
                           }
                         }}
-                        className="w-full h-32 md:h-48 font-mono text-xs md:text-sm p-2 md:p-3 rounded-md border border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                        className="w-full h-32 md:h-48 font-mono text-xs md:text-sm p-2 md:p-3 rounded-md border border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         placeholder="Enter valid JSON"
                       />
                     </div>
@@ -748,28 +901,28 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
                         ...editingItem,
                         [key]: e.target.value
                       })}
-                      className="h-8 md:h-9 text-xs md:text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                      className="h-8 md:h-9 text-xs md:text-sm border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                     />
                   )}
                 </div>
               ))}
             </div>
           </div>
-          <DialogFooter className="p-3 md:p-4 border-t border-gray-100 flex-row space-x-2">
+          <DialogFooter className="p-3 md:p-4 border-t border-gray-100 dark:border-gray-800 flex-row space-x-2">
             <Button
               variant="outline"
               onClick={() => {
                 setShowEditDialog(false);
                 setEditingItem(null);
               }}
-              className="flex-1 h-8 md:h-9 text-xs md:text-sm border-gray-200 hover:bg-gray-50"
+              className="flex-1 h-8 md:h-9 text-xs md:text-sm border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
             >
               Cancel
             </Button>
             <Button
               onClick={handleUpdateItem}
               disabled={updatingItem}
-              className="flex-1 h-8 md:h-9 text-xs md:text-sm bg-blue-600 text-white hover:bg-blue-700"
+              className="flex-1 h-8 md:h-9 text-xs md:text-sm bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600"
             >
               {updatingItem ? (
                 <>
@@ -786,7 +939,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ tableName
 
       {/* Item Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-[90%] sm:w-[500px] h-[400px] sm:h-auto bg-white p-0 border-0 rounded-lg overflow-hidden">
+        <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-[90%] sm:w-[500px] h-[400px] sm:h-auto bg-white dark:bg-gray-900 p-0 border-0 dark:border-gray-800 rounded-lg overflow-hidden">
           <DialogTitle className="sr-only">
             Item Details - {selectedItem?.id}
           </DialogTitle>
