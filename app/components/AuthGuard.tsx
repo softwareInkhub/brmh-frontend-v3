@@ -19,12 +19,21 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       // Determine API URL based on environment
       const isProduction = window.location.hostname.includes('brmh.in') && !window.location.hostname.includes('localhost');
+      
+      // IMPORTANT: Backend API is at brmh.in, NOT auth.brmh.in
+      // auth.brmh.in is the auth frontend, brmh.in is the backend API
       let API_BASE_URL = isProduction 
-        ? (process.env.NEXT_PUBLIC_AWS_URL || 'https://brmh.in')
+        ? (process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_AWS_URL || 'https://brmh.in')
         : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001');
       
       // Remove trailing slash to prevent double slashes in URLs
       API_BASE_URL = API_BASE_URL.replace(/\/+$/, '');
+      
+      // Safety check: If API_BASE_URL points to auth.brmh.in, redirect to brmh.in
+      if (API_BASE_URL.includes('auth.brmh.in')) {
+        console.warn('[AuthGuard] API_BASE_URL incorrectly points to auth.brmh.in, using brmh.in instead');
+        API_BASE_URL = 'https://brmh.in';
+      }
       
       // Get auth URL from environment variable with fallback logic
       // Priority: .env > default localhost:3000 (auth app) > fallback
