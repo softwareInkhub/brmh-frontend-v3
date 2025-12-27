@@ -19,9 +19,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       // Determine API URL based on environment
       const isProduction = window.location.hostname.includes('brmh.in') && !window.location.hostname.includes('localhost');
-      const API_BASE_URL = isProduction 
+      let API_BASE_URL = isProduction 
         ? (process.env.NEXT_PUBLIC_AWS_URL || 'https://brmh.in')
         : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001');
+      
+      // Remove trailing slash to prevent double slashes in URLs
+      API_BASE_URL = API_BASE_URL.replace(/\/+$/, '');
       
       // Get auth URL from environment variable with fallback logic
       // Priority: .env > default localhost:3000 (auth app) > fallback
@@ -120,7 +123,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         addDebugLog(`🍪 No tokens in localStorage, checking for cookie-based auth...`);
         
         try {
-          const response = await fetch(`${API_BASE_URL}/auth/me`, {
+          // Use backend API URL (brmh.in), not auth.brmh.in
+          const authCheckUrl = `${API_BASE_URL}/auth/me`;
+          addDebugLog(`🔗 Checking auth at: ${authCheckUrl}`);
+          const response = await fetch(authCheckUrl, {
             method: 'GET',
             credentials: 'include' // Send cookies
           });
