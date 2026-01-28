@@ -132,11 +132,11 @@ export default function DocsPage() {
 
   const getDocumentColor = (type: string) => {
     switch (type) {
-      case 'workflow': return 'text-blue-600 bg-blue-50'
-      case 'wireframe': return 'text-purple-600 bg-purple-50'
-      case 'schema': return 'text-green-600 bg-green-50'
-      case 'documentation': return 'text-orange-600 bg-orange-50'
-      default: return 'text-gray-600 bg-gray-50'
+      case 'workflow': return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30'
+      case 'wireframe': return 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30'
+      case 'schema': return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30'
+      case 'documentation': return 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30'
+      default: return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30'
     }
   }
 
@@ -216,7 +216,7 @@ export default function DocsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
@@ -313,13 +313,13 @@ export default function DocsPage() {
                 {selectedNamespace ? (
                   <div className="space-y-8">
                     {/* Search and Actions */}
-                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/30 p-8">
+                    <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/30 dark:border-gray-800 p-8">
                       <div className="flex items-center justify-between mb-6">
                         <div>
-                          <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                          <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                             {namespaces.find(n => n.id === selectedNamespace)?.name}
                           </h2>
-                          <p className="text-gray-600 mt-1 capitalize">{activeTab} Collection</p>
+                          <p className="text-gray-600 dark:text-gray-400 mt-1 capitalize">{activeTab} Collection</p>
                         </div>
                         <button 
                           onClick={() => handleCreateDocument()}
@@ -337,7 +337,7 @@ export default function DocsPage() {
                           placeholder={`Search ${activeTab}...`}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full pl-12 pr-4 py-4 border border-gray-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 bg-white/50 backdrop-blur-sm transition-all duration-300"
+                          className="w-full pl-12 pr-4 py-4 border border-gray-200/50 dark:border-gray-700/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50 focus:border-blue-500/50 dark:focus:border-blue-400/50 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm transition-all duration-300 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                         />
                       </div>
                     </div>
@@ -350,43 +350,43 @@ export default function DocsPage() {
                           initial={{ opacity: 0, y: 30, scale: 0.9 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           transition={{ delay: index * 0.1 }}
-                          className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 p-6 hover:shadow-2xl hover:scale-105 transition-all duration-300 transform"
+                          className="group bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 dark:border-gray-800 p-6 hover:shadow-2xl hover:scale-105 transition-all duration-300 transform"
                         >
                           <div className="flex items-start justify-between mb-6">
                             <div className={`p-3 rounded-xl ${getDocumentColor(document.type)} shadow-lg`}>
                               {getDocumentIcon(document.type)}
                             </div>
                             <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              <button className="p-2 hover:bg-blue-50 rounded-lg transition-colors duration-200">
-                                <Eye className="w-4 h-4 text-blue-600" />
+                              <button className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors duration-200">
+                                <Eye className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                               </button>
                               <button 
                                 onClick={() => handleEditDocument(document)}
-                                className="p-2 hover:bg-green-50 rounded-lg transition-colors duration-200"
+                                className="p-2 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors duration-200"
                               >
-                                <Edit className="w-4 h-4 text-green-600" />
+                                <Edit className="w-4 h-4 text-green-600 dark:text-green-400" />
                               </button>
-                              <button className="p-2 hover:bg-red-50 rounded-lg transition-colors duration-200">
-                                <Trash2 className="w-4 h-4 text-red-600" />
+                              <button className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors duration-200">
+                                <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
                               </button>
                             </div>
                           </div>
                           
-                          <h3 className="font-bold text-gray-900 mb-3 text-lg">{document.name}</h3>
-                          <p className="text-sm text-gray-600 mb-6 flex items-center">
-                            <span className="w-2 h-2 bg-gray-300 rounded-full mr-2"></span>
+                          <h3 className="font-bold text-gray-900 dark:text-white mb-3 text-lg">{document.name}</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 flex items-center">
+                            <span className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full mr-2"></span>
                             Last updated {new Date(document.updatedAt).toLocaleDateString()}
                           </p>
                           
-                          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                          <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
                             <button 
                               onClick={() => handleEditDocument(document)}
-                              className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors duration-200"
+                              className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-200"
                             >
                               Open Document →
                             </button>
-                            <button className="p-2 hover:bg-gray-50 rounded-lg transition-colors duration-200">
-                              <Download className="w-4 h-4 text-gray-500" />
+                            <button className="p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors duration-200">
+                              <Download className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                             </button>
                           </div>
                         </motion.div>
@@ -397,17 +397,17 @@ export default function DocsPage() {
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/30 p-16 text-center"
+                        className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/30 dark:border-gray-800 p-16 text-center"
                       >
-                        <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
+                        <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 rounded-2xl flex items-center justify-center">
                             {getDocumentIcon(activeTab)}
                           </div>
                         </div>
-                        <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-3">
+                        <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-3">
                           No {activeTab} found
                         </h3>
-                        <p className="text-gray-600 mb-8 text-lg">
+                        <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg">
                           {searchTerm ? 'Try adjusting your search terms' : `Create your first ${activeTab.slice(0, -1)} to get started`}
                         </p>
                         <button 
@@ -424,17 +424,17 @@ export default function DocsPage() {
                   <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/30 p-16 text-center"
+                    className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/30 dark:border-gray-800 p-16 text-center"
                   >
-                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-blue-100 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                      <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl flex items-center justify-center">
+                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-blue-100 dark:from-indigo-900/30 dark:to-blue-900/30 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                      <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-600 dark:from-indigo-600 dark:to-blue-700 rounded-2xl flex items-center justify-center">
                         <FolderOpen className="w-7 h-7 text-white" />
                       </div>
                     </div>
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-3">
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-3">
                       Select a Namespace
                     </h3>
-                    <p className="text-gray-600 text-lg">
+                    <p className="text-gray-600 dark:text-gray-400 text-lg">
                       Choose a namespace from the sidebar to view and manage its documents
                     </p>
                   </motion.div>

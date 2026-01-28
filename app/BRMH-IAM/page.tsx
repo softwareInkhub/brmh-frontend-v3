@@ -79,6 +79,25 @@ interface RoleTemplate {
   createdBy: string;
 }
 
+interface ResourceAccess {
+  userId: string;
+  resourceId: string;
+  resourceType: 'namespace' | 'schema' | 'table' | 'drive-folder' | 'drive-file';
+  actualResourceId: string;
+  permissions: string[];
+  grantedBy: string;
+  grantedAt: string;
+  updatedAt: string;
+  expiresAt?: string;
+  metadata?: any;
+  isActive: boolean;
+}
+
+interface ResourceConfig {
+  resourceTypes: Array<{ value: string; label: string; description: string }>;
+  permissionTypes: Array<{ value: string; label: string; description: string }>;
+}
+
 export default function BRMHIAMPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -98,6 +117,17 @@ export default function BRMHIAMPage() {
   const [isCreateTemplateDialogOpen, setIsCreateTemplateDialogOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<RoleTemplate | null>(null);
+  
+  // Resource Access Management
+  const [resourceAccesses, setResourceAccesses] = useState<ResourceAccess[]>([]);
+  const [resourceConfig, setResourceConfig] = useState<ResourceConfig | null>(null);
+  const [isGrantResourceDialogOpen, setIsGrantResourceDialogOpen] = useState(false);
+  const [selectedResourceUser, setSelectedResourceUser] = useState<User | null>(null);
+  const [resourceType, setResourceType] = useState<string>('');
+  const [resourceId, setResourceId] = useState<string>('');
+  const [resourcePermissions, setResourcePermissions] = useState<string[]>([]);
+  const [resourceSearch, setResourceSearch] = useState('');
+  const [filterResourceType, setFilterResourceType] = useState<string>('all');
   const [newTemplate, setNewTemplate] = useState<Partial<RoleTemplate>>({
     name: '',
     namespace: 'general',
@@ -112,6 +142,7 @@ export default function BRMHIAMPage() {
     fetchUsers();
     fetchNamespaces();
     fetchRoleTemplates();
+    fetchResourceConfig();
   }, []);
 
   const fetchNamespaces = async () => {
@@ -328,6 +359,124 @@ export default function BRMHIAMPage() {
     });
   };
 
+  // Resource Access Management Functions
+  const fetchResourceConfig = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/user-resources/config`);
+      const data = await res.json();
+      if (data.success) {
+        setResourceConfig(data.config);
+      }
+    } catch (err) {
+      console.error('Error fetching resource config:', err);
+    }
+  };
+
+  const fetchUserResources = async (userId: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/user-resources/${userId}`);
+      const data = await res.json();
+      if (data.success) {
+        setResourceAccesses(data.allResources || []);
+      }
+    } catch (err) {
+      console.error('Error fetching user resources:', err);
+    }
+  };
+
+  const grantResourceAccess = async () => {
+    if (!selectedResourceUser || !resourceType || !resourceId || resourcePermissions.length === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/user-resources/grant`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedResourceUser.userId,
+          resourceType,
+          resourceId,
+          permissions: resourcePermissions,
+          grantedBy: 'superadmin',
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          title: 'Success',
+          description: 'Resource access granted successfully',
+        });
+        setIsGrantResourceDialogOpen(false);
+        setResourceType('');
+        setResourceId('');
+        setResourcePermissions([]);
+        fetchUserResources(selectedResourceUser.userId);
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to grant resource access',
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      console.error('Error granting resource access:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to grant resource access',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const revokeResourceAccess = async (userId: string, resourceType: string, resourceId: string) => {
+    if (!confirm('Are you sure you want to revoke this resource access?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/user-resources/revoke`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, resourceType, resourceId }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          title: 'Success',
+          description: 'Resource access revoked successfully',
+        });
+        fetchUserResources(userId);
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to revoke resource access',
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      console.error('Error revoking resource access:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to revoke resource access',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const assignNamespaceRole = async () => {
     if (!selectedUser || !selectedNamespace || !selectedRole || selectedPermissions.length === 0) {
       toast({
@@ -491,20 +640,20 @@ export default function BRMHIAMPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6 bg-gray-50 dark:bg-gray-950 min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-3">
-            <Shield className="w-8 h-8 text-indigo-600" />
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent flex items-center gap-3">
+            <Shield className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
             BRMH IAM - Namespace Roles & Permissions
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground dark:text-gray-400">
             Manage namespace-specific roles and permissions for users across different domains
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={fetchUsers} className="gap-2">
+          <Button variant="outline" size="sm" onClick={fetchUsers} className="gap-2 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
             <RefreshCw className="w-4 h-4" />
             Refresh
           </Button>
@@ -513,49 +662,49 @@ export default function BRMHIAMPage() {
 
       {/* Compact Professional Stats */}
       <div className="grid gap-3 md:grid-cols-4">
-        <Card className="border-l-4 border-l-blue-500 shadow-sm">
+        <Card className="border-l-4 border-l-blue-500 dark:border-l-blue-400 shadow-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Users</p>
-                <p className="text-xl font-bold mt-1">{users.length}</p>
+                <p className="text-xs font-medium text-muted-foreground dark:text-gray-400 uppercase tracking-wide">Total Users</p>
+                <p className="text-xl font-bold mt-1 text-gray-900 dark:text-white">{users.length}</p>
               </div>
-              <Users className="w-8 h-8 text-blue-500 opacity-20" />
+              <Users className="w-8 h-8 text-blue-500 dark:text-blue-400 opacity-20" />
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-green-500 shadow-sm">
+        <Card className="border-l-4 border-l-green-500 dark:border-l-green-400 shadow-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Namespaces</p>
-                <p className="text-xl font-bold mt-1">{availableNamespaces.length}</p>
+                <p className="text-xs font-medium text-muted-foreground dark:text-gray-400 uppercase tracking-wide">Namespaces</p>
+                <p className="text-xl font-bold mt-1 text-gray-900 dark:text-white">{availableNamespaces.length}</p>
               </div>
-              <Shield className="w-8 h-8 text-green-500 opacity-20" />
+              <Shield className="w-8 h-8 text-green-500 dark:text-green-400 opacity-20" />
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-purple-500 shadow-sm">
+        <Card className="border-l-4 border-l-purple-500 dark:border-l-purple-400 shadow-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assignments</p>
-                <p className="text-xl font-bold mt-1">
+                <p className="text-xs font-medium text-muted-foreground dark:text-gray-400 uppercase tracking-wide">Assignments</p>
+                <p className="text-xl font-bold mt-1 text-gray-900 dark:text-white">
                   {users.reduce((acc, u) => acc + Object.keys(u.namespaceRoles || {}).length, 0)}
                 </p>
               </div>
-              <Key className="w-8 h-8 text-purple-500 opacity-20" />
+              <Key className="w-8 h-8 text-purple-500 dark:text-purple-400 opacity-20" />
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-orange-500 shadow-sm">
+        <Card className="border-l-4 border-l-orange-500 dark:border-l-orange-400 shadow-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Templates</p>
-                <p className="text-xl font-bold mt-1">{roleTemplates.length}</p>
+                <p className="text-xs font-medium text-muted-foreground dark:text-gray-400 uppercase tracking-wide">Templates</p>
+                <p className="text-xl font-bold mt-1 text-gray-900 dark:text-white">{roleTemplates.length}</p>
               </div>
-              <Sparkles className="w-8 h-8 text-orange-500 opacity-20" />
+              <Sparkles className="w-8 h-8 text-orange-500 dark:text-orange-400 opacity-20" />
             </div>
           </CardContent>
         </Card>
@@ -563,14 +712,18 @@ export default function BRMHIAMPage() {
 
       {/* Main Content */}
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="users" className="gap-2">
+        <TabsList className="grid w-full grid-cols-3 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+          <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-gray-100 dark:data-[state=active]:bg-gray-800 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white">
             <Users className="w-4 h-4" />
             User Management
           </TabsTrigger>
-          <TabsTrigger value="templates" className="gap-2">
+          <TabsTrigger value="templates" className="gap-2 data-[state=active]:bg-gray-100 dark:data-[state=active]:bg-gray-800 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white">
             <Sparkles className="w-4 h-4" />
             Role Templates
+          </TabsTrigger>
+          <TabsTrigger value="resources" className="gap-2 data-[state=active]:bg-gray-100 dark:data-[state=active]:bg-gray-800 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white">
+            <Lock className="w-4 h-4" />
+            Resource Access
           </TabsTrigger>
         </TabsList>
 
@@ -578,10 +731,10 @@ export default function BRMHIAMPage() {
           {/* Search */}
           <div className="flex items-center gap-4">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-gray-400" />
               <Input
                 placeholder="Search by name, email, ID, or Cognito username..."
-                className="pl-10"
+                className="pl-10 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -591,73 +744,73 @@ export default function BRMHIAMPage() {
           {/* Compact Users Table */}
           {loading ? (
             <div className="flex items-center justify-center h-64">
-              <RefreshCw className="w-8 h-8 animate-spin text-indigo-600" />
+              <RefreshCw className="w-8 h-8 animate-spin text-indigo-600 dark:text-indigo-400" />
             </div>
           ) : filteredUsers.length === 0 ? (
-            <Card>
+            <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
               <CardContent className="flex flex-col items-center justify-center h-64">
-                <Users className="w-12 h-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No users found</p>
+                <Users className="w-12 h-12 text-muted-foreground dark:text-gray-400 mb-4" />
+                <p className="text-muted-foreground dark:text-gray-400">No users found</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-[250px]">User</TableHead>
-                    <TableHead className="w-[200px]">Cognito Username</TableHead>
-                    <TableHead className="w-[200px]">Email</TableHead>
-                    <TableHead>Namespace Roles</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
+            <div className="border rounded-lg overflow-hidden bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+              <Table className="bg-white dark:bg-gray-900">
+                <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                  <TableRow className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <TableHead className="w-[250px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800">User</TableHead>
+                    <TableHead className="w-[200px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800">Cognito Username</TableHead>
+                    <TableHead className="w-[200px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800">Email</TableHead>
+                    <TableHead className="text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800">Namespace Roles</TableHead>
+                    <TableHead className="w-[100px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="bg-white dark:bg-gray-900">
                   {filteredUsers.map((user) => (
-                    <TableRow key={user.userId} className="hover:bg-muted/50">
-                      <TableCell>
+                    <TableRow key={user.userId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+                      <TableCell className="text-gray-900 dark:text-gray-100">
                         <div className="flex items-center gap-2">
-                          <div className="p-2 rounded-full bg-indigo-100">
-                            <UserCog className="w-4 h-4 text-indigo-600" />
+                          <div className="p-2 rounded-full bg-indigo-100 dark:bg-indigo-900/30">
+                            <UserCog className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                           </div>
                           <div>
                             <div className="font-medium">{user.username || user.email}</div>
-                            <div className="text-xs text-muted-foreground font-mono">{user.userId}</div>
+                            <div className="text-xs text-muted-foreground dark:text-gray-400 font-mono">{user.userId}</div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="font-mono text-xs">
+                      <TableCell className="text-gray-900 dark:text-gray-100">
+                        <Badge variant="outline" className="font-mono text-xs border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                           {user.cognitoUsername || 'N/A'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm">{user.email}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-sm text-gray-900 dark:text-gray-100">{user.email}</TableCell>
+                      <TableCell className="text-gray-900 dark:text-gray-100">
                         <div className="flex flex-wrap gap-1">
                           {Object.keys(user.namespaceRoles || {}).length > 0 ? (
                             Object.entries(user.namespaceRoles || {}).map(([namespace, roleData]) => (
                               <div key={namespace} className="group relative">
                                 <Badge
                                   variant="secondary"
-                                  className="capitalize cursor-pointer hover:bg-indigo-100"
+                                  className="capitalize cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700"
                                 >
                                   {namespace}: {roleData.role}
                                   <div className="ml-1 inline-flex gap-1">
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity dark:hover:bg-gray-700"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         openEditDialog(user, namespace);
                                       }}
                                     >
-                                      <Edit2 className="w-3 h-3" />
+                                      <Edit2 className="w-3 h-3 text-gray-600 dark:text-gray-400" />
                                     </Button>
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-600"
+                                      className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-600 dark:hover:text-red-400 dark:hover:bg-gray-700"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         removeNamespaceRole(user.userId, namespace);
@@ -670,11 +823,11 @@ export default function BRMHIAMPage() {
                               </div>
                             ))
                           ) : (
-                            <span className="text-xs text-muted-foreground">No roles assigned</span>
+                            <span className="text-xs text-muted-foreground dark:text-gray-400">No roles assigned</span>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-gray-900 dark:text-gray-100">
                         <Button
                           size="sm"
                           variant="outline"
@@ -682,7 +835,7 @@ export default function BRMHIAMPage() {
                             setSelectedUser(user);
                             setIsAssignRoleDialogOpen(true);
                           }}
-                          className="gap-1"
+                          className="gap-1 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
                         >
                           <Plus className="w-3 h-3" />
                           Assign
@@ -700,15 +853,15 @@ export default function BRMHIAMPage() {
           {/* Template Search and Create */}
           <div className="flex items-center gap-4">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-gray-400" />
               <Input
                 placeholder="Search templates by name, role, namespace, or tags..."
-                className="pl-10"
+                className="pl-10 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 value={templateSearch}
                 onChange={(e) => setTemplateSearch(e.target.value)}
               />
             </div>
-            <Button onClick={() => setIsCreateTemplateDialogOpen(true)} className="gap-2">
+            <Button onClick={() => setIsCreateTemplateDialogOpen(true)} className="gap-2 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
               <Plus className="w-4 h-4" />
               Create Template
             </Button>
@@ -805,7 +958,322 @@ export default function BRMHIAMPage() {
             </Card>
           )}
         </TabsContent>
+
+        <TabsContent value="resources" className="space-y-4">
+          {/* Resource Management Header */}
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users..."
+                value={resourceSearch}
+                onChange={(e) => setResourceSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={filterResourceType} onValueChange={setFilterResourceType}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Resources</SelectItem>
+                {resourceConfig?.resourceTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* User Selection for Resource Access */}
+          <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+                <Lock className="w-5 h-5 text-gray-900 dark:text-white" />
+                Resource Access Management
+              </CardTitle>
+              <CardDescription className="text-gray-600 dark:text-gray-400">
+                Control user access to namespaces, schemas, tables, and drive resources
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Label>Select User</Label>
+                  <Select
+                    value={selectedResourceUser?.userId || ''}
+                    onValueChange={(userId) => {
+                      const user = users.find((u) => u.userId === userId);
+                      setSelectedResourceUser(user || null);
+                      if (user) {
+                        fetchUserResources(userId);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users
+                        .filter(
+                          (u) =>
+                            !resourceSearch ||
+                            u.username.toLowerCase().includes(resourceSearch.toLowerCase()) ||
+                            u.email.toLowerCase().includes(resourceSearch.toLowerCase())
+                        )
+                        .map((user) => (
+                          <SelectItem key={user.userId} value={user.userId}>
+                            {user.username} ({user.email})
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedResourceUser && (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="font-semibold">
+                          Resource Access for {selectedResourceUser.username}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">{selectedResourceUser.email}</p>
+                      </div>
+                      <Button
+                        onClick={() => setIsGrantResourceDialogOpen(true)}
+                        className="gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Grant Access
+                      </Button>
+                    </div>
+
+                    {/* Resource Access Table */}
+                    {loading ? (
+                      <div className="flex justify-center p-8">
+                        <RefreshCw className="w-6 h-6 animate-spin" />
+                      </div>
+                    ) : resourceAccesses.length === 0 ? (
+                      <Card className="border-dashed">
+                        <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+                          <Lock className="w-12 h-12 text-muted-foreground mb-4" />
+                          <h3 className="text-lg font-semibold mb-2">No Resource Access</h3>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            This user has no resource access assigned yet
+                          </p>
+                          <Button onClick={() => setIsGrantResourceDialogOpen(true)} className="gap-2">
+                            <Plus className="w-4 h-4" />
+                            Grant First Access
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <Card>
+                        <CardContent className="p-0">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Resource Type</TableHead>
+                                <TableHead>Resource ID</TableHead>
+                                <TableHead>Permissions</TableHead>
+                                <TableHead>Granted By</TableHead>
+                                <TableHead>Granted At</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {resourceAccesses
+                                .filter(
+                                  (ra) =>
+                                    filterResourceType === 'all' || ra.resourceType === filterResourceType
+                                )
+                                .map((resource) => (
+                                  <TableRow key={resource.resourceId}>
+                                    <TableCell>
+                                      <Badge variant="outline">
+                                        {resourceConfig?.resourceTypes.find((t) => t.value === resource.resourceType)?.label || resource.resourceType}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="font-mono text-sm">
+                                      {resource.actualResourceId}
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex flex-wrap gap-1">
+                                        {resource.permissions.map((perm) => (
+                                          <Badge key={perm} variant="secondary" className="text-xs">
+                                            {perm}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-sm">{resource.grantedBy}</TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">
+                                      {new Date(resource.grantedAt).toLocaleDateString()}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() =>
+                                          revokeResourceAccess(
+                                            resource.userId,
+                                            resource.resourceType,
+                                            resource.actualResourceId
+                                          )
+                                        }
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                            </TableBody>
+                          </Table>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Resource Type Overview */}
+          {resourceConfig && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {resourceConfig.resourceTypes.map((type) => (
+                <Card key={type.value}>
+                  <CardHeader>
+                    <CardTitle className="text-sm">{type.label}</CardTitle>
+                    <CardDescription className="text-xs">{type.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {
+                        resourceAccesses.filter((ra) => ra.resourceType === type.value)
+                          .length
+                      }
+                    </div>
+                    <p className="text-xs text-muted-foreground">Active assignments</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
+
+      {/* Grant Resource Access Dialog */}
+      <Dialog open={isGrantResourceDialogOpen} onOpenChange={setIsGrantResourceDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-blue-600" />
+              Grant Resource Access
+            </DialogTitle>
+            <DialogDescription>
+              Assign access to specific resources for{' '}
+              {selectedResourceUser?.username}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Resource Type</Label>
+              <Select value={resourceType} onValueChange={setResourceType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select resource type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {resourceConfig?.resourceTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      <div>
+                        <div className="font-medium">{type.label}</div>
+                        <div className="text-xs text-muted-foreground">{type.description}</div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Resource ID</Label>
+              <Input
+                value={resourceId}
+                onChange={(e) => setResourceId(e.target.value)}
+                placeholder="Enter resource ID (e.g., namespace-id, schema-id, folder-id)"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                The unique identifier of the resource you want to grant access to
+              </p>
+            </div>
+
+            <div>
+              <Label>Permissions</Label>
+              <div className="border rounded-md p-4 space-y-2 max-h-60 overflow-y-auto">
+                {resourceConfig?.permissionTypes.map((perm) => (
+                  <div key={perm.value} className="flex items-start gap-2">
+                    <Checkbox
+                      id={`resource-perm-${perm.value}`}
+                      checked={resourcePermissions.includes(perm.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setResourcePermissions([...resourcePermissions, perm.value]);
+                        } else {
+                          setResourcePermissions(
+                            resourcePermissions.filter((p) => p !== perm.value)
+                          );
+                        }
+                      }}
+                    />
+                    <div className="flex-1">
+                      <label
+                        htmlFor={`resource-perm-${perm.value}`}
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        {perm.label}
+                      </label>
+                      <p className="text-xs text-muted-foreground">{perm.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Selected: {resourcePermissions.length} permission(s)
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsGrantResourceDialogOpen(false);
+                setResourceType('');
+                setResourceId('');
+                setResourcePermissions([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={grantResourceAccess} disabled={loading}>
+              {loading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Granting...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Grant Access
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Template Dialog */}
       <Dialog open={isCreateTemplateDialogOpen} onOpenChange={setIsCreateTemplateDialogOpen}>

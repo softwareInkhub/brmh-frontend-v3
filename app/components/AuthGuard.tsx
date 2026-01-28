@@ -19,25 +19,29 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       // Determine API URL based on environment
       const isProduction = window.location.hostname.includes('brmh.in') && !window.location.hostname.includes('localhost');
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const API_BASE_URL = isProduction 
-        ? (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://auth.brmh.in')
+        ? (process.env.NEXT_PUBLIC_AWS_URL || 'https://brmh.in')
         : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001');
+      
+      // Remove trailing slash to prevent double slashes in URLs
+      API_BASE_URL = API_BASE_URL.replace(/\/+$/, '');
+      
+      // Safety check: If API_BASE_URL points to auth.brmh.in, redirect to brmh.in
+      if (API_BASE_URL.includes('auth.brmh.in')) {
+        console.warn('[AuthGuard] API_BASE_URL incorrectly points to auth.brmh.in, using brmh.in instead');
+        API_BASE_URL = 'https://brmh.in';
+      }
+      
+      // Get auth URL from environment variable with fallback logic
+      // Priority: .env > default localhost:3000 (auth app) > fallback
+      const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL  || 'http://localhost:3000';
       
       addDebugLog(`🔍 Starting auth check for path: ${pathname}`);
       addDebugLog(`📍 Current URL: ${window.location.href.substring(0, 100)}`);
       addDebugLog(`🌐 API Base URL: ${API_BASE_URL} (${isProduction ? 'production' : 'development'})`);
       
-      // SKIP ALL AUTH FOR LOCALHOST DEVELOPMENT
-      if (isLocalhost) {
-        addDebugLog(`🏠 Localhost detected - skipping all auth checks for local development`);
-        setIsChecking(false);
-        setIsAuthenticated(true);
-        return;
-      }
-      
-      // Skip auth check for public routes
-      const publicRoutes = ['/authPage', '/login', '/callback', '/register', '/landingPage', '/debug-auth'];
+      // Skip auth check for public routes (removed /login as it's not a route in main app)
+      const publicRoutes = ['/authPage', '/callback', '/register', '/landingPage', '/debug-auth'];
       const isPublicRoute = publicRoutes.some(route => pathname === route || pathname?.startsWith(route));
       
       if (isPublicRoute) {
@@ -124,7 +128,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         addDebugLog(`🍪 No tokens in localStorage, checking for cookie-based auth...`);
         
         try {
-          const response = await fetch(`${API_BASE_URL}/auth/me`, {
+          // Use backend API URL (brmh.in), not auth.brmh.in
+          const authCheckUrl = `${API_BASE_URL}/auth/me`;
+          addDebugLog(`🔗 Checking auth at: ${authCheckUrl}`);
+          const response = await fetch(authCheckUrl, {
             method: 'GET',
             credentials: 'include' // Send cookies
           });
@@ -152,9 +159,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           addDebugLog(`⚠️ Cookie auth check failed: ${error}`);
         }
         
-        // No tokens and no valid cookies, redirect to auth.brmh.in
+        // No tokens and no valid cookies, redirect to auth URL
         const currentUrl = window.location.href.split('#')[0]; // Remove hash before redirect
-        const authUrl = `https://auth.brmh.in/login?next=${encodeURIComponent(currentUrl)}`;
+        const authUrl = `${AUTH_URL}/login?next=${encodeURIComponent(currentUrl)}`;
         addDebugLog(`❌ No authentication found, will redirect to auth in 2 seconds...`);
         addDebugLog(`🔀 Redirect URL: ${authUrl}`);
         
@@ -195,7 +202,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           addDebugLog(`🗑️ Clearing invalid tokens...`);
           localStorage.clear();
           const currentUrl = window.location.href.split('#')[0]; // Remove hash before redirect
-          const authUrl = `https://auth.brmh.in/login?next=${encodeURIComponent(currentUrl)}`;
+          const authUrl = `${AUTH_URL}/login?next=${encodeURIComponent(currentUrl)}`;
           addDebugLog(`🔀 Will redirect to auth in 2 seconds: ${authUrl}`);
           
           setTimeout(() => {

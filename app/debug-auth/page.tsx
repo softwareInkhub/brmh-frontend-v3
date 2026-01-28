@@ -215,9 +215,8 @@ export default function DebugAuthPage() {
   };
 
   const redirectToAuth = () => {
-    if (!isBrowser) return;
-    const { origin } = getLocation();
-    const authUrl = `https://auth.brmh.in/login?next=${encodeURIComponent(origin + '/')}`;
+    const currentUrl = 'http://localhost:3000/';
+    const authUrl = `https://auth.brmh.in/login?next=${encodeURIComponent(currentUrl)}`;
     addLog(`🔀 Redirecting to: ${authUrl}`);
     window.location.href = authUrl;
   };

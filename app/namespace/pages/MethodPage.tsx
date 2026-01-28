@@ -1267,31 +1267,51 @@ Please select an indexing configuration above.`);
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-white">
+    <div className="h-full w-full flex flex-col bg-gray-900">
       {/* Breadcrumbs */}
-      <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center space-x-1 text-xs text-gray-600">
-          <span className="text-gray-400">Namespace</span>
+      <div className="px-4 py-2 border-b border-gray-700 bg-gray-800">
+        <div className="flex items-center space-x-1 text-xs text-gray-300">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.history.back();
+              }
+            }}
+            className="hover:text-blue-400 cursor-pointer transition-colors"
+          >
+            Namespace
+          </button>
           <span className="text-gray-400">/</span>
-          <span className="text-gray-600">{namespace?.['namespace-name'] || 'Unknown'}</span>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.history.back();
+              }
+            }}
+            className="hover:text-blue-400 cursor-pointer transition-colors"
+          >
+            {namespace?.['namespace-name'] || 'Unknown'}
+          </button>
           <span className="text-gray-400">/</span>
-          <span className="text-gray-600">Method</span>
+          <span className="text-gray-300">Method</span>
           <span className="text-gray-400">/</span>
-          <span className="text-gray-800 font-medium">{editMethod["namespace-method-name"] || 'Details'}</span>
+          <span className="text-gray-100 font-medium">{editMethod["namespace-method-name"] || 'Details'}</span>
         </div>
       </div>
 
       {/* Header Section */}
-      <div className="px-3 md:px-4 py-2 border-b border-gray-200 bg-white">
+      <div className="px-3 md:px-4 py-2 border-b border-gray-700 bg-gray-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 md:gap-3">
-            <Settings className="text-blue-500" size={20} />
-            <h2 className="text-base md:text-lg font-semibold text-gray-800">Method Details</h2>
+            <Settings className="text-blue-400" size={20} />
+            <h2 className="text-base md:text-lg font-semibold text-gray-100">Method Details</h2>
           </div>
           <div className="flex gap-2 items-center">
             <button
               title="Test Method"
-              className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-green-100 hover:bg-green-200 text-green-700 rounded-2xl transition-colors shadow-sm"
+              className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-green-900 hover:bg-green-800 text-green-300 rounded-2xl transition-colors shadow-sm"
               onClick={() => {
                 if (onTest) onTest(editMethod, namespace);
               }}
@@ -1337,13 +1357,13 @@ Please select an indexing configuration above.`);
       </div>
 
             {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200 bg-white overflow-x-auto">
+      <div className="flex border-b border-gray-700 bg-gray-800 overflow-x-auto">
               <button
                 onClick={() => setActiveTab('details')}
           className={`px-2 md:px-3 py-1 md:py-1.5 text-xs font-medium border-b-2 transition-colors ${
                   activeTab === 'details'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-400 text-blue-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                 }`}
               >
                 Details
@@ -1352,8 +1372,8 @@ Please select an indexing configuration above.`);
                 onClick={() => setActiveTab('caching')}
           className={`px-2 md:px-3 py-1 md:py-1.5 text-xs font-medium border-b-2 transition-colors ${
                   activeTab === 'caching'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-400 text-blue-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                 }`}
               >
                 Caching
@@ -1362,8 +1382,8 @@ Please select an indexing configuration above.`);
                 onClick={() => setActiveTab('search')}
           className={`px-2 md:px-3 py-1 md:py-1.5 text-xs font-medium border-b-2 transition-colors ${
                   activeTab === 'search'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-400 text-blue-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                 }`}
               >
                 Search Indexing
@@ -1374,36 +1394,36 @@ Please select an indexing configuration above.`);
       {!editMode ? (
         <>
             {activeTab === 'details' && (
-            <div className="px-3 md:px-4 py-3">
+            <div className="px-3 md:px-4 py-3 bg-gray-900">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-6 gap-y-2 md:gap-y-3">
                 <div>
-                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Edit size={14} className="text-blue-400" /> Name</div>
-                  <div className="text-sm md:text-base font-semibold text-gray-900 break-words">{editMethod["namespace-method-name"] || ''}</div>
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1"><Edit size={14} className="text-blue-400" /> Name</div>
+                  <div className="text-sm md:text-base font-semibold text-gray-100 break-words">{editMethod["namespace-method-name"] || ''}</div>
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Hash size={14} className="text-purple-400" /> ID</div>
-                  <div className="text-xs font-mono text-gray-700 break-all">
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1"><Hash size={14} className="text-purple-400" /> ID</div>
+                  <div className="text-xs font-mono text-gray-300 break-all">
                     {editMethod["namespace-method-id"] || editMethod["id"] || editMethod["methodId"] || <span className="italic text-gray-400">No ID</span>}
                   </div>
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Type size={14} className="text-green-400" /> Type</div>
-                  <span className="inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold">{editMethod["namespace-method-type"] || ''}</span>
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1"><Type size={14} className="text-green-400" /> Type</div>
+                  <span className="inline-block bg-green-900 text-green-300 px-2 py-0.5 rounded text-xs font-bold">{editMethod["namespace-method-type"] || ''}</span>
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Link size={14} className="text-pink-400" /> URL Override</div>
-                  <div className="text-xs text-gray-700 break-all">{editMethod["namespace-method-url-override"] || <span className="italic text-gray-400">None</span>}</div>
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1"><Link size={14} className="text-pink-400" /> URL Override</div>
+                  <div className="text-xs text-gray-300 break-all">{editMethod["namespace-method-url-override"] || <span className="italic text-gray-400">None</span>}</div>
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Settings size={14} className="text-blue-400" /> Table Name</div>
-                  <div className="text-xs text-gray-700">{editMethod["namespace-method-tableName"] || editMethod["tableName"] || <span className="italic text-gray-400">null</span>}</div>
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1"><Settings size={14} className="text-blue-400" /> Table Name</div>
+                  <div className="text-xs text-gray-300">{editMethod["namespace-method-tableName"] || editMethod["tableName"] || <span className="italic text-gray-400">null</span>}</div>
                 </div>
                 <div className="md:col-span-2">
-                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Tag size={14} className="text-yellow-400" /> Tags</div>
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1"><Tag size={14} className="text-yellow-400" /> Tags</div>
                   <div className="flex flex-wrap gap-1">
                     {Array.isArray(editMethod.tags) && editMethod.tags.length > 0 ? (
                       editMethod.tags.map((tag: string, idx: number) => (
-                        <span key={idx} className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-semibold">{tag}</span>
+                        <span key={idx} className="bg-yellow-900 text-yellow-300 px-2 py-0.5 rounded text-xs font-semibold">{tag}</span>
                       ))
                     ) : (
                       <span className="italic text-gray-400 text-xs">No tags</span>
@@ -1411,11 +1431,11 @@ Please select an indexing configuration above.`);
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1"><Settings size={14} className="text-blue-400" /> Query Params</div>
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1"><Settings size={14} className="text-blue-400" /> Query Params</div>
                   <div className="flex flex-wrap gap-1">
                     {(Array.isArray(editMethod["namespace-method-queryParams"]) ? editMethod["namespace-method-queryParams"] : []).length > 0 ? (
                       (editMethod["namespace-method-queryParams"] || []).map((q: any, idx: number) => (
-                        <span key={idx} className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-mono">{q.key || ''} = {q.value || ''}</span>
+                        <span key={idx} className="bg-blue-900 text-blue-300 px-2 py-0.5 rounded text-xs font-mono">{q.key || ''} = {q.value || ''}</span>
                       ))
                     ) : (
                       <span className="italic text-gray-400 text-xs">No query params</span>
@@ -1424,9 +1444,9 @@ Please select an indexing configuration above.`);
                 </div>
                 <div className="md:col-span-2 flex items-center gap-2 mt-2">
                   <div className="flex flex-col">
-                    <CheckCircle size={16} className={editMethod['save-data'] ? 'text-green-500' : 'text-gray-300'} />
-                    <span className={editMethod['save-data'] ? 'text-green-700 font-semibold text-xs' : 'text-gray-400 text-xs'}>Save Data</span>
-                    <span className="text-xs text-gray-500">Table Name: {editMethod["namespace-method-tableName"] || editMethod["tableName"] || <span className="italic text-gray-400">null</span>}</span>
+                    <CheckCircle size={16} className={editMethod['save-data'] ? 'text-green-400' : 'text-gray-400'} />
+                    <span className={editMethod['save-data'] ? 'text-green-400 font-semibold text-xs' : 'text-gray-400 text-xs'}>Save Data</span>
+                    <span className="text-xs text-gray-400">Table Name: {editMethod["namespace-method-tableName"] || editMethod["tableName"] || <span className="italic text-gray-400">null</span>}</span>
                   </div>
                   </div>
                 </div>
@@ -1434,12 +1454,12 @@ Please select an indexing configuration above.`);
             )}
 
             {activeTab === 'caching' && (
-              <div className="px-4 py-3 space-y-4">
+              <div className="px-4 py-3 space-y-4 bg-gray-900">
                 {/* Cache Section */}
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded border">
+                <div className="flex justify-between items-center p-3 bg-gray-800 rounded border border-gray-700">
                   <div className="flex items-center gap-2">
-                    <Database size={16} className="text-blue-500" />
-                    <h3 className="text-sm font-semibold text-gray-800">Cache Configuration</h3>
+                    <Database size={16} className="text-blue-400" />
+                    <h3 className="text-sm font-semibold text-gray-100">Cache Configuration</h3>
                   </div>
                   <button
                     onClick={handleEnableCache}
@@ -1450,14 +1470,14 @@ Please select an indexing configuration above.`);
                 </div>
 
                 {/* Cache Data Display */}
-                <div className="bg-white border border-gray-200 rounded overflow-hidden">
-                  <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
+                <div className="bg-gray-800 border border-gray-700 rounded overflow-hidden">
+                  <div className="px-3 py-2 bg-gray-700 border-b border-gray-600">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-semibold text-gray-700">Configured Cache Data</h4>
+                      <h4 className="text-xs font-semibold text-gray-200">Configured Cache Data</h4>
                       <button
                         onClick={fetchCacheData}
                         disabled={loadingCache}
-                        className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded transition-colors disabled:opacity-50"
+                        className="text-xs bg-blue-900 hover:bg-blue-800 text-blue-300 px-2 py-1 rounded transition-colors disabled:opacity-50"
                       >
                         {loadingCache ? 'Loading...' : 'Refresh'}
                       </button>
@@ -1465,42 +1485,42 @@ Please select an indexing configuration above.`);
                   </div>
                   
                   {loadingCache ? (
-                    <div className="p-3 text-center text-gray-500">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mx-auto mb-1"></div>
+                    <div className="p-3 text-center text-gray-400">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400 mx-auto mb-1"></div>
                       <div className="text-xs">Loading cache data...</div>
                     </div>
                   ) : cacheData.length === 0 ? (
-                    <div className="p-3 text-center text-gray-500">
+                    <div className="p-3 text-center text-gray-400">
                       <div className="text-xs">No cache configurations found for this method</div>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
-                        <thead className="bg-gray-50">
+                        <thead className="bg-gray-700">
                           <tr>
-                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
-                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Table</th>
-                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TTL</th>
-                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items/Key</th>
-                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Project</th>
+                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Account</th>
+                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Table</th>
+                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">TTL</th>
+                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Items/Key</th>
+                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Created</th>
+                            <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-gray-800 divide-y divide-gray-700">
                           {cacheData.map((cacheConfig, index) => (
-                            <tr key={cacheConfig.id || `cache-${index}`} className="hover:bg-gray-50">
-                              <td className="px-3 py-2 text-xs text-gray-900 font-mono">
+                            <tr key={cacheConfig.id || `cache-${index}`} className="hover:bg-gray-700">
+                              <td className="px-3 py-2 text-xs text-gray-200 font-mono">
                                 {cacheConfig.project || 'N/A'}
                               </td>
-                              <td className="px-3 py-2 text-xs text-gray-900">
+                              <td className="px-3 py-2 text-xs text-gray-200">
                                 {cacheConfig.accountId || 'N/A'}
                               </td>
-                              <td className="px-3 py-2 text-xs text-gray-900 font-mono">
+                              <td className="px-3 py-2 text-xs text-gray-200 font-mono">
                                 {cacheConfig.tableName || 'N/A'}
                               </td>
-                              <td className="px-3 py-2 text-xs text-gray-900">
+                              <td className="px-3 py-2 text-xs text-gray-200">
                                 {cacheConfig.timeToLive === 0 ? (
                                   <span className="text-purple-600 font-medium">Infinite</span>
                                 ) : cacheConfig.timeToLive ? (
@@ -1538,26 +1558,26 @@ Please select an indexing configuration above.`);
                                   'N/A'
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-xs text-gray-900">
+                              <td className="px-3 py-2 text-xs text-gray-200">
                                 {cacheConfig.itemsPerKey || 'N/A'}
                               </td>
                               <td className="px-3 py-2 text-xs">
                                 <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
                                   cacheConfig.status === 'active' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-gray-100 text-gray-800'
+                                    ? 'bg-green-900 text-green-300' 
+                                    : 'bg-gray-700 text-gray-300'
                                 }`}>
                                   {cacheConfig.status || 'unknown'}
                                 </span>
                               </td>
-                              <td className="px-3 py-2 text-xs text-gray-500">
+                              <td className="px-3 py-2 text-xs text-gray-400">
                                 {cacheConfig.createdAt ? new Date(cacheConfig.createdAt).toLocaleDateString() : 'N/A'}
                               </td>
-                              <td className="px-3 py-2 text-xs text-gray-900">
+                              <td className="px-3 py-2 text-xs text-gray-200">
                                 <div className="flex gap-1">
                                   <button
                                     onClick={() => handleCacheTable(cacheConfig)}
-                                    className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-1.5 py-0.5 rounded transition-colors"
+                                    className="text-xs bg-blue-900 hover:bg-blue-800 text-blue-300 px-1.5 py-0.5 rounded transition-colors"
                                     title="Cache table data to Redis"
                                   >
                                     Cache Table
@@ -1573,8 +1593,8 @@ Please select an indexing configuration above.`);
                                     onClick={() => handleToggleCacheStatus(cacheConfig)}
                                     className={`text-xs px-1.5 py-0.5 rounded transition-colors ${
                                       cacheConfig.status === 'active'
-                                        ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-700'
-                                        : 'bg-green-100 hover:bg-green-200 text-green-700'
+                                        ? 'bg-yellow-900 hover:bg-yellow-800 text-yellow-300'
+                                        : 'bg-green-900 hover:bg-green-800 text-green-300'
                                     }`}
                                   >
                                     {cacheConfig.status === 'active' ? 'Deactivate' : 'Activate'}
@@ -1598,14 +1618,14 @@ Please select an indexing configuration above.`);
             )}
 
             {activeTab === 'search' && (
-              <div className="px-4 py-3 space-y-4">
+              <div className="px-4 py-3 space-y-4 bg-gray-900">
                 {/* Search Indexing Section */}
                
 
                 {/* Indexing Configurations Display */}
-                <div className="bg-white border border-gray-200 rounded overflow-hidden">
-                  <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-                    <h4 className="text-xs font-semibold text-gray-700">Search Indexing</h4>
+                <div className="bg-gray-800 border border-gray-700 rounded overflow-hidden">
+                  <div className="px-3 py-2 bg-gray-700 border-b border-gray-600 flex justify-between items-center">
+                    <h4 className="text-xs font-semibold text-gray-200">Search Indexing</h4>
                   <button
                     onClick={() => setShowCreateIndexingModal(true)}
                       className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
@@ -1614,8 +1634,8 @@ Please select an indexing configuration above.`);
                   </button>
                 </div>
                   <div className="p-3">
-                    <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
-                      <div className="text-xs text-yellow-800">
+                    <div className="mb-3 p-2 bg-yellow-900 border border-yellow-700 rounded">
+                      <div className="text-xs text-yellow-300">
                         <strong>💡 How to use Search:</strong>
                         <div className="mt-1">
                           • Check the "Search" checkbox next to an indexing configuration to activate the search interface
@@ -1634,66 +1654,66 @@ Please select an indexing configuration above.`);
                   
                     {/* Indexing Configurations Table */}
                   {loadingIndexingConfigs ? (
-                      <div className="p-3 text-center text-gray-500">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-500 mx-auto mb-1"></div>
+                      <div className="p-3 text-center text-gray-400">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-400 mx-auto mb-1"></div>
                         <div className="text-xs">Loading indexing configurations...</div>
                     </div>
                   ) : indexingConfigs.length === 0 ? (
-                      <div className="p-3 text-center text-gray-500">
+                      <div className="p-3 text-center text-gray-400">
                         <div className="text-xs">No indexing configurations found for this method</div>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-xs">
-                        <thead className="bg-gray-50">
+                        <thead className="bg-gray-700">
                           <tr>
-                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Search</th>
-                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Table</th>
-                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Search</th>
+                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Project</th>
+                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Table</th>
+                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Description</th>
+                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Created</th>
+                              <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-gray-800 divide-y divide-gray-700">
                           {indexingConfigs.map((config, index) => (
-                              <tr key={config.id || `config-${index}`} className="hover:bg-gray-50">
-                                <td className="px-3 py-2 text-xs text-gray-900">
+                              <tr key={config.id || `config-${index}`} className="hover:bg-gray-700">
+                                <td className="px-3 py-2 text-xs text-gray-200">
                                   <input
                                     type="checkbox"
                                     checked={selectedConfigForSearch === (config.id || index.toString())}
                                     onChange={() => handleSearchConfigSelection(config.id || index.toString(), config)}
-                                    className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                    className="h-3 w-3 text-blue-400 focus:ring-blue-500 border-gray-600 rounded bg-gray-700"
                                     title="Select this configuration for search"
                                   />
                                 </td>
-                                <td className="px-3 py-2 text-xs text-gray-900 font-mono">
+                                <td className="px-3 py-2 text-xs text-gray-200 font-mono">
                                 {config.project || 'N/A'}
                               </td>
-                                <td className="px-3 py-2 text-xs text-gray-900 font-mono">
+                                <td className="px-3 py-2 text-xs text-gray-200 font-mono">
                                 {config.table || 'N/A'}
                               </td>
-                                <td className="px-3 py-2 text-xs text-gray-900">
+                                <td className="px-3 py-2 text-xs text-gray-200">
                                 {config.description || 'No description'}
                               </td>
                                 <td className="px-3 py-2 text-xs">
                                   <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
                                   config.status === 'active' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-gray-100 text-gray-800'
+                                    ? 'bg-green-900 text-green-300' 
+                                    : 'bg-gray-700 text-gray-300'
                                 }`}>
                                   {config.status || 'unknown'}
                                 </span>
                               </td>
-                                <td className="px-3 py-2 text-xs text-gray-500">
+                                <td className="px-3 py-2 text-xs text-gray-400">
                                 {config.createdAt ? new Date(config.createdAt).toLocaleDateString() : 'N/A'}
                               </td>
-                                <td className="px-3 py-2 text-xs text-gray-900">
+                                <td className="px-3 py-2 text-xs text-gray-200">
                                   <div className="flex gap-1">
                                     <button
                                       onClick={() => handleEditIndexingConfig(config)}
-                                      className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-1.5 py-0.5 rounded transition-colors"
+                                      className="text-xs bg-purple-900 hover:bg-purple-800 text-purple-300 px-1.5 py-0.5 rounded transition-colors"
                                       title="Edit configuration"
                                     >
                                       Edit
@@ -1701,7 +1721,7 @@ Please select an indexing configuration above.`);
                                   <button
                                     onClick={() => handleExecuteIndexing(config)}
                                     disabled={config.status !== 'active'}
-                                      className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-1.5 py-0.5 rounded transition-colors disabled:opacity-50"
+                                      className="text-xs bg-blue-900 hover:bg-blue-800 text-blue-300 px-1.5 py-0.5 rounded transition-colors disabled:opacity-50"
                                   >
                                     Execute
                                   </button>
@@ -1709,15 +1729,15 @@ Please select an indexing configuration above.`);
                                     onClick={() => handleToggleIndexingStatus(config)}
                                       className={`text-xs px-1.5 py-0.5 rounded transition-colors ${
                                       config.status === 'active'
-                                        ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-700'
-                                        : 'bg-green-100 hover:bg-green-200 text-green-700'
+                                        ? 'bg-yellow-900 hover:bg-yellow-800 text-yellow-300'
+                                        : 'bg-green-900 hover:bg-green-800 text-green-300'
                                     }`}
                                   >
                                     {config.status === 'active' ? 'Deactivate' : 'Activate'}
                                   </button>
                                   <button
                                     onClick={() => handleDeleteIndexingConfig(config.id)}
-                                      className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-1.5 py-0.5 rounded transition-colors"
+                                      className="text-xs bg-red-900 hover:bg-red-800 text-red-300 px-1.5 py-0.5 rounded transition-colors"
                                   >
                                     Delete
                                   </button>
@@ -1739,21 +1759,21 @@ Please select an indexing configuration above.`);
 
                 {/* Search Interface - Collapsible */}
                 {selectedConfigForSearch && (
-                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
                     <div 
-                      className="px-4 py-3 bg-blue-50 border-b border-gray-200 cursor-pointer hover:bg-blue-100 transition-colors"
+                      className="px-4 py-3 bg-blue-900 border-b border-gray-600 cursor-pointer hover:bg-blue-800 transition-colors"
                       onClick={() => setShowSearchInterface(!showSearchInterface)}
                     >
                       <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-blue-700 flex items-center gap-2">
+                        <h4 className="text-sm font-semibold text-blue-300 flex items-center gap-2">
                           <span>🔍 Search Interface</span>
                           {indexingConfigs.find(c => (c.id || c.id === 0) === selectedConfigForSearch) && (
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                            <span className="text-xs bg-green-900 text-green-300 px-2 py-1 rounded">
                               {indexingConfigs.find(c => (c.id || c.id === 0) === selectedConfigForSearch)?.project}/{indexingConfigs.find(c => (c.id || c.id === 0) === selectedConfigForSearch)?.table}
                             </span>
                           )}
                         </h4>
-                        <span className="text-blue-600 text-sm">
+                        <span className="text-blue-400 text-sm">
                           {showSearchInterface ? '▼' : '▶'}
                         </span>
                   </div>
@@ -1762,46 +1782,46 @@ Please select an indexing configuration above.`);
                     {showSearchInterface && (
                   <div className="p-4">
                         {/* Compact Search Form */}
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                        <div className="bg-gray-700 border border-gray-600 rounded-lg p-3 mb-4">
                           <div className="flex items-center gap-3">
                             <div className="flex-1">
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Search Query</label>
+                              <label className="block text-xs font-medium text-gray-300 mb-1">Search Query</label>
                         <input
                           type="text"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+                                className="w-full border border-gray-600 rounded px-2 py-1 text-sm bg-gray-800 text-gray-200 focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
                                 placeholder="Enter search query..."
                         />
                       </div>
                             <div className="w-20">
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Hits</label>
+                              <label className="block text-xs font-medium text-gray-300 mb-1">Hits</label>
                         <input
                           type="number"
                           value={searchHitsPerPage}
                           onChange={(e) => setSearchHitsPerPage(parseInt(e.target.value) || 20)}
-                                className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+                                className="w-full border border-gray-600 rounded px-2 py-1 text-sm bg-gray-800 text-gray-200 focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
                           min="1"
                           max="100"
                         />
                       </div>
                             <div className="w-16">
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Page</label>
+                              <label className="block text-xs font-medium text-gray-300 mb-1">Page</label>
                         <input
                           type="number"
                           value={searchPage}
                           onChange={(e) => setSearchPage(parseInt(e.target.value) || 0)}
-                                className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+                                className="w-full border border-gray-600 rounded px-2 py-1 text-sm bg-gray-800 text-gray-200 focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
                           min="0"
                         />
                       </div>
                             <div className="w-40">
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Table</label>
+                              <label className="block text-xs font-medium text-gray-300 mb-1">Table</label>
                               <input
                                 type="text"
                                 value={searchFormData.table}
                                 onChange={(e) => setSearchFormData(prev => ({ ...prev, table: e.target.value }))}
-                                className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+                                className="w-full border border-gray-600 rounded px-2 py-1 text-sm bg-gray-800 text-gray-200 focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
                                 placeholder="Table name"
                               />
                     </div>
@@ -1826,15 +1846,15 @@ Please select an indexing configuration above.`);
 
                 {/* Search Results */}
                 {searchResults.length > 0 && (
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                            <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
+                  <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+                            <div className="px-3 py-2 bg-gray-700 border-b border-gray-600">
                               <div className="flex items-center justify-between">
-                                <h5 className="text-sm font-semibold text-gray-700">
+                                <h5 className="text-sm font-semibold text-gray-200">
                                   Search Results ({searchResults.length} found)
                                 </h5>
                                 <button
                                   onClick={() => setSearchResults([])}
-                                  className="text-xs text-gray-500 hover:text-gray-700"
+                                  className="text-xs text-gray-400 hover:text-gray-200"
                                 >
                                   Clear
                                 </button>
@@ -1842,9 +1862,9 @@ Please select an indexing configuration above.`);
                       </div>
                             <div className="max-h-96 overflow-y-auto">
                       {searchResults.map((result, idx) => (
-                                <div key={`result-${idx}`} className="border-b border-gray-100 last:border-b-0">
-                                  <div className="p-3 hover:bg-gray-50">
-                                    <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono">
+                                <div key={`result-${idx}`} className="border-b border-gray-700 last:border-b-0">
+                                  <div className="p-3 hover:bg-gray-700">
+                                    <pre className="text-xs text-gray-300 whitespace-pre-wrap font-mono">
                             {JSON.stringify(result, null, 2)}
                           </pre>
                                   </div>
@@ -1856,7 +1876,7 @@ Please select an indexing configuration above.`);
 
                         {/* No Results Message */}
                         {searchResults.length === 0 && !loadingSearch && (
-                          <div className="text-center py-8 text-gray-500">
+                          <div className="text-center py-8 text-gray-400">
                             <div className="text-sm">No search results yet</div>
                             <div className="text-xs mt-1">Enter a search query and click Search to find results</div>
                       </div>
@@ -1869,80 +1889,80 @@ Please select an indexing configuration above.`);
             )}
           </>
         ) : (
-          <form onSubmit={handleSave} className="flex flex-col gap-4 md:gap-6 animate-fade-in p-3 md:p-6">
+          <form onSubmit={handleSave} className="flex flex-col gap-4 md:gap-6 animate-fade-in p-3 md:p-6 bg-gray-900">
             <div className="flex items-center gap-3 mb-2">
-              <Edit size={24} className="text-blue-500" />
-              <h2 className="text-xl font-bold text-blue-700 tracking-tight">Edit Method</h2>
+              <Edit size={24} className="text-blue-400" />
+              <h2 className="text-xl font-bold text-blue-400 tracking-tight">Edit Method</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-3 md:gap-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">Name</label>
                 <input
                   type="text"
-                  className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm md:text-base focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition outline-none bg-blue-50 placeholder-gray-400"
+                  className="w-full border border-blue-700 rounded-lg px-3 py-2 text-sm md:text-base focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition outline-none bg-gray-800 text-gray-200 placeholder-gray-500"
                   value={editMethod["namespace-method-name"] || ''}
                   onChange={e => handleInput("namespace-method-name", e.target.value)}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">ID</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">ID</label>
                 <input
                   type="text"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm md:text-base bg-gray-100"
+                  className="w-full border border-gray-700 rounded-lg px-3 py-2 text-sm md:text-base bg-gray-800 text-gray-400"
                   value={editMethod["namespace-method-id"] || ''}
                   readOnly
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">Type</label>
                 <input
                   type="text"
-                  className="w-full border border-green-200 rounded-lg px-3 py-2 text-sm md:text-base focus:ring-2 focus:ring-green-400 focus:border-green-400 transition outline-none bg-green-50 placeholder-gray-400"
+                  className="w-full border border-green-700 rounded-lg px-3 py-2 text-sm md:text-base focus:ring-2 focus:ring-green-400 focus:border-green-400 transition outline-none bg-gray-800 text-gray-200 placeholder-gray-500"
                   value={editMethod["namespace-method-type"] || ''}
                   onChange={e => handleInput("namespace-method-type", e.target.value)}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">URL Override</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">URL Override</label>
                 <input
                   type="text"
-                  className="w-full border border-pink-200 rounded-lg px-3 py-2 text-sm md:text-base focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition outline-none bg-pink-50 placeholder-gray-400"
+                  className="w-full border border-pink-700 rounded-lg px-3 py-2 text-sm md:text-base focus:ring-2 focus:ring-pink-400 focus:border-pink-400 transition outline-none bg-gray-800 text-gray-200 placeholder-gray-500"
                   value={editMethod["namespace-method-url-override"] || ''}
                   onChange={e => handleInput("namespace-method-url-override", e.target.value)}
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">Tags (comma separated)</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">Tags (comma separated)</label>
                 <input
                   type="text"
-                  className="w-full border border-yellow-200 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition outline-none bg-yellow-50 placeholder-gray-400"
+                  className="w-full border border-yellow-700 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition outline-none bg-gray-800 text-gray-200 placeholder-gray-500"
                   value={Array.isArray(editMethod.tags) ? editMethod.tags.join(', ') : ''}
                   onChange={e => handleInput('tags', e.target.value.split(',').map((t: string) => t.trim()).filter(Boolean))}
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">Query Params</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">Query Params</label>
                 <div className="space-y-2">
                   {(Array.isArray(editMethod["namespace-method-queryParams"]) ? editMethod["namespace-method-queryParams"] : []).map((q: any, idx: number) => (
                     <div key={idx} className="flex flex-col md:flex-row gap-2 items-stretch md:items-center">
                       <input
                         type="text"
-                        className="border border-blue-200 rounded px-2 py-1 text-xs flex-1 bg-blue-50 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                        className="border border-blue-700 rounded px-2 py-1 text-xs flex-1 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                         placeholder="Key"
                         value={q.key || ''}
                         onChange={e => handleArrayInput("namespace-method-queryParams", idx, 'key', e.target.value)}
                       />
                       <input
                         type="text"
-                        className="border border-blue-200 rounded px-2 py-1 text-xs flex-1 bg-blue-50 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                        className="border border-blue-700 rounded px-2 py-1 text-xs flex-1 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                         placeholder="Value"
                         value={q.value || ''}
                         onChange={e => handleArrayInput("namespace-method-queryParams", idx, 'value', e.target.value)}
                       />
-                      <button type="button" className="text-red-500 text-xs" onClick={() => handleRemoveArrayItem("namespace-method-queryParams", idx)}>Remove</button>
+                      <button type="button" className="text-red-400 text-xs" onClick={() => handleRemoveArrayItem("namespace-method-queryParams", idx)}>Remove</button>
                     </div>
                   ))}
-                  <button type="button" className="text-blue-600 text-xs mt-1" onClick={() => handleAddArrayItem("namespace-method-queryParams", { key: '', value: '' })}>+ Add Query Param</button>
+                  <button type="button" className="text-blue-400 text-xs mt-1" onClick={() => handleAddArrayItem("namespace-method-queryParams", { key: '', value: '' })}>+ Add Query Param</button>
                 </div>
               </div>
               <div className="sm:col-span-2 flex items-center gap-2 mt-2">
@@ -1951,14 +1971,15 @@ Please select an indexing configuration above.`);
                   checked={!!editMethod['save-data']}
                   onChange={e => handleInput('save-data', e.target.checked)}
                   id="save-data-checkbox"
+                  className="bg-gray-800 border-gray-600"
                 />
-                <label htmlFor="save-data-checkbox" className="text-xs font-medium text-gray-700">Save Data</label>
+                <label htmlFor="save-data-checkbox" className="text-xs font-medium text-gray-300">Save Data</label>
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button
                 type="button"
-                className="bg-gray-200 text-gray-700 rounded-lg px-6 py-2 font-semibold text-base hover:bg-gray-300 transition"
+                className="bg-gray-700 text-gray-200 rounded-lg px-6 py-2 font-semibold text-base hover:bg-gray-600 transition"
                 onClick={() => setEditMode(false)}
               >
                 Cancel
@@ -1970,19 +1991,19 @@ Please select an indexing configuration above.`);
                 Save
               </button>
             </div>
-            {saveMsg && <div className="text-green-600 text-sm mt-2">{saveMsg}</div>}
+            {saveMsg && <div className="text-green-400 text-sm mt-2">{saveMsg}</div>}
           </form>
         )}
 
         {/* Cache Modal */}
         {showCacheModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-700">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-800">Enable Caching</h3>
+                <h3 className="text-xl font-bold text-gray-100">Enable Caching</h3>
                 <button
                   onClick={() => setShowCacheModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-400 hover:text-gray-200"
                 >
                   ✕
                 </button>
@@ -1990,14 +2011,14 @@ Please select an indexing configuration above.`);
 
               {/* Step 1: Account Selection */}
               <div className="mb-6">
-                <h4 className="text-lg font-semibold mb-3">1. Select Account</h4>
-                <div className="mb-2 text-sm text-gray-600">
+                <h4 className="text-lg font-semibold mb-3 text-gray-200">1. Select Account</h4>
+                <div className="mb-2 text-sm text-gray-400">
                   Found {accounts.length} accounts
                 </div>
                 <select
                   value={selectedAccountId}
                   onChange={(e) => handleAccountSelect(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                  className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-700 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                 >
                   <option value="">Select an account...</option>
                   {accounts.map((account, index) => {
@@ -2013,7 +2034,7 @@ Please select an indexing configuration above.`);
                   })}
                 </select>
                 {accounts.length === 0 && (
-                  <div className="mt-2 text-sm text-red-600">
+                  <div className="mt-2 text-sm text-red-400">
                     No accounts found. Please check if the namespace has accounts.
                   </div>
                 )}
@@ -2022,15 +2043,15 @@ Please select an indexing configuration above.`);
               {/* Step 2: Table Check */}
               {selectedAccountId && (
                 <div className="mb-6">
-                  <h4 className="text-lg font-semibold mb-3">2. Table Status</h4>
+                  <h4 className="text-lg font-semibold mb-3 text-gray-200">2. Table Status</h4>
                   {tableExists ? (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                      <p className="text-green-800">✓ Table exists for this account and method</p>
-                      <p className="text-sm text-green-600 mt-1">Table: {cacheFormData.tableName}</p>
+                    <div className="bg-green-900 border border-green-700 rounded-lg p-3">
+                      <p className="text-green-300">✓ Table exists for this account and method</p>
+                      <p className="text-sm text-green-400 mt-1">Table: {cacheFormData.tableName}</p>
                     </div>
                   ) : (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                      <p className="text-yellow-800">⚠ No table found for this account and method</p>
+                    <div className="bg-yellow-900 border border-yellow-700 rounded-lg p-3">
+                      <p className="text-yellow-300">⚠ No table found for this account and method</p>
                       <button
                         onClick={() => setShowCreateTableModal(true)}
                         className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
@@ -2045,34 +2066,34 @@ Please select an indexing configuration above.`);
               {/* Step 3: Cache Configuration */}
               {selectedAccountId && tableExists && (
                 <div className="mb-6">
-                  <h4 className="text-lg font-semibold mb-3">3. Cache Configuration</h4>
+                  <h4 className="text-lg font-semibold mb-3 text-gray-200">3. Cache Configuration</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Project Name</label>
                       <input
                         type="text"
                         value={cacheFormData.project}
                         onChange={(e) => setCacheFormData(prev => ({ ...prev, project: e.target.value }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                        className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-700 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                         placeholder="Enter project name"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Table Name</label>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Table Name</label>
                       <input
                         type="text"
                         value={cacheFormData.tableName}
                         onChange={(e) => setCacheFormData(prev => ({ ...prev, tableName: e.target.value }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                        className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-700 text-gray-400 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                         readOnly
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Time to Live</label>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Time to Live</label>
                       <div className="space-y-3">
                         {/* TTL Type Selection */}
                         <div className="flex flex-wrap gap-4">
-                          <label className="flex items-center bg-gray-50 px-3 py-2 rounded-lg border cursor-pointer hover:bg-gray-100 transition-colors">
+                          <label className="flex items-center bg-gray-700 px-3 py-2 rounded-lg border border-gray-600 cursor-pointer hover:bg-gray-600 transition-colors">
                             <input
                               type="radio"
                               name="createTTLType"
@@ -2083,11 +2104,11 @@ Please select an indexing configuration above.`);
                                 const newTTL = convertToSeconds(cacheTTLValue, cacheTTLUnit);
                                 setCacheFormData(prev => ({ ...prev, timeToLive: newTTL }));
                               }}
-                              className="mr-2 text-blue-600 focus:ring-blue-500"
+                              className="mr-2 text-blue-400 focus:ring-blue-500"
                             />
-                            <span className="text-sm font-medium">Finite Time</span>
+                            <span className="text-sm font-medium text-gray-200">Finite Time</span>
                           </label>
-                          <label className="flex items-center bg-gray-50 px-3 py-2 rounded-lg border cursor-pointer hover:bg-gray-100 transition-colors">
+                          <label className="flex items-center bg-gray-700 px-3 py-2 rounded-lg border border-gray-600 cursor-pointer hover:bg-gray-600 transition-colors">
                             <input
                               type="radio"
                               name="createTTLType"
@@ -2097,9 +2118,9 @@ Please select an indexing configuration above.`);
                                 setCacheTTLType('infinite');
                                 setCacheFormData(prev => ({ ...prev, timeToLive: 0 }));
                               }}
-                              className="mr-2 text-blue-600 focus:ring-blue-500"
+                              className="mr-2 text-blue-400 focus:ring-blue-500"
                             />
-                            <span className="text-sm font-medium">Infinite (No Expiration)</span>
+                            <span className="text-sm font-medium text-gray-200">Infinite (No Expiration)</span>
                           </label>
                         </div>
                         
@@ -2116,7 +2137,7 @@ Please select an indexing configuration above.`);
                                   const newTTL = convertToSeconds(value, cacheTTLUnit);
                                   setCacheFormData(prev => ({ ...prev, timeToLive: newTTL }));
                                 }}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                        className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-700 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                                 min="1"
                                 placeholder="Enter value"
                               />
@@ -2130,7 +2151,7 @@ Please select an indexing configuration above.`);
                                   const newTTL = convertToSeconds(cacheTTLValue, unit);
                                   setCacheFormData(prev => ({ ...prev, timeToLive: newTTL }));
                                 }}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                                className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-700 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                               >
                                 <option value="minutes">Minutes</option>
                                 <option value="hours">Hours</option>
@@ -2141,7 +2162,7 @@ Please select an indexing configuration above.`);
                         )}
                         
                         {/* Display current TTL in seconds */}
-                        <div className="text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded border">
+                        <div className="text-xs text-gray-400 bg-gray-700 px-3 py-2 rounded border border-gray-600">
                           <span className="font-medium">Current TTL:</span> {cacheTTLType === 'infinite' 
                             ? 'No expiration (0 seconds)' 
                             : `${cacheFormData.timeToLive.toLocaleString()} seconds`
@@ -2150,23 +2171,23 @@ Please select an indexing configuration above.`);
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Status</label>
                       <select
                         value={cacheFormData.status}
                         onChange={(e) => setCacheFormData(prev => ({ ...prev, status: e.target.value }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                        className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-700 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                       >
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Items per Key</label>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Items per Key</label>
                       <input
                         type="number"
                         value={cacheFormData.itemsPerKey}
                         onChange={(e) => setCacheFormData(prev => ({ ...prev, itemsPerKey: parseInt(e.target.value) || 100 }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                        className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-700 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                         min="1"
                       />
                     </div>
@@ -2178,7 +2199,7 @@ Please select an indexing configuration above.`);
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowCacheModal(false)}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                  className="bg-gray-700 text-gray-200 px-4 py-2 rounded-lg font-medium hover:bg-gray-600 transition-colors"
                 >
                   Cancel
                 </button>
@@ -2198,30 +2219,30 @@ Please select an indexing configuration above.`);
         {/* Create Table Modal */}
         {showCreateTableModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 w-full max-w-md">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-800">Create Table</h3>
+                <h3 className="text-xl font-bold text-gray-100">Create Table</h3>
                 <button
                   onClick={() => setShowCreateTableModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-400 hover:text-gray-300"
                 >
                   ✕
                 </button>
               </div>
               
               <div className="mb-4">
-                <p className="text-gray-600 mb-3">
+                <p className="text-gray-400 mb-3">
                   Create a table for account <strong>{selectedAccount?.['namespace-account-name']}</strong> and method <strong>{methodName}</strong>?
                 </p>
-                <p className="text-sm text-gray-500">
-                  Table name: <code className="bg-gray-100 px-2 py-1 rounded">{resolvedNamespaceName}-{selectedAccount?.['namespace-account-name']}-{methodName}</code>
+                <p className="text-sm text-gray-400">
+                  Table name: <code className="bg-gray-700 px-2 py-1 rounded">{resolvedNamespaceName}-{selectedAccount?.['namespace-account-name']}-{methodName}</code>
                 </p>
               </div>
 
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowCreateTableModal(false)}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                  className="bg-gray-700 text-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
@@ -2239,15 +2260,15 @@ Please select an indexing configuration above.`);
         {/* Execute Indexing Confirmation Modal */}
         {showExecuteModal && selectedConfigForExecution && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-800">Execute Indexing</h3>
+                <h3 className="text-xl font-bold text-gray-100">Execute Indexing</h3>
                 <button
                   onClick={() => {
                     setShowExecuteModal(false);
                     setSelectedConfigForExecution(null);
                   }}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-400 hover:text-gray-300"
                 >
                   ✕
                 </button>
@@ -2266,52 +2287,52 @@ Please select an indexing configuration above.`);
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900">
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Project Name</label>
+                      <div className="bg-gray-700 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
                         {selectedConfigForExecution.project}
                       </div>
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Table Name</label>
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 font-mono">
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Table Name</label>
+                      <div className="bg-gray-700 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 font-mono">
                         {selectedConfigForExecution.table}
                       </div>
                     </div>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
+                    <div className="bg-gray-700 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
                       {selectedConfigForExecution.description || 'No description provided'}
                     </div>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Custom Fields ({selectedConfigForExecution.customFields?.length || 0} fields)</label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Custom Fields ({selectedConfigForExecution.customFields?.length || 0} fields)</label>
+                    <div className="bg-gray-700 border border-gray-700 rounded-lg p-3 max-h-40 overflow-y-auto">
                       {selectedConfigForExecution.customFields && selectedConfigForExecution.customFields.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {selectedConfigForExecution.customFields.map((field: string, index: number) => (
-                            <span key={`field-${index}`} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                            <span key={`field-${index}`} className="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded">
                               {field}
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-gray-500 text-sm">No custom fields specified</span>
+                        <span className="text-gray-400 text-sm">No custom fields specified</span>
                       )}
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Status</label>
+                      <div className="bg-gray-700 border border-gray-700 rounded-lg px-3 py-2">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           selectedConfigForExecution.status === 'active' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-800'
+                            ? 'bg-green-900 text-green-300' 
+                            : 'bg-gray-700 text-gray-100'
                         }`}>
                           {selectedConfigForExecution.status}
                         </span>
@@ -2319,8 +2340,8 @@ Please select an indexing configuration above.`);
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Created</label>
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900">
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Created</label>
+                      <div className="bg-gray-700 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
                         {selectedConfigForExecution.createdAt ? new Date(selectedConfigForExecution.createdAt).toLocaleString() : 'N/A'}
                       </div>
                     </div>
@@ -2335,7 +2356,7 @@ Please select an indexing configuration above.`);
                   </svg>
                   <div>
                     <h4 className="text-blue-800 font-medium">What will happen?</h4>
-                    <ul className="text-blue-700 text-sm mt-1 space-y-1">
+                    <ul className="text-blue-300 text-sm mt-1 space-y-1">
                       <li>• All data from the specified table will be scanned</li>
                       <li>• Data will be indexed to Algolia with the specified custom fields</li>
                       <li>• A new search index will be created with timestamp</li>
@@ -2351,7 +2372,7 @@ Please select an indexing configuration above.`);
                     setShowExecuteModal(false);
                     setSelectedConfigForExecution(null);
                   }}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                  className="bg-gray-700 text-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
@@ -2369,12 +2390,12 @@ Please select an indexing configuration above.`);
         {/* Create Indexing Configuration Modal */}
         {showCreateIndexingModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-800">Create Indexing Configuration</h3>
+                <h3 className="text-xl font-bold text-gray-100">Create Indexing Configuration</h3>
                 <button
                   onClick={() => setShowCreateIndexingModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-400 hover:text-gray-300"
                 >
                   ✕
                 </button>
@@ -2384,13 +2405,13 @@ Please select an indexing configuration above.`);
                 {/* Step 1: Account Selection */}
                 <div>
                   <h4 className="text-lg font-semibold mb-3">1. Select Account</h4>
-                  <div className="mb-2 text-sm text-gray-600">
+                  <div className="mb-2 text-sm text-gray-400">
                     Found {accounts.length} accounts
                   </div>
                   <select
                     value={selectedIndexingAccountId}
                     onChange={(e) => handleIndexingAccountSelect(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                    className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                   >
                     <option value="">Select an account...</option>
                     {accounts.map((account, index) => {
@@ -2437,41 +2458,41 @@ Please select an indexing configuration above.`);
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                          <label className="block text-sm font-medium text-gray-300 mb-1">Project Name</label>
                           <input
                             type="text"
                             value={indexingFormData.project}
                             onChange={(e) => setIndexingFormData(prev => ({ ...prev, project: e.target.value }))}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                            className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                             placeholder="Enter project name"
                           />
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Table Name</label>
+                          <label className="block text-sm font-medium text-gray-300 mb-1">Table Name</label>
                           <input
                             type="text"
                             value={indexingFormData.table}
                             onChange={(e) => setIndexingFormData(prev => ({ ...prev, table: e.target.value }))}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                            className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                             placeholder="Enter table name"
                           />
                         </div>
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
                         <input
                           type="text"
                           value={indexingFormData.description}
                           onChange={(e) => setIndexingFormData(prev => ({ ...prev, description: e.target.value }))}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                          className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                           placeholder="Enter description for this indexing configuration"
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Custom Fields (comma separated)</label>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Custom Fields (comma separated)</label>
                         <input
                           type="text"
                           value={indexingFormData.customFields.join(', ')}
@@ -2479,17 +2500,17 @@ Please select an indexing configuration above.`);
                             ...prev, 
                             customFields: e.target.value.split(',').map(field => field.trim()).filter(Boolean)
                           }))}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                          className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                           placeholder="e.g., id, name, order_number, email, phone, financial_status, fulfillment_status, tags, created_at, updated_at, total_price, currency, customer.first_name, customer.last_name, customer.email, customer.phone, customer.default_address.city, customer.default_address.province, customer.default_address.country, billing_address.name, billing_address.city, billing_address.province, billing_address.country, shipping_address.name, shipping_address.city, shipping_address.province, shipping_address.country, line_items.title, line_items.variant_title, line_items.sku, line_items.vendor, line_items.price, fulfillments.tracking_number, fulfillments.tracking_company, fulfillments.shipment_status"
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Status</label>
                         <select
                           value={indexingFormData.status}
                           onChange={(e) => setIndexingFormData(prev => ({ ...prev, status: e.target.value }))}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                          className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                         >
                           <option value="active">Active</option>
                           <option value="inactive">Inactive</option>
@@ -2515,7 +2536,7 @@ Please select an indexing configuration above.`);
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setShowCreateIndexingModal(false)}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                  className="bg-gray-700 text-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
@@ -2534,12 +2555,12 @@ Please select an indexing configuration above.`);
         {/* Search Indexing Modal */}
         {showSearchModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-800">Search Indexing</h3>
+                <h3 className="text-xl font-bold text-gray-100">Search Indexing</h3>
                 <button
                   onClick={() => setShowSearchModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-400 hover:text-gray-300"
                 >
                   ✕
                 </button>
@@ -2550,27 +2571,27 @@ Please select an indexing configuration above.`);
                 <h4 className="text-lg font-semibold mb-3">1. Indexing Configuration</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Project Name</label>
                     <input
                       type="text"
                       value={searchFormData.project}
                       onChange={(e) => setSearchFormData(prev => ({ ...prev, project: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                      className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                       placeholder="Enter project name"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Table Name</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Table Name</label>
                     <input
                       type="text"
                       value={searchFormData.table}
                       onChange={(e) => setSearchFormData(prev => ({ ...prev, table: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                      className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                       placeholder="Enter table name"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Custom Fields (comma separated)</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Custom Fields (comma separated)</label>
                     <input
                       type="text"
                       value={searchFormData.customFields.join(', ')}
@@ -2578,7 +2599,7 @@ Please select an indexing configuration above.`);
                         ...prev, 
                         customFields: e.target.value.split(',').map(field => field.trim()).filter(Boolean)
                       }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                      className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                       placeholder="e.g., name, email, description"
                     />
                   </div>
@@ -2592,7 +2613,7 @@ Please select an indexing configuration above.`);
                     {indexingStatus.includes('Indexing') ? 'Indexing...' : 'Index Table'}
                   </button>
                   {indexingStatus && (
-                    <p className="mt-2 text-sm text-gray-600">{indexingStatus}</p>
+                    <p className="mt-2 text-sm text-gray-400">{indexingStatus}</p>
                   )}
                 </div>
               </div>
@@ -2608,7 +2629,7 @@ Please select an indexing configuration above.`);
                     <div>Project: <span className="font-mono">{searchFormData.project || 'Not set'}</span></div>
                     <div>Table: <span className="font-mono">{searchFormData.table || 'Not set'}</span></div>
                     {selectedConfigForSearch && (
-                      <div className="mt-2 p-2 bg-green-100 border border-green-300 rounded">
+                      <div className="mt-2 p-2 bg-green-900 border border-green-700 rounded">
                         <div className="text-green-800">
                           <strong>✓ Selected Configuration:</strong>
                           <div className="font-mono text-xs">
@@ -2627,13 +2648,13 @@ Please select an indexing configuration above.`);
                 
                 {/* Manual Table Override */}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Manual Table Override (if auto-detection fails):</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Manual Table Override (if auto-detection fails):</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={searchFormData.table}
                       onChange={(e) => setSearchFormData(prev => ({ ...prev, table: e.target.value }))}
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                      className="flex-1 border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                       placeholder="Enter table name (e.g., shopify-inkhub-get-orders)"
                     />
                     <button
@@ -2648,7 +2669,7 @@ Please select an indexing configuration above.`);
                 {/* Indexing Configuration Selector */}
                 {indexingConfigs.length > 0 && (
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Indexing Configuration:</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Select Indexing Configuration:</label>
                     <div className="space-y-2">
                       {indexingConfigs.map((config, idx) => (
                         <div key={config.id || `search-config-${idx}`} className="flex items-center gap-2">
@@ -2656,8 +2677,8 @@ Please select an indexing configuration above.`);
                             onClick={() => handleSelectIndexingConfigForSearch(config)}
                             className={`px-3 py-1 rounded text-sm border ${
                               searchFormData.table === config.table && searchFormData.project === config.project
-                                ? 'bg-blue-100 border-blue-300 text-blue-700'
-                                : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-blue-100 border-blue-300 text-blue-300'
+                                : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-700'
                             }`}
                           >
                             {config.project}/{config.table} ({config.status})
@@ -2670,43 +2691,43 @@ Please select an indexing configuration above.`);
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Search Query</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Search Query</label>
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                      className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                       placeholder="Enter search query"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Filters (optional)</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Filters (optional)</label>
                     <input
                       type="text"
                       value={searchFilters}
                       onChange={(e) => setSearchFilters(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                      className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                       placeholder="e.g., status:active"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Hits per Page</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Hits per Page</label>
                     <input
                       type="number"
                       value={searchHitsPerPage}
                       onChange={(e) => setSearchHitsPerPage(parseInt(e.target.value) || 20)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                      className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                       min="1"
                       max="100"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Page</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Page</label>
                     <input
                       type="number"
                       value={searchPage}
                       onChange={(e) => setSearchPage(parseInt(e.target.value) || 0)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                      className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                       min="0"
                     />
                   </div>
@@ -2724,13 +2745,13 @@ Please select an indexing configuration above.`);
               {searchResults.length > 0 && (
                 <div className="mb-6">
                   <h4 className="text-lg font-semibold mb-3">3. Search Results</h4>
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-96 overflow-y-auto">
-                    <div className="text-sm text-gray-600 mb-2">
+                  <div className="bg-gray-700 border border-gray-700 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    <div className="text-sm text-gray-400 mb-2">
                       Found {searchResults.length} results
                     </div>
                     {searchResults.map((result, idx) => (
-                      <div key={`search-result-${idx}`} className="bg-white border border-gray-200 rounded p-3 mb-2">
-                        <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+                      <div key={`search-result-${idx}`} className="bg-white border border-gray-700 rounded p-3 mb-2">
+                        <pre className="text-xs text-gray-300 whitespace-pre-wrap">
                           {JSON.stringify(result, null, 2)}
                         </pre>
                       </div>
@@ -2743,7 +2764,7 @@ Please select an indexing configuration above.`);
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowSearchModal(false)}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                  className="bg-gray-700 text-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
                 >
                   Close
                 </button>
@@ -2755,15 +2776,15 @@ Please select an indexing configuration above.`);
         {/* Edit Cache Configuration Modal */}
         {showEditCacheModal && editingCacheConfig && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-800">Edit Cache Configuration</h3>
+                <h3 className="text-xl font-bold text-gray-100">Edit Cache Configuration</h3>
                 <button
                   onClick={() => {
                     setShowEditCacheModal(false);
                     setEditingCacheConfig(null);
                   }}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-400 hover:text-gray-300"
                 >
                   ✕
                 </button>
@@ -2772,23 +2793,23 @@ Please select an indexing configuration above.`);
               <div className="space-y-4">
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Table Name</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Table Name</label>
                   <input
                     type="text"
                     value={editCacheFormData.tableName}
                     onChange={(e) => setEditCacheFormData(prev => ({ ...prev, tableName: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                    className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                     placeholder="Enter table name"
                   />
     </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Project</label>
                   <input
                     type="text"
                     value={editCacheFormData.project}
                     onChange={(e) => setEditCacheFormData(prev => ({ ...prev, project: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                    className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                     placeholder="Enter project name"
                   />
                 </div>
@@ -2796,11 +2817,11 @@ Please select an indexing configuration above.`);
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Time to Live</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Time to Live</label>
                     <div className="space-y-3">
                       {/* TTL Type Selection */}
                       <div className="flex flex-wrap gap-4">
-                        <label className="flex items-center bg-gray-50 px-3 py-2 rounded-lg border cursor-pointer hover:bg-gray-100 transition-colors">
+                        <label className="flex items-center bg-gray-700 px-3 py-2 rounded-lg border cursor-pointer hover:bg-gray-700 transition-colors">
                           <input
                             type="radio"
                             name="editTTLType"
@@ -2815,7 +2836,7 @@ Please select an indexing configuration above.`);
                           />
                           <span className="text-sm font-medium">Finite Time</span>
                         </label>
-                        <label className="flex items-center bg-gray-50 px-3 py-2 rounded-lg border cursor-pointer hover:bg-gray-100 transition-colors">
+                        <label className="flex items-center bg-gray-700 px-3 py-2 rounded-lg border cursor-pointer hover:bg-gray-700 transition-colors">
                           <input
                             type="radio"
                             name="editTTLType"
@@ -2844,7 +2865,7 @@ Please select an indexing configuration above.`);
                                 const newTTL = convertToSeconds(value, editCacheTTLUnit);
                                 setEditCacheFormData(prev => ({ ...prev, timeToLive: newTTL }));
                               }}
-                              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                              className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                               min="1"
                               placeholder="Enter value"
                             />
@@ -2858,7 +2879,7 @@ Please select an indexing configuration above.`);
                                 const newTTL = convertToSeconds(editCacheTTLValue, unit);
                                 setEditCacheFormData(prev => ({ ...prev, timeToLive: newTTL }));
                               }}
-                              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                              className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                             >
                               <option value="minutes">Minutes</option>
                               <option value="hours">Hours</option>
@@ -2869,7 +2890,7 @@ Please select an indexing configuration above.`);
                       )}
                       
                       {/* Display current TTL in seconds */}
-                      <div className="text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded border">
+                      <div className="text-xs text-gray-400 bg-gray-700 px-3 py-2 rounded border">
                         <span className="font-medium">Current TTL:</span> {editCacheTTLType === 'infinite' 
                           ? 'No expiration (0 seconds)' 
                           : `${editCacheFormData.timeToLive.toLocaleString()} seconds`
@@ -2879,21 +2900,21 @@ Please select an indexing configuration above.`);
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Items per Key</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Items per Key</label>
                     <input
                       type="number"
                       value={editCacheFormData.itemsPerKey}
                       onChange={(e) => setEditCacheFormData(prev => ({ ...prev, itemsPerKey: parseInt(e.target.value) || 100 }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                      className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                       min="1"
                     />
                   </div>
                   <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Status</label>
                   <select
                     value={editCacheFormData.status}
                     onChange={(e) => setEditCacheFormData(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                    className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -2910,7 +2931,7 @@ Please select an indexing configuration above.`);
                     </svg>
                     <div>
                       <h4 className="text-blue-800 font-medium">Current Configuration</h4>
-                      <div className="text-blue-700 text-sm mt-1 space-y-1">
+                      <div className="text-blue-300 text-sm mt-1 space-y-1">
                         <div>• Table: {editingCacheConfig.tableName}</div>
                         <div>• Project: {editingCacheConfig.project}</div>
                         <div>• TTL: {editingCacheConfig.timeToLive}s</div>
@@ -2928,7 +2949,7 @@ Please select an indexing configuration above.`);
                     setShowEditCacheModal(false);
                     setEditingCacheConfig(null);
                   }}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                  className="bg-gray-700 text-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
@@ -2946,15 +2967,15 @@ Please select an indexing configuration above.`);
         {/* Edit Indexing Configuration Modal */}
         {showEditIndexingModal && editingIndexingConfig && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-800">Edit Indexing Configuration</h3>
+                <h3 className="text-xl font-bold text-gray-100">Edit Indexing Configuration</h3>
                 <button
                   onClick={() => {
                     setShowEditIndexingModal(false);
                     setEditingIndexingConfig(null);
                   }}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-400 hover:text-gray-300"
                 >
                   ✕
                 </button>
@@ -2962,40 +2983,40 @@ Please select an indexing configuration above.`);
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Project Name</label>
                   <input
                     type="text"
                     value={indexingFormData.project}
                     onChange={(e) => setIndexingFormData(prev => ({ ...prev, project: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                    className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                     placeholder="Enter project name"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Table Name</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Table Name</label>
                   <input
                     type="text"
                     value={indexingFormData.table}
                     onChange={(e) => setIndexingFormData(prev => ({ ...prev, table: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                    className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                     placeholder="Enter table name"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
                   <input
                     type="text"
                     value={indexingFormData.description}
                     onChange={(e) => setIndexingFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                    className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                     placeholder="Enter description for this indexing configuration"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Custom Fields (comma separated)</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Custom Fields (comma separated)</label>
                   <input
                     type="text"
                     value={indexingFormData.customFields.join(', ')}
@@ -3003,17 +3024,17 @@ Please select an indexing configuration above.`);
                       ...prev, 
                       customFields: e.target.value.split(',').map(field => field.trim()).filter(Boolean)
                     }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                    className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                     placeholder="e.g., id, name, order_number, email, phone, financial_status, fulfillment_status, tags, created_at, updated_at, total_price, currency, customer.first_name, customer.last_name, customer.email, customer.phone, customer.default_address.city, customer.default_address.province, customer.default_address.country, billing_address.name, billing_address.city, billing_address.province, billing_address.country, shipping_address.name, shipping_address.city, shipping_address.province, shipping_address.country, line_items.title, line_items.variant_title, line_items.sku, line_items.vendor, line_items.price, fulfillments.tracking_number, fulfillments.tracking_company, fulfillments.shipment_status"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Status</label>
                   <select
                     value={indexingFormData.status}
                     onChange={(e) => setIndexingFormData(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+                    className="w-full border border-gray-600 rounded-lg px-3 py-2 bg-gray-800 text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -3027,7 +3048,7 @@ Please select an indexing configuration above.`);
                     setShowEditIndexingModal(false);
                     setEditingIndexingConfig(null);
                   }}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                  className="bg-gray-700 text-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
