@@ -1020,7 +1020,7 @@ const Page = () => {
                       <div className="flex flex-wrap gap-2 mt-2">
                         {selectedNamespaces.map(tag => {
                           const ns = availableNamespaces.find(n => n.id === tag)
-                          return (
+  return (
                             <span 
                               key={tag}
                               className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md"

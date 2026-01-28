@@ -16,7 +16,8 @@ export function middleware(req: NextRequest) {
   }
 
   // For localhost development, skip auth redirect (auth will be handled client-side)
-  const isLocalhost = req.nextUrl.hostname === 'localhost' || req.nextUrl.hostname === '127.0.0.1';
+  const hostname = req.nextUrl.hostname;
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname?.startsWith('localhost:') || hostname?.startsWith('127.0.0.1:');
   if (isLocalhost) {
     console.log('[Middleware] Localhost detected, skipping auth redirect (client-side auth will handle)');
     return NextResponse.next();

@@ -2,78 +2,120 @@
 
 import { useState, useEffect } from 'react';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+// 🔧 Utility helpers
+const isBrowser = typeof window !== 'undefined';
+
+const getLocation = () => {
+  if (!isBrowser)
+    return { href: '', hash: '', pathname: '', search: '', origin: '', hostname: '' };
+  const { href, hash, pathname, search, origin, hostname } = window.location;
+  return { href, hash, pathname, search, origin, hostname };
+};
+
+const parseHashTokens = (hash: string) => {
+  if (!hash.startsWith('#')) return {};
+  const params = new URLSearchParams(hash.substring(1));
+  return {
+    access_token: params.get('access_token'),
+    id_token: params.get('id_token'),
+    refresh_token: params.get('refresh_token'),
+  };
+};
+
+const getLocalTokens = () => {
+  if (!isBrowser) return {};
+  const keys = [
+    'access_token',
+    'accessToken',
+    'id_token',
+    'idToken',
+    'refresh_token',
+    'refreshToken',
+    'user_id',
+    'user_email',
+  ];
+  return Object.fromEntries(keys.map((k) => [k, localStorage.getItem(k)]));
+};
+
+const getCookies = () => {
+  if (!isBrowser || !document.cookie) return {};
+  return document.cookie.split(';').reduce((acc, cookie) => {
+    const [key, value] = cookie.trim().split('=');
+    if (key && value)
+      acc[key] = value.substring(0, 50) + (value.length > 50 ? '...' : '');
+    return acc;
+  }, {} as Record<string, string>);
+};
 
 export default function DebugAuthPage() {
-  const [tokens, setTokens] = useState<any>({});
-  const [hashTokens, setHashTokens] = useState<any>({});
-  const [cookies, setCookies] = useState<any>({});
+  const [tokens, setTokens] = useState<Record<string, string | null>>({});
+  const [hashTokens, setHashTokens] = useState<Record<string, string | null>>({});
+  const [cookies, setCookies] = useState<Record<string, string>>({});
   const [validationResult, setValidationResult] = useState<any>(null);
   const [backendStatus, setBackendStatus] = useState<string>('checking...');
   const [logs, setLogs] = useState<string[]>([]);
+  const [currentHash, setCurrentHash] = useState<string>('');
 
+  // 🌐 Dynamic backend URL
+  const { hostname } = getLocation();
+  const isProduction =
+    hostname.includes('brmh.in') && !hostname.includes('localhost');
+  const API_BASE_URL =
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    (isProduction ? 'https://auth.brmh.in' : 'http://localhost:5001');
+
+  // 🧾 Logging utility
   const addLog = (message: string) => {
     const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
     const logMessage = `[${timestamp}] ${message}`;
     console.log(logMessage);
-    setLogs(prev => [logMessage, ...prev]);
+    setLogs((prev) => [logMessage, ...prev]);
   };
 
   useEffect(() => {
-    loadAllData();
+    if (isBrowser) {
+      const { hash } = getLocation();
+      setCurrentHash(hash);
+      loadAllData();
+    }
   }, []);
 
   const loadAllData = () => {
     addLog('🔍 Loading authentication debug data...');
-    
-    // Check URL hash
-    if (window.location.hash) {
-      addLog(`📍 URL Hash detected: ${window.location.hash.substring(0, 100)}`);
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const hashData = {
-        access_token: hashParams.get('access_token')?.substring(0, 50) + '...',
-        id_token: hashParams.get('id_token')?.substring(0, 50) + '...',
-        refresh_token: hashParams.get('refresh_token')?.substring(0, 50) + '...',
-      };
-      setHashTokens(hashData);
-      addLog(`✅ Hash tokens extracted: ${Object.keys(hashData).filter(k => hashData[k]).join(', ')}`);
-    } else {
-      addLog('ℹ️ No URL hash present');
+
+    // URL Hash Tokens
+    if (isBrowser) {
+      const { hash } = getLocation();
+      if (hash) {
+        const parsed = parseHashTokens(hash);
+        const shortTokens: Record<string, string | null> = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          shortTokens[k] = v ? v.substring(0, 50) + '...' : null;
+        }
+        setHashTokens(shortTokens);
+        addLog(`✅ Hash tokens extracted: ${Object.keys(parsed).filter((k) => parsed[k as keyof typeof parsed]).join(', ')}`);
+      } else {
+        addLog('ℹ️ No URL hash present');
+      }
     }
-    
-    // Get localStorage tokens
-    const localStorageTokens = {
-      access_token: localStorage.getItem('access_token'),
-      accessToken: localStorage.getItem('accessToken'),
-      id_token: localStorage.getItem('id_token'),
-      idToken: localStorage.getItem('idToken'),
-      refresh_token: localStorage.getItem('refresh_token'),
-      refreshToken: localStorage.getItem('refreshToken'),
-      user_id: localStorage.getItem('user_id'),
-      user_email: localStorage.getItem('user_email'),
-    };
-    setTokens(localStorageTokens);
-    
-    const hasTokens = !!(localStorageTokens.access_token || localStorageTokens.accessToken);
+
+    // Local Storage Tokens
+    const localTokens = getLocalTokens();
+    setTokens(localTokens);
+    const hasTokens = !!(localTokens.access_token || localTokens.accessToken);
     addLog(`💾 localStorage tokens: ${hasTokens ? 'FOUND' : 'NOT FOUND'}`);
     if (hasTokens) {
-      addLog(`   - access_token: ${localStorageTokens.access_token?.substring(0, 30)}...`);
-      addLog(`   - user_email: ${localStorageTokens.user_email}`);
-      addLog(`   - user_id: ${localStorageTokens.user_id}`);
+      addLog(`   - access_token: ${localTokens.access_token?.substring(0, 30)}...`);
+      addLog(`   - user_email: ${localTokens.user_email}`);
+      addLog(`   - user_id: ${localTokens.user_id}`);
     }
-    
-    // Get cookies
-    const cookieData = document.cookie.split(';').reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split('=');
-      if (key && value) {
-        acc[key] = value.substring(0, 50) + (value.length > 50 ? '...' : '');
-      }
-      return acc;
-    }, {} as Record<string, string>);
+
+    // Cookies
+    const cookieData = getCookies();
     setCookies(cookieData);
     addLog(`🍪 Cookies: ${Object.keys(cookieData).length} found`);
-    
-    // Test backend connection
+
+    // Backend
     testBackend();
   };
 
@@ -91,8 +133,9 @@ export default function DebugAuthPage() {
   };
 
   const validateToken = async () => {
-    const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
-    
+    const localTokens = getLocalTokens();
+    const token = localTokens.access_token || localTokens.accessToken;
+
     if (!token) {
       addLog('❌ No access token found for validation');
       setValidationResult({ error: 'No token found' });
@@ -100,25 +143,23 @@ export default function DebugAuthPage() {
     }
 
     addLog(`🔐 Validating token: ${token.substring(0, 30)}...`);
-    
     try {
       const response = await fetch(`${API_BASE_URL}/auth/validate`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        credentials: 'include'
+        credentials: 'include',
       });
 
       const data = await response.json();
       setValidationResult({ status: response.status, data });
-      
-      if (response.ok) {
+
+      if (response.ok)
         addLog(`✅ Token validation successful: ${JSON.stringify(data)}`);
-      } else {
+      else
         addLog(`❌ Token validation failed (${response.status}): ${JSON.stringify(data)}`);
-      }
     } catch (error) {
       addLog(`❌ Token validation error: ${error}`);
       setValidationResult({ error: String(error) });
@@ -126,28 +167,24 @@ export default function DebugAuthPage() {
   };
 
   const extractHashTokens = () => {
-    if (!window.location.hash) {
-      addLog('⚠️ No URL hash to extract');
-      return;
-    }
+    if (!isBrowser) return addLog('⚠️ No browser environment');
+
+    const { hash, pathname } = getLocation();
+    if (!hash) return addLog('⚠️ No URL hash to extract');
 
     addLog('🔓 Extracting tokens from URL hash...');
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const hashAccessToken = hashParams.get('access_token');
-    const hashIdToken = hashParams.get('id_token');
-    const hashRefreshToken = hashParams.get('refresh_token');
-    
-    if (hashAccessToken) {
-      localStorage.setItem('access_token', hashAccessToken);
-      localStorage.setItem('accessToken', hashAccessToken);
+    const parsed = parseHashTokens(hash);
+
+    if (parsed.access_token) {
+      localStorage.setItem('access_token', parsed.access_token);
+      localStorage.setItem('accessToken', parsed.access_token);
       addLog('✅ Stored access_token from hash');
     }
-    if (hashIdToken) {
-      localStorage.setItem('id_token', hashIdToken);
-      localStorage.setItem('idToken', hashIdToken);
-      
+    if (parsed.id_token) {
+      localStorage.setItem('id_token', parsed.id_token);
+      localStorage.setItem('idToken', parsed.id_token);
       try {
-        const payload = JSON.parse(atob(hashIdToken.split('.')[1]));
+        const payload = JSON.parse(atob(parsed.id_token.split('.')[1]));
         if (payload.sub) localStorage.setItem('user_id', payload.sub);
         if (payload.email) localStorage.setItem('user_email', payload.email);
         addLog(`✅ Stored id_token and user info: ${payload.email}`);
@@ -155,53 +192,47 @@ export default function DebugAuthPage() {
         addLog(`⚠️ Could not extract user info: ${e}`);
       }
     }
-    if (hashRefreshToken) {
-      localStorage.setItem('refresh_token', hashRefreshToken);
-      localStorage.setItem('refreshToken', hashRefreshToken);
+    if (parsed.refresh_token) {
+      localStorage.setItem('refresh_token', parsed.refresh_token);
+      localStorage.setItem('refreshToken', parsed.refresh_token);
       addLog('✅ Stored refresh_token from hash');
     }
-    
-    window.history.replaceState(null, '', window.location.pathname);
+
+    window.history.replaceState(null, '', pathname);
+    setCurrentHash('');
     addLog('🧹 Cleared URL hash');
-    
     loadAllData();
   };
 
   const clearAllTokens = () => {
     addLog('🗑️ Clearing all tokens...');
-    localStorage.clear();
-    sessionStorage.clear();
+    if (isBrowser) {
+      localStorage.clear();
+      sessionStorage.clear();
+    }
     addLog('✅ All tokens cleared');
     loadAllData();
   };
 
   const redirectToAuth = () => {
-    const currentUrl = 'http://localhost:3000/';
-    const authUrl = `https://auth.brmh.in/login?next=${encodeURIComponent(currentUrl)}`;
+    if (!isBrowser) return;
+    const { origin } = getLocation();
+    const authUrl = `https://auth.brmh.in/login?next=${encodeURIComponent(origin + '/')}`;
     addLog(`🔀 Redirecting to: ${authUrl}`);
     window.location.href = authUrl;
   };
 
   const testFullFlow = async () => {
     addLog('🧪 Starting full authentication flow test...');
-    
-    // Step 1: Check backend
-    addLog('Step 1: Testing backend connection...');
     await testBackend();
-    
-    // Step 2: Check tokens
-    addLog('Step 2: Checking localStorage tokens...');
-    const hasTokens = !!(localStorage.getItem('access_token') || localStorage.getItem('accessToken'));
-    addLog(`   Result: ${hasTokens ? '✅ Tokens found' : '❌ No tokens'}`);
-    
-    // Step 3: Validate if we have tokens
-    if (hasTokens) {
-      addLog('Step 3: Validating token with backend...');
-      await validateToken();
-    } else {
-      addLog('Step 3: Skipped (no tokens to validate)');
-    }
-    
+
+    const localTokens = getLocalTokens();
+    const hasTokens = !!(localTokens.access_token || localTokens.accessToken);
+    addLog(`   Tokens: ${hasTokens ? '✅ Found' : '❌ Missing'}`);
+
+    if (hasTokens) await validateToken();
+    else addLog('Skipped validation — no tokens found.');
+
     addLog('🎉 Test complete! Check results above.');
   };
 
@@ -209,73 +240,36 @@ export default function DebugAuthPage() {
     <div className="min-h-screen bg-gray-900 p-8">
       <div className="max-w-6xl mx-auto">
         <div className="bg-gray-800 rounded-lg shadow-2xl p-6 mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">🔐 Auth Debug Dashboard</h1>
-          <p className="text-gray-400">Comprehensive authentication debugging for localhost:3000</p>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            🔐 Auth Debug Dashboard
+          </h1>
+          <p className="text-gray-400">
+            Comprehensive authentication debugging for localhost:3000
+          </p>
         </div>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <button
-            onClick={loadAllData}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
-          >
-            🔄 Refresh Data
-          </button>
-          <button
-            onClick={validateToken}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
-          >
-            ✅ Validate Token
-          </button>
-          <button
-            onClick={clearAllTokens}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
-          >
-            🗑️ Clear Tokens
-          </button>
-          <button
-            onClick={redirectToAuth}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
-          >
-            🔐 Go to Auth
-          </button>
+          <button onClick={loadAllData} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors">🔄 Refresh Data</button>
+          <button onClick={validateToken} className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors">✅ Validate Token</button>
+          <button onClick={clearAllTokens} className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors">🗑️ Clear Tokens</button>
+          <button onClick={redirectToAuth} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors">🔐 Go to Auth</button>
         </div>
 
+        {/* Backend & Token Validation */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Backend Status */}
           <div className="bg-gray-800 rounded-lg p-6">
             <h2 className="text-xl font-bold text-white mb-4">Backend Status</h2>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Connection:</span>
-                <span className={backendStatus.includes('✅') ? 'text-green-400' : 'text-red-400'}>
-                  {backendStatus}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">URL:</span>
-                <span className="text-gray-300 text-sm">{API_BASE_URL}</span>
-              </div>
-            </div>
+            <p className={backendStatus.includes('✅') ? 'text-green-400' : 'text-red-400'}>{backendStatus}</p>
+            <p className="text-gray-400 text-sm mt-2">URL: {API_BASE_URL}</p>
           </div>
 
-          {/* Token Validation */}
           <div className="bg-gray-800 rounded-lg p-6">
             <h2 className="text-xl font-bold text-white mb-4">Token Validation</h2>
             {validationResult ? (
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Status:</span>
-                  <span className={validationResult.status === 200 ? 'text-green-400' : 'text-red-400'}>
-                    {validationResult.status || 'Error'}
-                  </span>
-                </div>
-                <div className="mt-4">
-                  <pre className="bg-gray-900 p-3 rounded text-xs text-gray-300 overflow-auto max-h-40">
-                    {JSON.stringify(validationResult, null, 2)}
-                  </pre>
-                </div>
-              </div>
+              <pre className="bg-gray-900 p-3 rounded text-xs text-gray-300 overflow-auto max-h-40">
+                {JSON.stringify(validationResult, null, 2)}
+              </pre>
             ) : (
               <p className="text-gray-400">Click "Validate Token" to test</p>
             )}
@@ -283,18 +277,16 @@ export default function DebugAuthPage() {
         </div>
 
         {/* URL Hash Tokens */}
-        {window.location.hash && (
+        {currentHash && (
           <div className="bg-gray-800 rounded-lg p-6 mb-6 border-2 border-yellow-500">
-            <h2 className="text-xl font-bold text-yellow-400 mb-4">⚠️ Tokens in URL Hash Detected!</h2>
-            <p className="text-gray-300 mb-4">You have tokens in your URL hash. Click below to extract and store them.</p>
-            <button
-              onClick={extractHashTokens}
-              className="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-            >
+            <h2 className="text-xl font-bold text-yellow-400 mb-4">
+              ⚠️ Tokens in URL Hash Detected!
+            </h2>
+            <button onClick={extractHashTokens} className="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
               📥 Extract & Store Tokens from Hash
             </button>
             <div className="mt-4 bg-gray-900 p-4 rounded">
-              <p className="text-gray-400 text-sm font-mono break-all">{window.location.hash}</p>
+              <p className="text-gray-400 text-sm font-mono break-all">{currentHash}</p>
             </div>
           </div>
         )}
@@ -330,10 +322,10 @@ export default function DebugAuthPage() {
           <h2 className="text-xl font-bold text-white mb-4">🍪 Cookies</h2>
           {Object.keys(cookies).length > 0 ? (
             <div className="space-y-2">
-              {Object.entries(cookies).map(([key, value]) => (
-                <div key={key} className="bg-gray-900 p-3 rounded flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">{key}:</span>
-                  <span className="text-gray-300 text-xs font-mono">{value}</span>
+              {Object.entries(cookies).map(([k, v]) => (
+                <div key={k} className="bg-gray-900 p-3 rounded flex justify-between items-center">
+                  <span className="text-gray-400 text-sm">{k}:</span>
+                  <span className="text-gray-300 text-xs font-mono">{v}</span>
                 </div>
               ))}
             </div>
@@ -346,10 +338,7 @@ export default function DebugAuthPage() {
         <div className="bg-gray-800 rounded-lg p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-white">📋 Debug Logs</h2>
-            <button
-              onClick={testFullFlow}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
-            >
+            <button onClick={testFullFlow} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors">
               🧪 Run Full Test
             </button>
           </div>
@@ -360,10 +349,13 @@ export default function DebugAuthPage() {
                   <div
                     key={i}
                     className={`p-2 rounded ${
-                      log.includes('✅') ? 'bg-green-900/20 text-green-300' :
-                      log.includes('❌') ? 'bg-red-900/20 text-red-300' :
-                      log.includes('⚠️') ? 'bg-yellow-900/20 text-yellow-300' :
-                      'bg-gray-800 text-gray-300'
+                      log.includes('✅')
+                        ? 'bg-green-900/20 text-green-300'
+                        : log.includes('❌')
+                        ? 'bg-red-900/20 text-red-300'
+                        : log.includes('⚠️')
+                        ? 'bg-yellow-900/20 text-yellow-300'
+                        : 'bg-gray-800 text-gray-300'
                     }`}
                   >
                     {log}
@@ -375,31 +367,7 @@ export default function DebugAuthPage() {
             )}
           </div>
         </div>
-
-        {/* Instructions */}
-        <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-6 mt-6">
-          <h2 className="text-xl font-bold text-blue-300 mb-4">📖 How to Use This Page</h2>
-          <ol className="text-gray-300 space-y-2 list-decimal list-inside">
-            <li>First, check if backend is connected (should show ✅)</li>
-            <li>If you see "Tokens in URL Hash", click "Extract & Store Tokens"</li>
-            <li>Click "Run Full Test" to validate everything</li>
-            <li>If validation fails, click "Clear Tokens" and try logging in again</li>
-            <li>Use "Go to Auth" to test the redirect flow</li>
-          </ol>
-        </div>
-
-        {/* Current URL */}
-        <div className="bg-gray-800 rounded-lg p-6 mt-6">
-          <h2 className="text-xl font-bold text-white mb-4">🌐 Current URL Info</h2>
-          <div className="space-y-2 font-mono text-sm">
-            <div><span className="text-gray-400">Full URL:</span> <span className="text-gray-300">{typeof window !== 'undefined' ? window.location.href : ''}</span></div>
-            <div><span className="text-gray-400">Pathname:</span> <span className="text-gray-300">{typeof window !== 'undefined' ? window.location.pathname : ''}</span></div>
-            <div><span className="text-gray-400">Hash:</span> <span className="text-gray-300">{typeof window !== 'undefined' ? window.location.hash || '(empty)' : ''}</span></div>
-            <div><span className="text-gray-400">Search:</span> <span className="text-gray-300">{typeof window !== 'undefined' ? window.location.search || '(empty)' : ''}</span></div>
-          </div>
-        </div>
       </div>
     </div>
   );
 }
-

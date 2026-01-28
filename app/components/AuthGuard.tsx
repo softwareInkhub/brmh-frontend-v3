@@ -19,13 +19,22 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       // Determine API URL based on environment
       const isProduction = window.location.hostname.includes('brmh.in') && !window.location.hostname.includes('localhost');
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const API_BASE_URL = isProduction 
-        ? (process.env.NEXT_PUBLIC_AWS_URL || 'https://brmh.in')
+        ? (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://auth.brmh.in')
         : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001');
       
       addDebugLog(`🔍 Starting auth check for path: ${pathname}`);
       addDebugLog(`📍 Current URL: ${window.location.href.substring(0, 100)}`);
       addDebugLog(`🌐 API Base URL: ${API_BASE_URL} (${isProduction ? 'production' : 'development'})`);
+      
+      // SKIP ALL AUTH FOR LOCALHOST DEVELOPMENT
+      if (isLocalhost) {
+        addDebugLog(`🏠 Localhost detected - skipping all auth checks for local development`);
+        setIsChecking(false);
+        setIsAuthenticated(true);
+        return;
+      }
       
       // Skip auth check for public routes
       const publicRoutes = ['/authPage', '/login', '/callback', '/register', '/landingPage', '/debug-auth'];

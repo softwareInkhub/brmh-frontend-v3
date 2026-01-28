@@ -36,7 +36,7 @@ import { toast } from '@/app/hooks/use-toast';
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
 import { Checkbox } from '@/app/components/ui3/checkbox';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://brmh.in';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://auth.brmh.in';
 
 const NAMESPACE_LIST = ['drive', 'admin', 'projectmangement', 'auth', 'api', 'custom'];
 

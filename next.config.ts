@@ -15,14 +15,19 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   async rewrites() {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://brmh.in';
     return [
       {
         source: '/unified/:path*',
-        destination: 'http://localhost:5001/unified/:path*',
+        destination: `${backendUrl}/unified/:path*`,
       },
       {
         source: '/api/:path*',
-        destination: 'http://localhost:5001/api/:path*',
+        destination: `${backendUrl}/api/:path*`,
+      },
+      {
+        source: '/auth/:path*',
+        destination: `${backendUrl}/auth/:path*`,
       },
     ];
   },

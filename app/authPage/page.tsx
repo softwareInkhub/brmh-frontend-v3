@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5001";
+// Use relative URLs to go through Next.js rewrites (which act as a proxy to bypass CORS)
+const API_BASE_URL = "";
 
 export default function AuthPage() {
   const [authMode, setAuthMode] = useState('oauth'); // 'oauth', 'email', 'phone'
@@ -19,12 +20,12 @@ export default function AuthPage() {
   const [oauthLoading, setOauthLoading] = useState(false);
   const router = useRouter();
 
+
   // Check if user is already logged in or just returned from auth.brmh.in
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
       // Check if we have tokens (could be from auth.brmh.in redirect)
       const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
-      
       if (token) {
         // Validate token
         try {
@@ -36,7 +37,7 @@ export default function AuthPage() {
             },
             credentials: 'include'
           });
-          
+
           if (res.ok) {
             console.log('[AuthPage] Token valid, redirecting to main app');
             router.push('/namespace'); // Redirect to main app
@@ -62,7 +63,7 @@ export default function AuthPage() {
         }
       }
     };
-    
+
     checkAuthAndRedirect();
   }, [router]);
 
@@ -70,19 +71,19 @@ export default function AuthPage() {
   const handleOAuthLogin = async () => {
     setOauthLoading(true);
     setMessage('');
-    
+
     try {
       // Get OAuth URL from backend
       const response = await fetch(`${API_BASE_URL}/auth/oauth-url`);
       if (!response.ok) {
         throw new Error('Failed to get OAuth URL');
       }
-      
+
       const { authUrl, state } = await response.json();
-      
+
       // Store state for verification
       sessionStorage.setItem('oauth_state', state);
-      
+
       // Redirect to Cognito
       window.location.href = authUrl;
     } catch (error) {
@@ -98,60 +99,60 @@ export default function AuthPage() {
     const code = urlParams.get('code');
     const state = urlParams.get('state');
     const error = urlParams.get('error');
-    
+
     if (error) {
       setMessage(`OAuth error: ${error}`);
       return;
     }
-    
+
     if (code) {
       // For password change flow, we might not have a state parameter
       // or it might not match due to Cognito's redirect behavior
       const savedState = sessionStorage.getItem('oauth_state');
-      
+
       // If we have a state and it doesn't match, but we have a code,
       // this might be a password change flow - proceed anyway
       if (state && savedState && state !== savedState) {
         console.warn('State mismatch detected, but proceeding with code exchange (password change flow)');
       }
-      
+
       // Exchange code for tokens
       fetch(`${API_BASE_URL}/auth/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
-          code, 
+        body: JSON.stringify({
+          code,
           state: state || savedState || 'password-change-flow' // Use available state or fallback
         })
       })
-      .then(res => res.json())
-      .then(tokens => {
-        if (tokens.error) {
-          throw new Error(tokens.error);
-        }
-        
-        // Store tokens
-        localStorage.setItem('id_token', tokens.id_token);
-        localStorage.setItem('access_token', tokens.access_token);
-        localStorage.setItem('refresh_token', tokens.refresh_token);
-        localStorage.setItem('token_expires', (Date.now() + (tokens.expires_in * 1000)).toString());
-        
-        // Clean up
-        sessionStorage.removeItem('oauth_state');
-        
-        // Clear URL parameters
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Redirect to main app
-        router.push('/namespace');
-      })
-      .catch(error => {
-        console.error('Token exchange failed:', error);
-        setMessage('Login failed. Please try again.');
-        sessionStorage.removeItem('oauth_state');
-      });
+        .then(res => res.json())
+        .then(tokens => {
+          if (tokens.error) {
+            throw new Error(tokens.error);
+          }
+
+          // Store tokens
+          localStorage.setItem('id_token', tokens.id_token);
+          localStorage.setItem('access_token', tokens.access_token);
+          localStorage.setItem('refresh_token', tokens.refresh_token);
+          localStorage.setItem('token_expires', (Date.now() + (tokens.expires_in * 1000)).toString());
+
+          // Clean up
+          sessionStorage.removeItem('oauth_state');
+
+          // Clear URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+
+          // Redirect to main app
+          router.push('/namespace');
+        })
+        .catch(error => {
+          console.error('Token exchange failed:', error);
+          setMessage('Login failed. Please try again.');
+          sessionStorage.removeItem('oauth_state');
+        });
     }
   }, [router]);
 
@@ -160,7 +161,7 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setMessage('');
-
+    console.log('Base URl is', API_BASE_URL);
     try {
       const endpoint = isLogin ? '/auth/login' : '/auth/signup';
       const body = isLogin ? { username, password } : { username, password, email };
@@ -170,6 +171,7 @@ export default function AuthPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // ✅ Include cookies in cross-origin requests
         body: JSON.stringify(body),
       });
 
@@ -191,6 +193,7 @@ export default function AuthPage() {
       }
     } catch (error) {
       setMessage('Network error. Please try again.');
+      console.error('[Auth] Login error:', error);
     } finally {
       setLoading(false);
     }
@@ -204,11 +207,13 @@ export default function AuthPage() {
 
     try {
       console.log('[FE] Phone signup request', { phoneNumber, hasPassword: !!password, hasEmail: !!email });
+      console.log('Base URl is', API_BASE_URL);
       const response = await fetch(`${API_BASE_URL}/auth/phone/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // ✅ Include cookies in cross-origin requests
         body: JSON.stringify({ phoneNumber, password, email }),
       });
 
@@ -247,6 +252,7 @@ export default function AuthPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // ✅ Include cookies in cross-origin requests
         body: JSON.stringify({ phoneNumber, password }),
       });
 
@@ -285,6 +291,7 @@ export default function AuthPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // ✅ Include cookies in cross-origin requests
         body: JSON.stringify({ phoneNumber, code: otp, username: sessionStorage.getItem('phone_signup_username') || undefined }),
       });
 
@@ -357,36 +364,33 @@ export default function AuthPage() {
             {isLogin ? 'Sign in to your account' : 'Create your account'}
           </h2>
         </div>
-        
+
         {/* Authentication Mode Selector */}
         <div className="flex justify-center space-x-4">
           <button
             onClick={() => { setAuthMode('oauth'); resetForm(); }}
-            className={`px-4 py-2 rounded-md text-sm font-medium ${
-              authMode === 'oauth' 
-                ? 'bg-blue-600 text-white' 
+            className={`px-4 py-2 rounded-md text-sm font-medium ${authMode === 'oauth'
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+              }`}
           >
             OAuth
           </button>
           <button
             onClick={() => { setAuthMode('email'); resetForm(); }}
-            className={`px-4 py-2 rounded-md text-sm font-medium ${
-              authMode === 'email' 
-                ? 'bg-blue-600 text-white' 
+            className={`px-4 py-2 rounded-md text-sm font-medium ${authMode === 'email'
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+              }`}
           >
             Email
           </button>
           <button
             onClick={() => { setAuthMode('phone'); resetForm(); }}
-            className={`px-4 py-2 rounded-md text-sm font-medium ${
-              authMode === 'phone' 
-                ? 'bg-blue-600 text-white' 
+            className={`px-4 py-2 rounded-md text-sm font-medium ${authMode === 'phone'
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+              }`}
           >
             Phone
           </button>
@@ -417,13 +421,13 @@ export default function AuthPage() {
                 <label htmlFor="username" className="sr-only">
                   Username
                 </label>
-          <input
+                <input
                   id="username"
                   name="username"
-            type="text"
+                  type="text"
                   required
                   className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-            placeholder="Username"
+                  placeholder="Username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
@@ -436,7 +440,7 @@ export default function AuthPage() {
                   id="password"
                   name="password"
                   type="password"
-            required
+                  required
                   className={`appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm ${isLogin ? 'rounded-b-md' : ''}`}
                   placeholder="Password"
                   value={password}
@@ -448,13 +452,13 @@ export default function AuthPage() {
                   <label htmlFor="email" className="sr-only">
                     Email
                   </label>
-            <input
+                  <input
                     id="email"
                     name="email"
-              type="email"
+                    type="email"
                     required
                     className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-              placeholder="Email"
+                    placeholder="Email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -507,7 +511,7 @@ export default function AuthPage() {
                       id="phoneNumber"
                       name="phoneNumber"
                       type="tel"
-              required
+                      required
                       className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                       placeholder="Phone Number (e.g., +1234567890)"
                       value={phoneNumber}
@@ -518,13 +522,13 @@ export default function AuthPage() {
                     <label htmlFor="password" className="sr-only">
                       Password
                     </label>
-          <input
+                    <input
                       id="password"
                       name="password"
-            type="password"
+                      type="password"
                       required
                       className={`appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm ${isLogin ? 'rounded-b-md' : ''}`}
-            placeholder="Password"
+                      placeholder="Password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
@@ -587,7 +591,7 @@ export default function AuthPage() {
                       id="otp"
                       name="otp"
                       type="text"
-            required
+                      required
                       className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                       placeholder="Enter OTP Code"
                       value={otp}
@@ -604,32 +608,32 @@ export default function AuthPage() {
                 )}
 
                 <div className="mt-6 space-y-3">
-          <button
-            type="submit"
+                  <button
+                    type="submit"
                     disabled={loading}
                     className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Verifying...' : 'Verify OTP'}
                   </button>
-                  
+
                   <button
                     type="button"
                     onClick={handleResendOtp}
-            disabled={loading}
+                    disabled={loading}
                     className="w-full text-sm text-blue-600 hover:text-blue-500 disabled:opacity-50"
                   >
                     Resend OTP
                   </button>
-                  
+
                   <button
                     type="button"
                     onClick={() => setShowOtpInput(false)}
                     className="w-full text-sm text-gray-600 hover:text-gray-500"
                   >
                     Back to Signup
-          </button>
+                  </button>
                 </div>
-        </form>
+              </form>
             )}
           </div>
         )}
