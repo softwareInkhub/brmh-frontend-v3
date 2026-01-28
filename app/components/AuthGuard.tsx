@@ -19,7 +19,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       // Determine API URL based on environment
       const isProduction = window.location.hostname.includes('brmh.in') && !window.location.hostname.includes('localhost');
-      const API_BASE_URL = isProduction 
+      let API_BASE_URL = isProduction 
         ? (process.env.NEXT_PUBLIC_AWS_URL || 'https://brmh.in')
         : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001');
       
