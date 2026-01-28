@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // Use relative URLs to go through Next.js rewrites (which act as a proxy to bypass CORS)
 const API_BASE_URL = "";
@@ -19,6 +19,42 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Helper function to get redirect destination (from 'next' param or default to '/namespace')
+  const getRedirectPath = () => {
+    const nextParam = searchParams.get('next');
+    if (nextParam) {
+      try {
+        // Decode the next URL
+        const decoded = decodeURIComponent(nextParam);
+        
+        // If it's a relative path (starts with /), use it directly
+        if (decoded.startsWith('/')) {
+          return decoded;
+        }
+        
+        // If it's a full URL, check if it's same origin and extract pathname
+        if (typeof window !== 'undefined') {
+          try {
+            const url = new URL(decoded);
+            // Only allow same-origin redirects for security
+            if (url.origin === window.location.origin) {
+              return url.pathname + url.search;
+            }
+          } catch (e) {
+            // Not a valid URL, treat as relative path if it starts with /
+            if (decoded.startsWith('/')) {
+              return decoded;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[AuthPage] Invalid next parameter:', e);
+      }
+    }
+    return '/namespace'; // Default redirect
+  };
 
 
   // Check if user is already logged in or just returned from auth.brmh.in
@@ -40,7 +76,7 @@ export default function AuthPage() {
 
           if (res.ok) {
             console.log('[AuthPage] Token valid, redirecting to main app');
-            router.push('/namespace'); // Redirect to main app
+            router.push(getRedirectPath()); // Redirect to intended destination or default
           } else {
             // Token invalid, clear it
             console.log('[AuthPage] Token invalid, clearing...');
@@ -145,8 +181,8 @@ export default function AuthPage() {
           // Clear URL parameters
           window.history.replaceState({}, document.title, window.location.pathname);
 
-          // Redirect to main app
-          router.push('/namespace');
+          // Redirect to intended destination or default
+          router.push(getRedirectPath());
         })
         .catch(error => {
           console.error('Token exchange failed:', error);
@@ -186,7 +222,7 @@ export default function AuthPage() {
         }
         setMessage(isLogin ? 'Login successful!' : 'Signup successful! Please check your email.');
         setTimeout(() => {
-          router.push('/namespace');
+          router.push(getRedirectPath());
         }, 1000);
       } else {
         setMessage(data.error || 'Authentication failed');
@@ -266,7 +302,7 @@ export default function AuthPage() {
         localStorage.setItem('refresh_token', data.result.refreshToken.token);
         setMessage('Login successful!');
         setTimeout(() => {
-          router.push('/namespace');
+          router.push(getRedirectPath());
         }, 1000);
       } else {
         setMessage(data.error || 'Login failed');
@@ -304,7 +340,7 @@ export default function AuthPage() {
         setOtp('');
         // Optionally redirect to login or auto-login
         setTimeout(() => {
-          router.push('/namespace');
+          router.push(getRedirectPath());
         }, 1000);
       } else {
         setMessage(data.error || 'Verification failed');

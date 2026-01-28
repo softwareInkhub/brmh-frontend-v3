@@ -40,8 +40,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       addDebugLog(`📍 Current URL: ${window.location.href.substring(0, 100)}`);
       addDebugLog(`🌐 API Base URL: ${API_BASE_URL} (${isProduction ? 'production' : 'development'})`);
       
-      // Skip auth check for public routes (removed /login as it's not a route in main app)
-      const publicRoutes = ['/authPage', '/callback', '/register', '/landingPage', '/debug-auth'];
+      // Skip auth check for public routes
+      // Include '/login' so that hitting the login page itself does not trigger another redirect,
+      // which can cause infinite redirect loops and nested `next` parameters.
+      const publicRoutes = ['/login', '/authPage', '/callback', '/register', '/landingPage', '/debug-auth'];
       const isPublicRoute = publicRoutes.some(route => pathname === route || pathname?.startsWith(route));
       
       if (isPublicRoute) {
